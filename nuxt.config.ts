@@ -10,5 +10,9 @@ export default defineNuxtConfig({
       { code: 'fr', language: 'fr-FR', name: 'Français', file: 'fr.json' },
       { code: 'en', language: 'en-US', name: 'English', file: 'en.json' }
     ]
+  },
+  runtimeConfig: {
+    tursoUrl: '',
+    tursoAuthToken: ''
   }
 })

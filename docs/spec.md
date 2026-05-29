@@ -22,8 +22,17 @@ Translators are paid against a **words-per-hour quota** set by their employer. T
 
 ## 3. Architecture concepts
 
+### DB & env pattern
+
+- Env vars validated at startup with **Zod** via `server/lib/env.ts` — fails fast if a required var is missing.
+- Drizzle client lives in `server/db/index.ts`, imports the validated env, passes `authToken: undefined` in development.
+- `casing: 'snake_case'` on the Drizzle instance — JS schema uses camelCase, SQL columns use snake_case automatically.
+- Schema imported directly into the Drizzle instance for query type inference.
+
+
+
 - **Multi-user**: each user has an account; all data is scoped to the user.
-- **Persistent database**: **Turso** (libSQL / SQLite at the edge) accessed through **Drizzle ORM**. Data does not live in the browser; the user can move between devices and find their data intact.
+- **Persistent database**: **Turso** (libSQL / SQLite at the edge) accessed through **Drizzle ORM**. Data does not live in the browser; the user can move between devices and find their data intact. Free tier: 500 databases, 9GB — one Turso account covers all projects.
 - **Auth**: **owner-managed, lightweight**. Magic-link only — user submits their email, gets a one-time link, clicks it, they're in. **Resend** sends the emails.
   - Access is gated by an **allowlist table** (`allowed_emails`) in Turso. The owner adds approved addresses directly; anyone else can submit the form but never receives a link. The sign-in UI returns the same neutral confirmation message either way, so the allowlist contents aren't leaked.
   - **Owner bootstrap**: a seed/migration step reads an `OWNER_EMAIL` env var on first run and inserts that row into `allowed_emails`. Idempotent — no manual DB ritual on a fresh deployment.
