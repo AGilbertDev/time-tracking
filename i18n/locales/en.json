@@ -3,5 +3,15 @@
     "title": "Translation Planner",
     "description": "Sign in to access your planner.",
     "google": "Sign in with Google"
+  },
+  "app": {
+    "name": "Translation Planner"
+  },
+  "header": {
+    "greetingMorning": "Good morning, {name}",
+    "greetingAfternoon": "Good afternoon, {name}",
+    "greetingEvening": "Good evening, {name}",
+    "profile": "Profile",
+    "logout": "Sign out"
   }
 }

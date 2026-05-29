@@ -1,10 +1,7 @@
 <template>
   <UPage>
-    <UHeader>
-      <AppNavbar />
-    </UHeader>
-    <UMain>
-      <slot />
-    </UMain>
+    <AppHeader />
+    <UMain><slot /></UMain>
+    <AppFooter />
   </UPage>
 </template>
