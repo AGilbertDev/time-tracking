@@ -36,21 +36,30 @@ Translators are paid against a **words-per-hour quota** set by their employer. T
 ## 4. Domain model (conceptual)
 
 ### User
-- `id` (opaque)
-- `email` (login key, unique)
-- `first_name`, `last_name`
-- `avatar_url`
-- Locale preference
-- Settings (see below)
+- `id` — text, primary key (nanoid or cuid)
+- `email` — text, unique, not null (login key)
+- `first_name` — text
+- `last_name` — text
+- `avatar_url` — text, nullable
+- `locale` — text, default `'fr'`
+- `created_at` — timestamp
 
 Profile fields are deliberately minimal — that's the whole identity surface.
 
 ### Settings (per user)
-- **Daily work duration** — configurable (e.g. 7h30, 8h, 6h, …). Used to compute "remaining" and "excess" per day.
-- **Working days of the week** — flexible. User can work Mon–Fri, Tue–Sat, four days, weekends only, etc.
-- **Default words-per-hour quota** — used as the per-task default but overridable.
-- **Holidays** — a list of dates the user marks as non-working. Calendar surfaces them; user can still log work on them.
-- TBD: locale, time zone, theme, default task category, employer/quota profiles, etc.
+- `user_id` — FK → users.id
+- `daily_work_minutes` — integer, default `450` (= 7h30). Stored as minutes for arithmetic simplicity.
+- `work_days` — text (JSON array of 0–6 day numbers, e.g. `[1,2,3,4,5]` for Mon–Fri)
+- `default_wph` — integer, default `450` (words per hour)
+- `timezone` — text, default `'America/Toronto'`
+- TBD: theme, default task category
+
+### Auth tables
+- **`allowed_emails`** — `email` text primary key. Owner-managed allowlist. Seeded from `OWNER_EMAIL` env var.
+- **`magic_link_tokens`** — `token` text primary key, `email` text, `expires_at` timestamp, `used` boolean default false. Single-use, short TTL (15 min).
+
+### Sessions
+Handled by `nuxt-auth-utils` (signed cookie). The session payload stores `{ userId, email }` — no sensitive data.
 
 ### Week
 A logical grouping of days, not a fixed Mon–Fri block. Internally probably stored as a date range or computed from a per-user week-anchor + active-days mask. The UI lets the user see and edit any week.

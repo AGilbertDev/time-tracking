@@ -1,7 +1,12 @@
+<script setup lang="ts"></script>
+
 <template>
-  <UPage>
+  <div class="flex min-h-dvh flex-col">
     <AppHeader />
-    <UMain><slot /></UMain>
+    <UMain class="bg-muted">
+      <slot />
+    </UMain>
+    <USeparator />
     <AppFooter />
-  </UPage>
+  </div>
 </template>

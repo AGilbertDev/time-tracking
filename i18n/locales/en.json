@@ -13,5 +13,6 @@
     "greetingEvening": "Good evening, {name}",
     "profile": "Profile",
     "logout": "Sign out"
-  }
+  },
+  "footer": { "rights": "All rights reserved." }
 }
