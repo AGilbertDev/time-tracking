@@ -1,7 +1,9 @@
 {
   "login": {
     "title": "Translation Planner",
-    "description": "Enter your email address to receive a sign-in link.",
+    "subtitle": "Sign in",
+    "invitation": "Access by invitation only. You should have received an email.",
+    "description": "Enter your email to receive a sign-in link.",
     "email": "Email address",
     "submit": "Send link",
     "sent": "A sign-in link has been sent. Check your inbox.",

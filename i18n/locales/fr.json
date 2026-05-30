@@ -1,10 +1,12 @@
 {
   "login": {
     "title": "Planning de traduction",
+    "subtitle": "Connexion",
+    "invitation": "Accès sur invitation seulement. Un message doit vous avoir été envoyé.",
     "description": "Entrez votre adresse courriel pour recevoir un lien de connexion.",
     "email": "Adresse courriel",
     "submit": "Recevoir le lien",
-    "sent": "Un lien de connexion vous a été envoyé. Vérifiez votre boîte de réception.",
+    "sent": "Un lien vers le site vous sera envoyé par courriel.",
     "error": "Une erreur est survenue. Veuillez réessayer."
   },
   "app": {

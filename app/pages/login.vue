@@ -35,29 +35,44 @@ async function submit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
-    <UCard class="w-full max-w-sm">
-      <div class="flex flex-col items-center gap-6 py-4 text-center">
-        <UIcon class="h-10 w-10 text-primary" name="i-carbon-calendar" />
-        <div class="flex flex-col gap-1">
-          <h1 class="text-xl font-bold">{{ t('login.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('login.description') }}</p>
+  <div
+    class="flex min-h-screen items-center justify-center bg-gray-100 bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
+  >
+    <UCard class="w-full max-w-100" :ui="{ body: 'px-9 pt-10 pb-9' }">
+      <div class="flex flex-col items-center text-center">
+        <div class="mb-4.5 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+          <UIcon class="h-6 w-6 text-primary" name="i-carbon-calendar" />
         </div>
 
-        <div v-if="sent" class="text-sm text-green-600">
-          {{ t('login.sent') }}
-        </div>
+        <p class="mb-1.5 text-[13px] font-medium text-gray-500">{{ t('login.title') }}</p>
 
-        <form v-else class="flex w-full flex-col gap-3" @submit.prevent="submit">
+        <h1 class="mb-2.5 text-[26px] font-bold tracking-tight text-gray-900">
+          {{ t('login.subtitle') }}
+        </h1>
+
+        <p class="mb-7 max-w-[30ch] text-sm leading-relaxed text-gray-500">
+          {{ t('login.invitation') }}
+        </p>
+
+        <form class="w-full" @submit.prevent="submit">
           <UInput
             v-model="email"
             autocomplete="email"
+            class="w-full"
+            :disabled="sent"
+            icon="i-carbon-email"
             :placeholder="t('login.email')"
             required
+            size="lg"
             type="email"
           />
-          <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
-          <UButton block :loading="loading" type="submit">
+
+          <p v-if="error" class="mt-2 text-left text-sm text-red-500">{{ error }}</p>
+
+          <p v-if="sent" class="mt-3.5 text-center text-sm text-green-600">
+            {{ t('login.sent') }}
+          </p>
+          <UButton v-else block class="mt-3.5" :loading="loading" size="lg" type="submit">
             {{ t('login.submit') }}
           </UButton>
         </form>

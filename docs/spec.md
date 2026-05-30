@@ -244,7 +244,51 @@ Initial seed:
 
 ---
 
-## 12. Out of scope (for v1)
+## 12. Admin panel
+
+Owner-only area for managing users. Protected by a role check on the session (`role: 'admin'`).
+
+### User management
+
+- **List users** — see all accounts (email, name, status, created date).
+- **Invite a user** — owner enters an email address. The app:
+  1. Adds the email to `allowed_emails`.
+  2. Creates a stub `users` row (email only, no profile yet).
+  3. Sends an invitation email via Resend with a magic link.
+- **Deactivate a user** — sets a `deactivated_at` timestamp on the user row. They remain in `allowed_emails` so the system recognises them, but the magic link request handler checks `deactivated_at` and returns a specific error message: *"Votre compte a été désactivé. Contactez l'administrateur." / "Your account has been deactivated. Please contact the administrator."* Their data is preserved.
+- **Reactivate a user** — re-adds to `allowed_emails`, clears `deactivated_at`.
+
+### First-login onboarding
+
+When a user signs in for the first time (profile is incomplete — no `first_name` set), redirect them to a **profile completion page** before the dashboard. Required fields:
+
+- First name
+- Last name
+- (Avatar upload — optional, can be set later in profile settings)
+
+Once saved, they land on the dashboard. They are never asked again.
+
+### Schema additions needed
+
+- `users.role` — `'admin' | 'user'`, default `'user'`. Owner's row is seeded as `'admin'`.
+- `users.deactivated_at` — timestamp, nullable. Null means active.
+- `allowed_emails` table already handles the access gate.
+
+### Admin routes (planned)
+
+```
+server/api/admin/
+  users/
+    index.get.ts          ← list all users
+    index.post.ts         ← invite a new user
+    [id].patch.ts         ← deactivate / reactivate
+```
+
+Protected by `defineAuthenticatedEventHandler` + admin role check.
+
+---
+
+## 13. Out of scope (for v1)
 
 - Team / multi-translator collaboration.
 - Invoicing or client-facing exports.
