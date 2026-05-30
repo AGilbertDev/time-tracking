@@ -13,6 +13,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     tursoUrl: '',
-    tursoAuthToken: ''
+    tursoAuthToken: '',
+    resendApiKey: '',
+    resendFromEmail: '',
+    ownerEmail: ''
   }
 })

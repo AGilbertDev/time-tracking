@@ -22,12 +22,22 @@ Translators are paid against a **words-per-hour quota** set by their employer. T
 
 ## 3. Architecture concepts
 
+### Server route conventions
+
+Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used across Mercuri, Morstowe, and Celebritee.
+
+- **Validation**: every route uses `readValidatedBody` / `getValidatedQuery` (H3 built-ins) with a Zod schema's `.safeParse`. Never call `readBody` without validation.
+- **Zod error utility**: `server/utils/sendZodError.ts` converts a `ZodError` into a structured 422 `createError` with per-field data for client-side display.
+- **Auth guard wrapper**: `server/utils/defineAuthenticatedEventHandler.ts` wraps `defineEventHandler` — checks session before the handler runs, throws 401 if absent. All protected routes use this instead of bare `defineEventHandler`.
+- **No global try/catch boilerplate**: H3 bubbles `createError` responses automatically. Only wrap specific DB operations that can throw known constraint errors (e.g. UNIQUE violations).
+- **Handler extraction**: business logic lives in separate handler functions (`server/api/{resource}/handlers/`), not inline in route files. Mirrors Nathan's pattern.
+- **Zod schemas**: defined once in `server/schemas/` and reused for both validation and TypeScript inference. Mirrors Nathan's model files.
+- **i18n in server routes**: use a plain dictionary in `server/utils/email-templates.ts` — `useI18n()` is Vue-only and unavailable server-side. Locale is passed in the request body by the client.
+
 ### DB & env pattern
 
-- Env vars validated at startup with **Zod** via `server/lib/env.ts` — fails fast if a required var is missing.
-- Drizzle client lives in `server/db/index.ts`, imports the validated env, passes `authToken: undefined` in development.
-- `casing: 'snake_case'` on the Drizzle instance — JS schema uses camelCase, SQL columns use snake_case automatically.
-- Schema imported directly into the Drizzle instance for query type inference.
+- Drizzle client lives in `server/db/index.ts`, lazy-initialized via `useDb()` using `useRuntimeConfig()`.
+- All env vars declared in `nuxt.config.ts` under `runtimeConfig` and auto-mapped from `NUXT_*` env vars.
 
 
 

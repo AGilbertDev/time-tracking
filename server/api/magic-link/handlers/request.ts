@@ -1,0 +1,40 @@
+import type { z } from 'zod'
+
+import { eq } from 'drizzle-orm'
+import { Resend } from 'resend'
+
+import type { RequestSchema } from '../../../models/magic-link'
+
+import { useDb } from '../../../db/index'
+import { allowedEmails, magicLinkTokens } from '../../../db/schema'
+import { MINUTE_IN_MILLISECONDS } from '../../../utils/constants/time'
+import { emailTemplates } from '../../../utils/email-templates'
+
+export async function requestMagicLink(body: z.infer<typeof RequestSchema>) {
+  const config = useRuntimeConfig()
+  const db = useDb()
+  const { email, locale } = body
+
+  // Return without sending so the response does not reveal whether the email is on the allowlist.
+  const allowed = await db.select().from(allowedEmails).where(eq(allowedEmails.email, email)).get()
+  if (!allowed) return { success: true }
+
+  const token = crypto.randomUUID()
+  const expiresAt = new Date(Date.now() + 15 * MINUTE_IN_MILLISECONDS)
+
+  // Persist the token before sending so a failed delivery does not leave an orphaned token.
+  await db.insert(magicLinkTokens).values({ token, email, expiresAt })
+
+  const verificationUrl = `${config.siteUrl}/api/magic-link/verify?token=${token}`
+  const resend = new Resend(config.resendApiKey as string)
+  const template = locale === 'en' ? emailTemplates.en.magicLink : emailTemplates.fr.magicLink
+
+  await resend.emails.send({
+    from: config.resendFromEmail as string,
+    to: email,
+    subject: template.subject,
+    html: template.body(verificationUrl)
+  })
+
+  return { success: true }
+}

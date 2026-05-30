@@ -1,8 +1,11 @@
 {
   "login": {
     "title": "Planning de traduction",
-    "description": "Connectez-vous pour accéder à votre planning.",
-    "google": "Se connecter avec Google"
+    "description": "Entrez votre adresse courriel pour recevoir un lien de connexion.",
+    "email": "Adresse courriel",
+    "submit": "Recevoir le lien",
+    "sent": "Un lien de connexion vous a été envoyé. Vérifiez votre boîte de réception.",
+    "error": "Une erreur est survenue. Veuillez réessayer."
   },
   "app": {
     "name": "Planning de traduction"

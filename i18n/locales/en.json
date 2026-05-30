@@ -1,8 +1,11 @@
 {
   "login": {
     "title": "Translation Planner",
-    "description": "Sign in to access your planner.",
-    "google": "Sign in with Google"
+    "description": "Enter your email address to receive a sign-in link.",
+    "email": "Email address",
+    "submit": "Send link",
+    "sent": "A sign-in link has been sent. Check your inbox.",
+    "error": "Something went wrong. Please try again."
   },
   "app": {
     "name": "Translation Planner"
