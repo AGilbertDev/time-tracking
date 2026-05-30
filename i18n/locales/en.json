@@ -19,5 +19,6 @@
     "profile": "Profile",
     "logout": "Sign out"
   },
-  "footer": { "rights": "All rights reserved." }
+  "footer": { "rights": "All rights reserved." },
+  "a11y": { "switchLocale": "Switch language" }
 }

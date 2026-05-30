@@ -8,10 +8,17 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   i18n: {
     defaultLocale: 'fr',
+    customRoutes: 'config',
     locales: [
       { code: 'fr', language: 'fr-FR', name: 'Français', file: 'fr.json' },
       { code: 'en', language: 'en-US', name: 'English', file: 'en.json' }
-    ]
+    ],
+    pages: {
+      login: {
+        fr: '/connexion',
+        en: '/login'
+      }
+    }
   },
   vite: {
     optimizeDeps: {

@@ -1,12 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: false,
-  nuxtI18n: {
-    paths: {
-      fr: '/connexion',
-      en: '/login'
-    }
-  }
+  layout: 'auth'
 })
 
 const { t, locale } = useI18n()
@@ -36,21 +30,21 @@ async function submit() {
 
 <template>
   <div
-    class="flex min-h-screen items-center justify-center bg-gray-100 bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
+    class="relative flex min-h-screen items-center justify-center bg-gray-100 bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
   >
-    <UCard class="w-full max-w-100" :ui="{ body: 'px-9 pt-10 pb-9' }">
+    <UCard class="w-full max-w-90" :ui="{ body: 'px-9 pt-20 pb-20' }">
       <div class="flex flex-col items-center text-center">
-        <div class="mb-4.5 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
           <UIcon class="h-6 w-6 text-primary" name="i-carbon-calendar" />
         </div>
 
-        <p class="mb-1.5 text-[13px] font-medium text-gray-500">{{ t('login.title') }}</p>
+        <p class="mb-7 text-[13px] font-medium text-gray-500">{{ t('login.title') }}</p>
 
-        <h1 class="mb-2.5 text-[26px] font-bold tracking-tight text-gray-900">
+        <h1 class="mb-7 text-[26px] font-bold tracking-tight text-gray-900">
           {{ t('login.subtitle') }}
         </h1>
 
-        <p class="mb-7 max-w-[30ch] text-sm leading-relaxed text-gray-500">
+        <p class="mb-14 max-w-[30ch] text-sm leading-relaxed text-gray-500">
           {{ t('login.invitation') }}
         </p>
 
@@ -69,10 +63,10 @@ async function submit() {
 
           <p v-if="error" class="mt-2 text-left text-sm text-red-500">{{ error }}</p>
 
-          <p v-if="sent" class="mt-3.5 text-center text-sm text-green-600">
+          <p v-if="sent" class="mt-4 text-center text-sm text-green-600">
             {{ t('login.sent') }}
           </p>
-          <UButton v-else block class="mt-3.5" :loading="loading" size="lg" type="submit">
+          <UButton v-else block class="mt-4" :loading="loading" size="lg" type="submit">
             {{ t('login.submit') }}
           </UButton>
         </form>
