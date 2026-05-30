@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "seed": "bun run --env-file=.env scripts/seed.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

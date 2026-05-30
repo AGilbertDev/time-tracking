@@ -1,3 +1,2 @@
 export const MINUTE_IN_MILLISECONDS = 60 * 1000
 export const DAY_IN_SECONDS = 60 * 60 * 24
-export const SESSION_MAX_AGE = 1 * DAY_IN_SECONDS

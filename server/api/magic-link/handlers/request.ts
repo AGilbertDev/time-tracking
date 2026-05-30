@@ -19,6 +19,9 @@ export async function requestMagicLink(body: z.infer<typeof RequestSchema>) {
   const allowed = await db.select().from(allowedEmails).where(eq(allowedEmails.email, email)).get()
   if (!allowed) return { success: true }
 
+  // Delete previous tokens for this email before creating a new one to keep the table clean.
+  await db.delete(magicLinkTokens).where(eq(magicLinkTokens.email, email))
+
   const token = crypto.randomUUID()
   const expiresAt = new Date(Date.now() + 15 * MINUTE_IN_MILLISECONDS)
 
@@ -29,12 +32,16 @@ export async function requestMagicLink(body: z.infer<typeof RequestSchema>) {
   const resend = new Resend(config.resendApiKey as string)
   const template = locale === 'en' ? emailTemplates.en.magicLink : emailTemplates.fr.magicLink
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: config.resendFromEmail as string,
     to: email,
     subject: template.subject,
     html: template.body(verificationUrl)
   })
+
+  if (error) {
+    throw createError({ statusCode: 503, statusMessage: 'Failed to send email. Please try again.' })
+  }
 
   return { success: true }
 }

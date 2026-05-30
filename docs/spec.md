@@ -34,6 +34,12 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 - **Zod schemas**: defined once in `server/schemas/` and reused for both validation and TypeScript inference. Mirrors Nathan's model files.
 - **i18n in server routes**: use a plain dictionary in `server/utils/email-templates.ts` — `useI18n()` is Vue-only and unavailable server-side. Locale is passed in the request body by the client.
 
+### Magic link token lifecycle
+
+- **On use**: mark `used = true` immediately to prevent replay attacks. Already enforced in the `WHERE` clause of the verify query (`used = false`).
+- **On new request for the same email**: delete all existing tokens for that email before inserting the new one. Keeps the table clean without a separate job.
+- **Expired token cleanup**: not implemented yet. Low priority for a 2–3 user app. When needed, use a **Vercel Cron job** — a `vercel.json` schedule that calls a server route (`/api/cron/cleanup-tokens`) on a daily interval. Free on Vercel's hobby plan.
+
 ### DB & env pattern
 
 - Drizzle client lives in `server/db/index.ts`, lazy-initialized via `useDb()` using `useRuntimeConfig()`.
