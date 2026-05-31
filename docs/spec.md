@@ -2,6 +2,22 @@
 
 First-pass spec for the rebuild. Loosely scoped — we will refine sections marked **TBD** after a working session with the primary user (the developer's partner, a professional translator).
 
+> **Build status & next steps live in [`docs/TODO.md`](./TODO.md).** Read it first if you are picking this up.
+
+---
+
+## Build status (2026-05-31)
+
+**Shipped and live** at `https://time-tracker.agilbert.dev` (Vercel):
+
+- Nuxt 4 + Nuxt UI v4 app shell (header, footer, `auth` + `default` layouts), brand orange palette, Hanken Grotesk font, adaptive light/dark logo + favicon.
+- i18n FR (default) / EN with localized routes (`customRoutes: 'config'`), language toggle (flip animation on auth pages, in the profile dropdown on the dashboard).
+- Turso + Drizzle DB. Tables: `users` (with `password_hash`, `role`, `deactivated_at`), `allowed_emails`, `magic_link_tokens`, `settings`.
+- **Auth, end to end**: two-page split — sign-up (`/inscription`, invite-only magic link) and sign-in (`/connexion`, email + password). Magic-link request/verify, password login (`verifyPassword`), unskippable onboarding (first/last name + confirmed password), NIST-aligned password policy with Have I Been Pwned breach check. Session carries `{ id, email, firstName, lastName, onboarded }`; 7-day cookie. Global middleware enforces sign-in and onboarding gates.
+- Owner bootstrap via `bun run seed` (seeds `allowed_emails` + admin `users` row from `NUXT_OWNER_EMAIL`).
+
+**Not built yet** (see TODO): admin user-management UI + routes, the planning week view (the dashboard is an empty placeholder), settings UI, stats, recurring/split tasks.
+
 ---
 
 ## 1. Audience & purpose
