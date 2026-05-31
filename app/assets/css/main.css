@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* Brand palette anchored on the logo orange (#F2682C at 500). */
+@theme static {
+  --color-brand-50: #fef4ef;
+  --color-brand-100: #fde7da;
+  --color-brand-200: #facbb4;
+  --color-brand-300: #f7a883;
+  --color-brand-400: #f58a57;
+  --color-brand-500: #f2682c;
+  --color-brand-600: #e04e12;
+  --color-brand-700: #ba3d11;
+  --color-brand-800: #943216;
+  --color-brand-900: #782c16;
+  --color-brand-950: #411208;
+}
+
 /* Tailwind v4 removed the default pointer cursor on buttons. Restore it. */
 @layer base {
   button:not(:disabled),

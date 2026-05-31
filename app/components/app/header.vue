@@ -29,9 +29,7 @@ const items = ref<DropdownMenuItem[][]>([
 <template>
   <UHeader :ui="{ container: 'max-w-full' }">
     <template #title
-      ><div class="flex items-center gap-2">
-        <UIcon name="i-carbon-calendar" />{{ t('app.name') }}
-      </div>
+      ><div class="flex items-center gap-2"><AppLogo class="h-7" />{{ t('app.name') }}</div>
     </template>
     <template #right>
       <UDropdownMenu :items="items">

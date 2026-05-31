@@ -40,7 +40,9 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
   }
 
   // Set the session cookie so subsequent requests are authenticated.
-  await setUserSession(event, { user: { id: user!.id, email: user!.email } })
+  await setUserSession(event, {
+    user: { id: user!.id, email: user!.email, onboarded: !!user!.passwordHash }
+  })
 
   return sendRedirect(event, '/')
 }

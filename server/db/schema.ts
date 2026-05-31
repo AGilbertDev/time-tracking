@@ -10,9 +10,12 @@ export const users = sqliteTable('users', {
   firstName: text('first_name'),
   lastName: text('last_name'),
   avatarUrl: text('avatar_url'),
+  passwordHash: text('password_hash'),
+  role: text('role').notNull().default('user'),
   locale: text('locale').notNull().default('fr'),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date())
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  deactivatedAt: integer('deactivated_at', { mode: 'timestamp' })
 })
 
 export const magicLinkTokens = sqliteTable('magic_link_tokens', {

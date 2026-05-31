@@ -34,9 +34,7 @@ async function submit() {
   >
     <UCard class="w-full max-w-90" :ui="{ body: 'px-9 pt-20 pb-20' }">
       <div class="flex flex-col items-center text-center">
-        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-          <UIcon class="h-6 w-6 text-primary" name="i-carbon-calendar" />
-        </div>
+        <AppLogo class="mb-4 h-14" />
 
         <p class="mb-7 text-[13px] font-medium text-gray-500">{{ t('login.title') }}</p>
 
