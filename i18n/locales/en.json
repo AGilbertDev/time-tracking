@@ -1,12 +1,34 @@
 {
-  "login": {
-    "title": "Translation Planner",
+  "signin": {
     "subtitle": "Sign in",
-    "invitation": "Access by invitation only. You should have received an email.",
+    "email": "Email address",
+    "password": "Password",
+    "submit": "Sign in",
+    "error": "Invalid credentials.",
+    "deactivated": "Your account has been deactivated. Please contact the administrator.",
+    "noAccount": "First time? Sign up"
+  },
+  "signup": {
+    "subtitle": "Sign up",
+    "invitation": "Access by invitation only. You need an invitation email to sign in.",
     "description": "Enter your email to receive a sign-in link.",
     "email": "Email address",
     "submit": "Send link",
     "sent": "A sign-in link has been sent. Check your inbox.",
+    "error": "Something went wrong. Please try again.",
+    "hasAccount": "Already have an account? Sign in"
+  },
+  "onboarding": {
+    "title": "Welcome",
+    "subtitle": "Complete your profile to continue.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "password": "Password",
+    "passwordConfirm": "Confirm password",
+    "passwordHint": "At least 8 characters. Avoid a password you use elsewhere.",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordBreached": "This password has appeared in a known data breach. Please choose another.",
+    "submit": "Finish",
     "error": "Something went wrong. Please try again."
   },
   "app": {
@@ -17,6 +39,7 @@
     "greetingAfternoon": "Good afternoon, {name}",
     "greetingEvening": "Good evening, {name}",
     "profile": "Profile",
+    "language": "Language: {code}",
     "logout": "Sign out"
   },
   "footer": { "rights": "All rights reserved." },

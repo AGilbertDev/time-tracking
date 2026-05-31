@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* Match the portfolio font. @nuxt/fonts auto-provisions and self-hosts it. */
+@theme static {
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+}
+
 /* Brand palette anchored on the logo orange (#F2682C at 500). */
 @theme static {
   --color-brand-50: #fef4ef;
@@ -14,6 +19,13 @@
   --color-brand-800: #943216;
   --color-brand-900: #782c16;
   --color-brand-950: #411208;
+}
+
+/* Larger base text across the app, matching the portfolio. */
+@layer base {
+  body {
+    font-size: var(--text-lg);
+  }
 }
 
 /* Tailwind v4 removed the default pointer cursor on buttons. Restore it. */

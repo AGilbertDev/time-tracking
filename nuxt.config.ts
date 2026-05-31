@@ -4,7 +4,7 @@ import { SESSION_MAX_AGE } from './app/constants/auth'
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/ui', '@nuxt/eslint', 'nuxt-auth-utils', '@nuxtjs/i18n'],
+  modules: ['@nuxt/ui', '@nuxt/eslint', '@nuxt/fonts', 'nuxt-auth-utils', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css'],
   i18n: {
     defaultLocale: 'fr',
@@ -14,9 +14,17 @@ export default defineNuxtConfig({
       { code: 'en', language: 'en-US', name: 'English', file: 'en.json' }
     ],
     pages: {
-      login: {
+      signin: {
         fr: '/connexion',
-        en: '/login'
+        en: '/signin'
+      },
+      signup: {
+        fr: '/inscription',
+        en: '/signup'
+      },
+      onboarding: {
+        fr: '/accueil',
+        en: '/onboarding'
       }
     }
   },
