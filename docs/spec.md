@@ -49,11 +49,14 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 
 - **Multi-user**: each user has an account; all data is scoped to the user.
 - **Persistent database**: **Turso** (libSQL / SQLite at the edge) accessed through **Drizzle ORM**. Data does not live in the browser; the user can move between devices and find their data intact. Free tier: 500 databases, 9GB — one Turso account covers all projects.
-- **Auth**: **owner-managed, lightweight**. Magic-link only — user submits their email, gets a one-time link, clicks it, they're in. **Resend** sends the emails.
-  - Access is gated by an **allowlist table** (`allowed_emails`) in Turso. The owner adds approved addresses directly; anyone else can submit the form but never receives a link. The sign-in UI returns the same neutral confirmation message either way, so the allowlist contents aren't leaked.
-  - **Owner bootstrap**: a seed/migration step reads an `OWNER_EMAIL` env var on first run and inserts that row into `allowed_emails`. Idempotent — no manual DB ritual on a fresh deployment.
-  - Conceptual auth surface: `users` table, `allowed_emails` table, `magic_link_tokens` table (short TTL, single-use), two API routes (request / verify), session cookie.
-  - No third-party identity providers (Clerk / Auth0 / Supabase Auth) and no identity-server backends (Kratos, Hydra, Keycloak) — simplicity is the priority. Vercel single-test-user limits and Google OAuth verification are sidestepped by construction.
+- **Auth**: **owner-managed, two methods**. Magic link is the *invitation / first-access* mechanism; a password set during onboarding becomes the *regular* login method. **Resend** sends the emails.
+  - **Invitation (magic link)** — used *only while `password_hash` is null* (first access). The owner adds an email to `allowed_emails` from the admin panel, which sends a bilingual invitation email with a one-time login link. Clicking it logs the user in and drops them straight into the unskippable onboarding form. This is the single bootstrap entry point.
+  - **Regular login (password)** — once onboarding sets a password, this is *the* login method: email + password. The magic link is no longer used for normal sign-in, so a leaked or replayed invitation link is inert after onboarding. Passwords are hashed with `nuxt-auth-utils`' `hashPassword` / `verifyPassword` (scrypt) — never plaintext.
+  - **Forgot password** (planned, not v1-critical) — re-issues a magic link; because a password already exists, the link lands the user on a *reset* form rather than logging them straight in.
+  - Access is still gated by `allowed_emails`. A deactivated user stays in the table but is blocked at login with a specific message (see §12).
+  - **Owner bootstrap**: a seed/migration step reads `OWNER_EMAIL` on first run, inserts it into `allowed_emails`, and creates the owner `users` row with `role = 'admin'`. Idempotent.
+  - Session payload is minimal (`{ id, email }`); 7-day cookie via `SESSION_MAX_AGE`.
+  - No third-party identity providers (Clerk / Auth0 / Supabase Auth) and no identity-server backends (Kratos, Hydra, Keycloak) — simplicity is the priority.
 - **i18n layer** in the app shell so every screen renders translated copy from a dictionary, not inline strings.
 
 ---
@@ -61,15 +64,18 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 ## 4. Domain model (conceptual)
 
 ### User
-- `id` — text, primary key (nanoid or cuid)
+- `id` — text, primary key (uuid)
 - `email` — text, unique, not null (login key)
-- `first_name` — text
-- `last_name` — text
+- `first_name` — text, nullable (set during onboarding)
+- `last_name` — text, nullable (set during onboarding)
+- `password_hash` — text, nullable. Null means onboarding is incomplete and magic-link auto-login is still allowed. Non-null means password login is required.
 - `avatar_url` — text, nullable
+- `role` — text, `'admin' | 'user'`, default `'user'`. Drives access to the admin panel and role-based permissions.
 - `locale` — text, default `'fr'`
-- `created_at` — timestamp
+- `deactivated_at` — timestamp, nullable. Null means active; set means blocked at login.
+- `created_at` / `updated_at` — timestamps
 
-Profile fields are deliberately minimal — that's the whole identity surface.
+`first_name` / `last_name` / `password_hash` being null is the signal that triggers the unskippable onboarding form (see §12).
 
 ### Settings (per user)
 - `user_id` — FK → users.id
@@ -248,31 +254,32 @@ Initial seed:
 
 Owner-only area for managing users. Protected by a role check on the session (`role: 'admin'`).
 
-### User management
+Access is gated by `users.role === 'admin'` on the session. Non-admins never see the panel and the admin API routes reject them (403). Role-based permissions are coarse for v1 — just `admin` vs `user` — but the check lives in one guard so finer roles can be added later.
 
-- **List users** — see all accounts (email, name, status, created date).
-- **Invite a user** — owner enters an email address. The app:
-  1. Adds the email to `allowed_emails`.
-  2. Creates a stub `users` row (email only, no profile yet).
-  3. Sends an invitation email via Resend with a magic link.
-- **Deactivate a user** — sets a `deactivated_at` timestamp on the user row. They remain in `allowed_emails` so the system recognises them, but the magic link request handler checks `deactivated_at` and returns a specific error message: *"Votre compte a été désactivé. Contactez l'administrateur." / "Your account has been deactivated. Please contact the administrator."* Their data is preserved.
-- **Reactivate a user** — re-adds to `allowed_emails`, clears `deactivated_at`.
+### Onboarding flow (end to end)
 
-### First-login onboarding
+1. **Admin opens the user-management page** (admin-only route). Lists all users with email, name, role, status (active / deactivated / pending-onboarding), created date.
+2. **Admin invites a user** by entering an email. The app:
+   1. Inserts the email into `allowed_emails`.
+   2. Creates a stub `users` row (email only — `first_name` / `last_name` / `password_hash` all null, `role = 'user'`).
+   3. Sends a **bilingual invitation email** via Resend. Copy (FR + EN both shown):
+      > *Vous avez été invité·e à utiliser la nouvelle application de planification de traduction d'Alexandre Gilbert.*
+      > *You have been invited to use Alexandre Gilbert's new translation planning app.*
+      followed by the **login link** (magic link).
+3. **First login (magic link)** — the invited user clicks the link, gets a session, and is dropped on an **unskippable onboarding form** (modal/overlay that re-opens until submitted, blocks the dashboard). Fields:
+   - First name
+   - Last name
+   - Password (with confirm)
 
-When a user signs in for the first time (profile is incomplete — no `first_name` set), redirect them to a **profile completion page** before the dashboard. Required fields:
+   On submit: set `first_name`, `last_name`, hash the password into `password_hash`. From then on the user logs in with **email + password**; the magic link is no longer their entry point.
 
-- First name
-- Last name
-- (Avatar upload — optional, can be set later in profile settings)
+### Deactivate / reactivate
 
-Once saved, they land on the dashboard. They are never asked again.
-
-### Schema additions needed
-
-- `users.role` — `'admin' | 'user'`, default `'user'`. Owner's row is seeded as `'admin'`.
-- `users.deactivated_at` — timestamp, nullable. Null means active.
-- `allowed_emails` table already handles the access gate.
+- **Deactivate** — sets `deactivated_at`. The user stays in `allowed_emails`, but both the password-login and magic-link handlers check `deactivated_at` and reject with a specific message shown on entering their email / credentials:
+  > *Votre compte a été désactivé. Contactez l'administrateur.*
+  > *Your account has been deactivated. Please contact the administrator.*
+  Their data is preserved.
+- **Reactivate** — clears `deactivated_at`.
 
 ### Admin routes (planned)
 
@@ -280,11 +287,14 @@ Once saved, they land on the dashboard. They are never asked again.
 server/api/admin/
   users/
     index.get.ts          ← list all users
-    index.post.ts         ← invite a new user
-    [id].patch.ts         ← deactivate / reactivate
+    index.post.ts         ← invite a new user (allowlist + stub row + email)
+    [id].patch.ts         ← deactivate / reactivate / change role
+
+server/api/onboarding/
+  complete.post.ts        ← set first/last name + password_hash for the current user
 ```
 
-Protected by `defineAuthenticatedEventHandler` + admin role check.
+All protected by the admin-role guard (except onboarding, which is any authenticated user whose onboarding is incomplete).
 
 ---
 
