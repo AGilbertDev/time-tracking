@@ -39,6 +39,12 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
     user = created
   }
 
+  // A magic link cannot grant a session once the account has a password. This keeps a leaked or
+  // replayed link inert after onboarding. Send them to sign in with their password instead.
+  if (user!.passwordHash) {
+    return sendRedirect(event, '/')
+  }
+
   // Set the session cookie so subsequent requests are authenticated.
   await setUserSession(event, {
     user: {

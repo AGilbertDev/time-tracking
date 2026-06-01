@@ -6,7 +6,7 @@ import { Resend } from 'resend'
 import type { RequestSchema } from '../../../models/magic-link'
 
 import { useDb } from '../../../db/index'
-import { allowedEmails, magicLinkTokens } from '../../../db/schema'
+import { allowedEmails, magicLinkTokens, users } from '../../../db/schema'
 import { MINUTE_IN_MILLISECONDS } from '../../../utils/constants/time'
 import { emailTemplates } from '../../../utils/email-templates'
 
@@ -18,6 +18,11 @@ export async function requestMagicLink(body: z.infer<typeof RequestSchema>) {
   // Return without sending so the response does not reveal whether the email is on the allowlist.
   const allowed = await db.select().from(allowedEmails).where(eq(allowedEmails.email, email)).get()
   if (!allowed) return { success: true }
+
+  // Do not send a link to an account that already has a password. Those users sign in with their
+  // password instead. The response stays neutral so it never reveals that an account exists.
+  const existing = await db.select().from(users).where(eq(users.email, email)).get()
+  if (existing?.passwordHash) return { success: true }
 
   // Delete previous tokens for this email before creating a new one to keep the table clean.
   await db.delete(magicLinkTokens).where(eq(magicLinkTokens.email, email))

@@ -6,11 +6,11 @@
     "submit": "Se connecter",
     "error": "Identifiants invalides.",
     "deactivated": "Votre compte a été désactivé. Contactez l'administrateur.",
-    "noAccount": "Première fois ? Inscrivez-vous"
+    "noAccount": "Première fois ? Activez votre compte"
   },
   "signup": {
-    "subtitle": "Inscription",
-    "invitation": "Accès sur invitation seulement. Vous devez avoir reçu un courriel d'invitation pour créer un compte.",
+    "subtitle": "Activer le compte",
+    "invitation": "Accès sur invitation seulement. Vous devez avoir reçu un courriel d'invitation pour activer votre compte.",
     "description": "Entrez votre adresse courriel pour recevoir un lien de connexion.",
     "email": "Adresse courriel",
     "submit": "Recevoir le lien",
