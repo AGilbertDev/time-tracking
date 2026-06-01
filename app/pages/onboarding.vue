@@ -46,19 +46,19 @@ async function submit() {
 
 <template>
   <div
-    class="flex min-h-screen items-center justify-center bg-gray-100 bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
+    class="flex min-h-screen items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
   >
     <UCard class="w-full max-w-90" :ui="{ body: 'px-9 pt-14 pb-14' }">
       <div class="flex flex-col items-center text-center">
         <AppLogo class="mb-4 h-14" />
 
-        <p class="mb-2 text-[13px] font-medium text-gray-500">{{ t('app.name') }}</p>
+        <p class="mb-2 text-[13px] font-medium text-muted">{{ t('app.name') }}</p>
 
-        <h1 class="mb-3 text-[26px] font-bold tracking-tight text-gray-900">
+        <h1 class="mb-3 text-[26px] font-bold tracking-tight text-highlighted">
           {{ t('onboarding.title') }}
         </h1>
 
-        <p class="mb-10 max-w-[30ch] text-sm leading-relaxed text-gray-500">
+        <p class="mb-10 max-w-[30ch] text-sm leading-relaxed text-muted">
           {{ t('onboarding.subtitle') }}
         </p>
 
@@ -105,7 +105,7 @@ async function submit() {
             />
           </UFormField>
 
-          <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+          <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
           <UButton block class="mt-2" :loading="loading" size="lg" type="submit">
             {{ t('onboarding.submit') }}

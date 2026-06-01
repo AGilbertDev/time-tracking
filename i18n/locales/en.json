@@ -10,7 +10,7 @@
   },
   "signup": {
     "subtitle": "Sign up",
-    "invitation": "Access by invitation only. You need an invitation email to sign in.",
+    "invitation": "Access by invitation only. You need an invitation email to create an account.",
     "description": "Enter your email to receive a sign-in link.",
     "email": "Email address",
     "submit": "Send link",

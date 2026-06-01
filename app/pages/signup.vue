@@ -31,19 +31,19 @@ async function submit() {
 
 <template>
   <div
-    class="relative flex min-h-screen items-center justify-center bg-gray-100 bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
+    class="relative flex min-h-screen items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
   >
     <UCard class="w-full max-w-90" :ui="{ body: 'px-9 pt-20 pb-20' }">
       <div class="flex flex-col items-center text-center">
         <AppLogo class="mb-4 h-14" />
 
-        <p class="mb-7 text-[13px] font-medium text-gray-500">{{ t('app.name') }}</p>
+        <p class="mb-7 text-[13px] font-medium text-muted">{{ t('app.name') }}</p>
 
-        <h1 class="mb-7 text-[26px] font-bold tracking-tight text-gray-900">
+        <h1 class="mb-7 text-[26px] font-bold tracking-tight text-highlighted">
           {{ t('signup.subtitle') }}
         </h1>
 
-        <p class="mb-14 max-w-[30ch] text-sm leading-relaxed text-gray-500">
+        <p class="mb-14 text-sm leading-relaxed text-muted">
           {{ t('signup.invitation') }}
         </p>
 
@@ -60,9 +60,9 @@ async function submit() {
             type="email"
           />
 
-          <p v-if="error" class="mt-2 text-left text-sm text-red-500">{{ error }}</p>
+          <p v-if="error" class="mt-2 text-left text-sm text-error">{{ error }}</p>
 
-          <p v-if="sent" class="mt-4 text-center text-sm text-green-600">
+          <p v-if="sent" class="mt-4 text-center text-sm text-success">
             {{ t('signup.sent') }}
           </p>
           <UButton v-else block class="mt-4" :loading="loading" size="lg" type="submit">

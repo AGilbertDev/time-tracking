@@ -10,7 +10,7 @@
   },
   "signup": {
     "subtitle": "Inscription",
-    "invitation": "Accès sur invitation seulement. Vous devez avoir reçu un courriel d'invitation pour vous connecter.",
+    "invitation": "Accès sur invitation seulement. Vous devez avoir reçu un courriel d'invitation pour créer un compte.",
     "description": "Entrez votre adresse courriel pour recevoir un lien de connexion.",
     "email": "Adresse courriel",
     "submit": "Recevoir le lien",

@@ -37,15 +37,15 @@ async function submit() {
 
 <template>
   <div
-    class="relative flex min-h-screen items-center justify-center bg-gray-100 bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
+    class="relative flex min-h-screen items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
   >
     <UCard class="w-full max-w-90" :ui="{ body: 'px-9 pt-20 pb-20' }">
       <div class="flex flex-col items-center text-center">
         <AppLogo class="mb-4 h-14" />
 
-        <p class="mb-7 text-[13px] font-medium text-gray-500">{{ t('app.name') }}</p>
+        <p class="mb-7 text-[13px] font-medium text-muted">{{ t('app.name') }}</p>
 
-        <h1 class="mb-10 text-[26px] font-bold tracking-tight text-gray-900">
+        <h1 class="mb-10 text-[26px] font-bold tracking-tight text-highlighted">
           {{ t('signin.subtitle') }}
         </h1>
 
@@ -72,7 +72,7 @@ async function submit() {
             type="password"
           />
 
-          <p v-if="error" class="text-left text-sm text-red-500">{{ error }}</p>
+          <p v-if="error" class="text-left text-sm text-error">{{ error }}</p>
 
           <UButton block :loading="loading" size="lg" type="submit">
             {{ t('signin.submit') }}
