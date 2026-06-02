@@ -244,7 +244,9 @@ input:autofill {
   --ui-bg-accented: var(--t-border);
   --ui-border: var(--t-border);
   --ui-border-muted: var(--t-border);
-  --ui-border-accented: var(--t-border);
+  /* Accented is the prominent border level Nuxt UI uses for form inputs. On */
+  /* dark surfaces the theme border is nearly invisible, so lift it toward white. */
+  --ui-border-accented: rgba(255, 255, 255, 0.22);
   --ui-text: var(--t-ink);
   --ui-text-highlighted: var(--t-ink);
   --ui-text-toned: var(--t-muted);
