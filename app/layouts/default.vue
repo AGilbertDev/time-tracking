@@ -6,7 +6,6 @@
     <UMain>
       <slot />
     </UMain>
-    <USeparator />
     <AppFooter />
   </div>
 </template>
