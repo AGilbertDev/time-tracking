@@ -180,17 +180,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #47732b;
   --ui-color-primary-900: #395c23;
   --ui-color-primary-950: #253b16;
-  --ui-color-neutral-50: var(--color-neutral-50);
-  --ui-color-neutral-100: var(--color-neutral-100);
+  --ui-color-neutral-50: #f4f7ec;
+  --ui-color-neutral-100: #e7eed6;
   --ui-color-neutral-200: var(--color-neutral-200);
   --ui-color-neutral-300: var(--color-neutral-300);
   --ui-color-neutral-400: var(--color-neutral-400);
   --ui-color-neutral-500: var(--color-neutral-500);
   --ui-color-neutral-600: var(--color-neutral-600);
   --ui-color-neutral-700: var(--color-neutral-700);
-  --ui-color-neutral-800: var(--color-neutral-800);
-  --ui-color-neutral-900: var(--color-neutral-900);
-  --ui-color-neutral-950: var(--color-neutral-950);
+  --ui-color-neutral-800: #24301a;
+  --ui-color-neutral-900: #1c2614;
+  --ui-color-neutral-950: #131a0d;
 }
 
 [data-theme="autumn"] {
@@ -230,17 +230,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #8c1245;
   --ui-color-primary-900: #710e37;
   --ui-color-primary-950: #480923;
-  --ui-color-neutral-50: var(--color-neutral-50);
-  --ui-color-neutral-100: var(--color-neutral-100);
+  --ui-color-neutral-50: #fdf2f7;
+  --ui-color-neutral-100: #fbdeec;
   --ui-color-neutral-200: var(--color-neutral-200);
   --ui-color-neutral-300: var(--color-neutral-300);
   --ui-color-neutral-400: var(--color-neutral-400);
   --ui-color-neutral-500: var(--color-neutral-500);
   --ui-color-neutral-600: var(--color-neutral-600);
   --ui-color-neutral-700: var(--color-neutral-700);
-  --ui-color-neutral-800: var(--color-neutral-800);
-  --ui-color-neutral-900: var(--color-neutral-900);
-  --ui-color-neutral-950: var(--color-neutral-950);
+  --ui-color-neutral-800: #2e1e27;
+  --ui-color-neutral-900: #26181f;
+  --ui-color-neutral-950: #1b1218;
 }
 
 [data-theme="frost"] {
