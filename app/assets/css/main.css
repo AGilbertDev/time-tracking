@@ -21,6 +21,60 @@
   --color-brand-950: #411208;
 }
 
+/* Per-theme surface ramps. Only the tinted ends (50/100 light, 800/900/950 dark) */
+/* are custom. Mid-range 200-700 stays on the base neutral scale per [data-theme]. */
+/* Defined here so they're available as Tailwind utilities AND via var() references. */
+@theme static {
+  --color-pastel-50: #f5faf8;
+  --color-pastel-100: #e8f4ee;
+  --color-pastel-800: #1e293b;
+  --color-pastel-900: #0f172a;
+  --color-pastel-950: #0b1120;
+
+  --color-ember-50: #fdf7f0;
+  --color-ember-100: #fde9dd;
+  --color-ember-800: #2d2027;
+  --color-ember-900: #251a20;
+  --color-ember-950: #1b1317;
+
+  --color-onyx-50: #f4f4f6;
+  --color-onyx-100: #e8e9ec;
+  --color-onyx-800: #1b1e23;
+  --color-onyx-900: #14161a;
+  --color-onyx-950: #0c0d10;
+
+  --color-coffee-50: #f7f1e8;
+  --color-coffee-100: #efe1ce;
+  --color-coffee-800: #2a2017;
+  --color-coffee-900: #221a13;
+  --color-coffee-950: #19120d;
+
+  --color-forest-50: #f4f7ec;
+  --color-forest-100: #e7eed6;
+  --color-forest-800: #24301a;
+  --color-forest-900: #1c2614;
+  --color-forest-950: #131a0d;
+
+  --color-autumn-50: #fdf4ec;
+  --color-autumn-100: #fbe6d2;
+  --color-autumn-800: #2c2113;
+  --color-autumn-900: #241a0f;
+  --color-autumn-950: #1a130b;
+
+  --color-berry-50: #fdf2f7;
+  --color-berry-100: #fbdeec;
+  --color-berry-800: #2e1e27;
+  --color-berry-900: #26181f;
+  --color-berry-950: #1b1218;
+
+  --color-frost-50: #f4f7fb;
+  --color-frost-100: #e7eef5;
+  --color-frost-800: #182142;
+  --color-frost-900: #121a33;
+  --color-frost-950: #0d1220;
+}
+
+
 /* Larger base text across the app, matching the portfolio. */
 @layer base {
   body {
@@ -80,17 +134,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #277759;
   --ui-color-primary-900: #206048;
   --ui-color-primary-950: #143d2e;
-  --ui-color-neutral-50: var(--color-slate-50);
-  --ui-color-neutral-100: var(--color-slate-100);
+  --ui-color-neutral-50: var(--color-pastel-50);
+  --ui-color-neutral-100: var(--color-pastel-100);
   --ui-color-neutral-200: var(--color-slate-200);
   --ui-color-neutral-300: var(--color-slate-300);
   --ui-color-neutral-400: var(--color-slate-400);
   --ui-color-neutral-500: var(--color-slate-500);
   --ui-color-neutral-600: var(--color-slate-600);
   --ui-color-neutral-700: var(--color-slate-700);
-  --ui-color-neutral-800: var(--color-slate-800);
-  --ui-color-neutral-900: var(--color-slate-900);
-  --ui-color-neutral-950: var(--color-slate-950);
+  --ui-color-neutral-800: var(--color-pastel-800);
+  --ui-color-neutral-900: var(--color-pastel-900);
+  --ui-color-neutral-950: var(--color-pastel-950);
 }
 
 [data-theme="ember"] {
@@ -105,17 +159,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #953409;
   --ui-color-primary-900: #782a07;
   --ui-color-primary-950: #4d1b05;
-  --ui-color-neutral-50: var(--color-stone-50);
-  --ui-color-neutral-100: var(--color-stone-100);
+  --ui-color-neutral-50: var(--color-ember-50);
+  --ui-color-neutral-100: var(--color-ember-100);
   --ui-color-neutral-200: var(--color-stone-200);
   --ui-color-neutral-300: var(--color-stone-300);
   --ui-color-neutral-400: var(--color-stone-400);
   --ui-color-neutral-500: var(--color-stone-500);
   --ui-color-neutral-600: var(--color-stone-600);
   --ui-color-neutral-700: var(--color-stone-700);
-  --ui-color-neutral-800: var(--color-stone-800);
-  --ui-color-neutral-900: var(--color-stone-900);
-  --ui-color-neutral-950: var(--color-stone-950);
+  --ui-color-neutral-800: var(--color-ember-800);
+  --ui-color-neutral-900: var(--color-ember-900);
+  --ui-color-neutral-950: var(--color-ember-950);
 }
 
 [data-theme="onyx"] {
@@ -130,17 +184,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #484d56;
   --ui-color-primary-900: #3a3e46;
   --ui-color-primary-950: #25282d;
-  --ui-color-neutral-50: var(--color-zinc-50);
-  --ui-color-neutral-100: var(--color-zinc-100);
+  --ui-color-neutral-50: var(--color-onyx-50);
+  --ui-color-neutral-100: var(--color-onyx-100);
   --ui-color-neutral-200: var(--color-zinc-200);
   --ui-color-neutral-300: var(--color-zinc-300);
   --ui-color-neutral-400: var(--color-zinc-400);
   --ui-color-neutral-500: var(--color-zinc-500);
   --ui-color-neutral-600: var(--color-zinc-600);
   --ui-color-neutral-700: var(--color-zinc-700);
-  --ui-color-neutral-800: var(--color-zinc-800);
-  --ui-color-neutral-900: var(--color-zinc-900);
-  --ui-color-neutral-950: var(--color-zinc-950);
+  --ui-color-neutral-800: var(--color-onyx-800);
+  --ui-color-neutral-900: var(--color-onyx-900);
+  --ui-color-neutral-950: var(--color-onyx-950);
 }
 
 [data-theme="coffee"] {
@@ -155,17 +209,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #6a4a34;
   --ui-color-primary-900: #553c2a;
   --ui-color-primary-950: #37261b;
-  --ui-color-neutral-50: var(--color-stone-50);
-  --ui-color-neutral-100: var(--color-stone-100);
+  --ui-color-neutral-50: var(--color-coffee-50);
+  --ui-color-neutral-100: var(--color-coffee-100);
   --ui-color-neutral-200: var(--color-stone-200);
   --ui-color-neutral-300: var(--color-stone-300);
   --ui-color-neutral-400: var(--color-stone-400);
   --ui-color-neutral-500: var(--color-stone-500);
   --ui-color-neutral-600: var(--color-stone-600);
   --ui-color-neutral-700: var(--color-stone-700);
-  --ui-color-neutral-800: var(--color-stone-800);
-  --ui-color-neutral-900: var(--color-stone-900);
-  --ui-color-neutral-950: var(--color-stone-950);
+  --ui-color-neutral-800: var(--color-coffee-800);
+  --ui-color-neutral-900: var(--color-coffee-900);
+  --ui-color-neutral-950: var(--color-coffee-950);
 }
 
 [data-theme="forest"] {
@@ -180,17 +234,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #47732b;
   --ui-color-primary-900: #395c23;
   --ui-color-primary-950: #253b16;
-  --ui-color-neutral-50: #f4f7ec;
-  --ui-color-neutral-100: #e7eed6;
+  --ui-color-neutral-50: var(--color-forest-50);
+  --ui-color-neutral-100: var(--color-forest-100);
   --ui-color-neutral-200: var(--color-neutral-200);
   --ui-color-neutral-300: var(--color-neutral-300);
   --ui-color-neutral-400: var(--color-neutral-400);
   --ui-color-neutral-500: var(--color-neutral-500);
   --ui-color-neutral-600: var(--color-neutral-600);
   --ui-color-neutral-700: var(--color-neutral-700);
-  --ui-color-neutral-800: #24301a;
-  --ui-color-neutral-900: #1c2614;
-  --ui-color-neutral-950: #131a0d;
+  --ui-color-neutral-800: var(--color-forest-800);
+  --ui-color-neutral-900: var(--color-forest-900);
+  --ui-color-neutral-950: var(--color-forest-950);
 }
 
 [data-theme="autumn"] {
@@ -205,17 +259,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #953209;
   --ui-color-primary-900: #782807;
   --ui-color-primary-950: #4d1a05;
-  --ui-color-neutral-50: var(--color-stone-50);
-  --ui-color-neutral-100: var(--color-stone-100);
+  --ui-color-neutral-50: var(--color-autumn-50);
+  --ui-color-neutral-100: var(--color-autumn-100);
   --ui-color-neutral-200: var(--color-stone-200);
   --ui-color-neutral-300: var(--color-stone-300);
   --ui-color-neutral-400: var(--color-stone-400);
   --ui-color-neutral-500: var(--color-stone-500);
   --ui-color-neutral-600: var(--color-stone-600);
   --ui-color-neutral-700: var(--color-stone-700);
-  --ui-color-neutral-800: var(--color-stone-800);
-  --ui-color-neutral-900: var(--color-stone-900);
-  --ui-color-neutral-950: var(--color-stone-950);
+  --ui-color-neutral-800: var(--color-autumn-800);
+  --ui-color-neutral-900: var(--color-autumn-900);
+  --ui-color-neutral-950: var(--color-autumn-950);
 }
 
 [data-theme="berry"] {
@@ -230,17 +284,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #8c1245;
   --ui-color-primary-900: #710e37;
   --ui-color-primary-950: #480923;
-  --ui-color-neutral-50: #fdf2f7;
-  --ui-color-neutral-100: #fbdeec;
+  --ui-color-neutral-50: var(--color-berry-50);
+  --ui-color-neutral-100: var(--color-berry-100);
   --ui-color-neutral-200: var(--color-neutral-200);
   --ui-color-neutral-300: var(--color-neutral-300);
   --ui-color-neutral-400: var(--color-neutral-400);
   --ui-color-neutral-500: var(--color-neutral-500);
   --ui-color-neutral-600: var(--color-neutral-600);
   --ui-color-neutral-700: var(--color-neutral-700);
-  --ui-color-neutral-800: #2e1e27;
-  --ui-color-neutral-900: #26181f;
-  --ui-color-neutral-950: #1b1218;
+  --ui-color-neutral-800: var(--color-berry-800);
+  --ui-color-neutral-900: var(--color-berry-900);
+  --ui-color-neutral-950: var(--color-berry-950);
 }
 
 [data-theme="frost"] {
@@ -255,17 +309,17 @@ input:-webkit-autofill:active {
   --ui-color-primary-800: #2d5171;
   --ui-color-primary-900: #24415b;
   --ui-color-primary-950: #172a3a;
-  --ui-color-neutral-50: var(--color-slate-50);
-  --ui-color-neutral-100: var(--color-slate-100);
+  --ui-color-neutral-50: var(--color-frost-50);
+  --ui-color-neutral-100: var(--color-frost-100);
   --ui-color-neutral-200: var(--color-slate-200);
   --ui-color-neutral-300: var(--color-slate-300);
   --ui-color-neutral-400: var(--color-slate-400);
   --ui-color-neutral-500: var(--color-slate-500);
   --ui-color-neutral-600: var(--color-slate-600);
   --ui-color-neutral-700: var(--color-slate-700);
-  --ui-color-neutral-800: var(--color-slate-800);
-  --ui-color-neutral-900: var(--color-slate-900);
-  --ui-color-neutral-950: var(--color-slate-950);
+  --ui-color-neutral-800: var(--color-frost-800);
+  --ui-color-neutral-900: var(--color-frost-900);
+  --ui-color-neutral-950: var(--color-frost-950);
 }
 
 /* In dark mode Nuxt UI resolves --ui-border to neutral-800 and --ui-border-muted */
