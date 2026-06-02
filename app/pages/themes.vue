@@ -24,6 +24,30 @@ interface Theme {
 
 const themes: Theme[] = [
   {
+    name: 'Pastel',
+    darkName: 'Pastel Night',
+    light: {
+      canvas: '#f5faf8',
+      surface: '#ffffff',
+      chrome: '#e8f4ee',
+      border: '#d5e9e0',
+      ink: '#33483f',
+      muted: '#6f8a80',
+      primary: '#5cc9a0',
+      accent: '#b3a4f0'
+    },
+    dark: {
+      canvas: '#0b1120',
+      surface: '#0f172a',
+      chrome: '#1e293b',
+      border: '#334155',
+      ink: '#e2e8f0',
+      muted: '#94a3b8',
+      primary: '#6ee7b7',
+      accent: '#c4b5fd'
+    }
+  },
+  {
     name: 'Ember & Teal',
     darkName: 'Ember Dusk',
     light: {
@@ -195,6 +219,7 @@ const themes: Theme[] = [
 
 // The chromatic relationship between each theme's primary and its complement.
 const shapes: Record<string, string> = {
+  Pastel: 'Triadic',
   'Ember & Teal': 'Complementary',
   Onyx: 'Neutral',
   Mocha: 'Complementary',
@@ -206,13 +231,20 @@ const shapes: Record<string, string> = {
 
 // Flatten into left (light) and right (dark) cards. Two columns keep light on
 // the left and dark on the right for every row.
-const cards = themes.flatMap((theme) => [
-  { key: `${theme.name}-l`, label: theme.name, palette: theme.light, shape: shapes[theme.name] },
+const cards = themes.flatMap((theme, index) => [
+  {
+    key: `${theme.name}-l`,
+    label: theme.name,
+    palette: theme.light,
+    shape: shapes[theme.name],
+    def: index === 0
+  },
   {
     key: `${theme.darkName}-d`,
     label: theme.darkName,
     palette: theme.dark,
-    shape: shapes[theme.name]
+    shape: shapes[theme.name],
+    def: index === 0
   }
 ])
 
@@ -249,7 +281,10 @@ function wash(hex: string) {
     <div class="mx-auto grid max-w-5xl grid-cols-2 gap-5">
       <section v-for="card in cards" :key="card.key">
         <div class="mb-2 flex items-center gap-2">
-          <p class="text-sm font-semibold text-neutral-800">{{ card.label }}</p>
+          <p class="text-sm font-semibold text-neutral-800">
+            {{ card.label
+            }}<span v-if="card.def" class="font-normal text-neutral-400"> (default)</span>
+          </p>
           <span class="text-xs text-neutral-500">{{ card.shape }}</span>
           <span class="ml-auto flex items-center gap-1">
             <span

@@ -13,12 +13,21 @@ export interface ThemePalette {
 export interface ThemeOption {
   dark: ThemePalette
   darkName: string
+  default?: boolean
   id: string
   light: ThemePalette
   name: string
 }
 
 export const themeOptions: ThemeOption[] = [
+  {
+    id: 'pastel',
+    name: 'Pastel',
+    darkName: 'Pastel Night',
+    default: true,
+    light: { canvas: '#f5faf8', primary: '#5cc9a0', accent: '#b3a4f0', ink: '#33483f' },
+    dark: { canvas: '#0b1120', primary: '#6ee7b7', accent: '#c4b5fd', ink: '#e2e8f0' }
+  },
   {
     id: 'ember',
     name: 'Ember & Teal',
@@ -69,7 +78,7 @@ export const themeOptions: ThemeOption[] = [
     dark: { canvas: '#0b1226', primary: '#6d8bce', accent: '#8a9bc4', ink: '#e6eaf4' }
   }
 ]
-const DEFAULT_THEME = 'ember'
+const DEFAULT_THEME = 'pastel'
 const ONE_YEAR = 60 * 60 * 24 * 365
 
 // Build the favicon, which is the clock alone (no calendar). The ring uses the

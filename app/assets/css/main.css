@@ -36,12 +36,38 @@
   }
 }
 
-/* Seven atmospheres, each with a light and a dark variant, chosen via the */
+/* Mobile browsers, notably Samsung Internet, tint autofill-capable inputs a */
+/* muddy green even when empty and unfocused. Keep the theme surface and text */
+/* instead. Left unlayered so it wins over the component styles. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+input:autofill {
+  -webkit-text-fill-color: var(--ui-text);
+  -webkit-box-shadow: 0 0 0 1000px var(--ui-bg) inset;
+  box-shadow: 0 0 0 1000px var(--ui-bg) inset;
+  caret-color: var(--ui-text);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Eight atmospheres, each with a light and a dark variant, chosen via the */
 /* data-theme attribute on the html element. The light variant applies when the */
 /* page is not dark and the dark variant when it is, so color mode picks which. */
 
-/* Ember (orange) is the default and also covers the moment before the cookie applies. */
+/* Pastel (soft mint and lavender) is the default and covers the moment before */
+/* the cookie applies. It is the calm first impression. */
 :root {
+  --t-canvas: #f5faf8;
+  --t-surface: #ffffff;
+  --t-chrome: #e8f4ee;
+  --t-border: #d5e9e0;
+  --t-ink: #33483f;
+  --t-muted: #6f8a80;
+  --t-primary: #5cc9a0;
+}
+
+[data-theme="ember"] {
   --t-canvas: #fdf7f0;
   --t-surface: #ffffff;
   --t-chrome: #fde9dd;
@@ -112,8 +138,18 @@
 }
 
 /* Dark variants, matched hue-for-hue with the light theme of the same name. */
-/* Ember is the default dark palette and covers any unknown id. */
+/* Pastel is the default dark palette and covers any unknown id. */
 .dark {
+  --t-canvas: #0b1120;
+  --t-surface: #0f172a;
+  --t-chrome: #1e293b;
+  --t-border: #334155;
+  --t-ink: #e2e8f0;
+  --t-muted: #94a3b8;
+  --t-primary: #6ee7b7;
+}
+
+.dark[data-theme="ember"] {
   --t-canvas: #1b1317;
   --t-surface: #251a20;
   --t-chrome: #2d2027;

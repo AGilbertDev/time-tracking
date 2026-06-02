@@ -36,7 +36,7 @@ async function logout() {
 const items = computed(() => {
   const current = isDark.value ? darkTheme : lightTheme
   const atmospheres = themes.map((option) => ({
-    label: isDark.value ? option.darkName : option.name,
+    label: (isDark.value ? option.darkName : option.name) + (option.default ? ' (default)' : ''),
     swatch: isDark.value ? option.dark : option.light,
     active: current.value === option.id,
     onSelect: () => {
@@ -66,7 +66,10 @@ const items = computed(() => {
 </script>
 
 <template>
-  <UHeader :ui="{ root: 'bg-elevated', container: 'max-w-full px-4 sm:px-6 lg:px-8' }">
+  <UHeader
+    :toggle="false"
+    :ui="{ root: 'bg-elevated', container: 'max-w-full px-4 sm:px-6 lg:px-8' }"
+  >
     <template #title>
       <NuxtLink :aria-label="t('app.name')" :to="localePath('index')">
         <AppLogo class="h-8 sm:h-10" />
