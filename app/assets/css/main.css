@@ -21,54 +21,110 @@
   --color-brand-950: #411208;
 }
 
-/* Per-theme surface ramps. Only the tinted ends (50/100 light, 800/900/950 dark) */
-/* are custom. Mid-range 200-700 stays on the base neutral scale per [data-theme]. */
-/* Defined here so they're available as Tailwind utilities AND via var() references. */
+/* Per-theme surface ramps (full 50-950). Tinted-neutral scales, one per theme. */
+/* Available as Tailwind utilities (bg-pastel-300, text-forest-700, ...) and via */
+/* var() in the [data-theme] blocks below. Single source of truth. */
 @theme static {
+  /* Pastel surface */
   --color-pastel-50: #f5faf8;
   --color-pastel-100: #e8f4ee;
+  --color-pastel-200: #cbd7d4;
+  --color-pastel-300: #aebabb;
+  --color-pastel-400: #919da1;
+  --color-pastel-500: #758088;
+  --color-pastel-600: #58636e;
+  --color-pastel-700: #3b4655;
   --color-pastel-800: #1e293b;
   --color-pastel-900: #0f172a;
   --color-pastel-950: #0b1120;
 
+  /* Ember surface */
   --color-ember-50: #fdf7f0;
   --color-ember-100: #fde9dd;
+  --color-ember-200: #dfccc3;
+  --color-ember-300: #c2b0a9;
+  --color-ember-400: #a4938f;
+  --color-ember-500: #867675;
+  --color-ember-600: #68595b;
+  --color-ember-700: #4b3d41;
   --color-ember-800: #2d2027;
   --color-ember-900: #251a20;
   --color-ember-950: #1b1317;
 
+  /* Onyx surface */
   --color-onyx-50: #f4f4f6;
   --color-onyx-100: #e8e9ec;
+  --color-onyx-200: #cbcccf;
+  --color-onyx-300: #adafb3;
+  --color-onyx-400: #909296;
+  --color-onyx-500: #737579;
+  --color-onyx-600: #56585c;
+  --color-onyx-700: #383b40;
   --color-onyx-800: #1b1e23;
   --color-onyx-900: #14161a;
   --color-onyx-950: #0c0d10;
 
+  /* Coffee surface */
   --color-coffee-50: #f7f1e8;
   --color-coffee-100: #efe1ce;
+  --color-coffee-200: #d3c5b4;
+  --color-coffee-300: #b7aa9a;
+  --color-coffee-400: #9b8e80;
+  --color-coffee-500: #7e7365;
+  --color-coffee-600: #62574b;
+  --color-coffee-700: #463c31;
   --color-coffee-800: #2a2017;
   --color-coffee-900: #221a13;
   --color-coffee-950: #19120d;
 
+  /* Forest surface */
   --color-forest-50: #f4f7ec;
   --color-forest-100: #e7eed6;
+  --color-forest-200: #cbd3bb;
+  --color-forest-300: #afb8a0;
+  --color-forest-400: #939d85;
+  --color-forest-500: #78816b;
+  --color-forest-600: #5c6650;
+  --color-forest-700: #404b35;
   --color-forest-800: #24301a;
   --color-forest-900: #1c2614;
   --color-forest-950: #131a0d;
 
+  /* Autumn surface */
   --color-autumn-50: #fdf4ec;
   --color-autumn-100: #fbe6d2;
+  --color-autumn-200: #ddcab7;
+  --color-autumn-300: #c0ae9b;
+  --color-autumn-400: #a29280;
+  --color-autumn-500: #857565;
+  --color-autumn-600: #67594a;
+  --color-autumn-700: #4a3d2e;
   --color-autumn-800: #2c2113;
   --color-autumn-900: #241a0f;
   --color-autumn-950: #1a130b;
 
+  /* Berry surface */
   --color-berry-50: #fdf2f7;
   --color-berry-100: #fbdeec;
+  --color-berry-200: #dec3d0;
+  --color-berry-300: #c0a7b4;
+  --color-berry-400: #a38c98;
+  --color-berry-500: #86707b;
+  --color-berry-600: #69555f;
+  --color-berry-700: #4b3943;
   --color-berry-800: #2e1e27;
   --color-berry-900: #26181f;
   --color-berry-950: #1b1218;
 
+  /* Frost surface */
   --color-frost-50: #f4f7fb;
   --color-frost-100: #e7eef5;
+  --color-frost-200: #c9d1db;
+  --color-frost-300: #acb3c2;
+  --color-frost-400: #8e96a8;
+  --color-frost-500: #71798f;
+  --color-frost-600: #535c75;
+  --color-frost-700: #363e5c;
   --color-frost-800: #182142;
   --color-frost-900: #121a33;
   --color-frost-950: #0d1220;
@@ -136,12 +192,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #143d2e;
   --ui-color-neutral-50: var(--color-pastel-50);
   --ui-color-neutral-100: var(--color-pastel-100);
-  --ui-color-neutral-200: var(--color-slate-200);
-  --ui-color-neutral-300: var(--color-slate-300);
-  --ui-color-neutral-400: var(--color-slate-400);
-  --ui-color-neutral-500: var(--color-slate-500);
-  --ui-color-neutral-600: var(--color-slate-600);
-  --ui-color-neutral-700: var(--color-slate-700);
+  --ui-color-neutral-200: var(--color-pastel-200);
+  --ui-color-neutral-300: var(--color-pastel-300);
+  --ui-color-neutral-400: var(--color-pastel-400);
+  --ui-color-neutral-500: var(--color-pastel-500);
+  --ui-color-neutral-600: var(--color-pastel-600);
+  --ui-color-neutral-700: var(--color-pastel-700);
   --ui-color-neutral-800: var(--color-pastel-800);
   --ui-color-neutral-900: var(--color-pastel-900);
   --ui-color-neutral-950: var(--color-pastel-950);
@@ -161,12 +217,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #4d1b05;
   --ui-color-neutral-50: var(--color-ember-50);
   --ui-color-neutral-100: var(--color-ember-100);
-  --ui-color-neutral-200: var(--color-stone-200);
-  --ui-color-neutral-300: var(--color-stone-300);
-  --ui-color-neutral-400: var(--color-stone-400);
-  --ui-color-neutral-500: var(--color-stone-500);
-  --ui-color-neutral-600: var(--color-stone-600);
-  --ui-color-neutral-700: var(--color-stone-700);
+  --ui-color-neutral-200: var(--color-ember-200);
+  --ui-color-neutral-300: var(--color-ember-300);
+  --ui-color-neutral-400: var(--color-ember-400);
+  --ui-color-neutral-500: var(--color-ember-500);
+  --ui-color-neutral-600: var(--color-ember-600);
+  --ui-color-neutral-700: var(--color-ember-700);
   --ui-color-neutral-800: var(--color-ember-800);
   --ui-color-neutral-900: var(--color-ember-900);
   --ui-color-neutral-950: var(--color-ember-950);
@@ -186,12 +242,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #25282d;
   --ui-color-neutral-50: var(--color-onyx-50);
   --ui-color-neutral-100: var(--color-onyx-100);
-  --ui-color-neutral-200: var(--color-zinc-200);
-  --ui-color-neutral-300: var(--color-zinc-300);
-  --ui-color-neutral-400: var(--color-zinc-400);
-  --ui-color-neutral-500: var(--color-zinc-500);
-  --ui-color-neutral-600: var(--color-zinc-600);
-  --ui-color-neutral-700: var(--color-zinc-700);
+  --ui-color-neutral-200: var(--color-onyx-200);
+  --ui-color-neutral-300: var(--color-onyx-300);
+  --ui-color-neutral-400: var(--color-onyx-400);
+  --ui-color-neutral-500: var(--color-onyx-500);
+  --ui-color-neutral-600: var(--color-onyx-600);
+  --ui-color-neutral-700: var(--color-onyx-700);
   --ui-color-neutral-800: var(--color-onyx-800);
   --ui-color-neutral-900: var(--color-onyx-900);
   --ui-color-neutral-950: var(--color-onyx-950);
@@ -211,12 +267,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #37261b;
   --ui-color-neutral-50: var(--color-coffee-50);
   --ui-color-neutral-100: var(--color-coffee-100);
-  --ui-color-neutral-200: var(--color-stone-200);
-  --ui-color-neutral-300: var(--color-stone-300);
-  --ui-color-neutral-400: var(--color-stone-400);
-  --ui-color-neutral-500: var(--color-stone-500);
-  --ui-color-neutral-600: var(--color-stone-600);
-  --ui-color-neutral-700: var(--color-stone-700);
+  --ui-color-neutral-200: var(--color-coffee-200);
+  --ui-color-neutral-300: var(--color-coffee-300);
+  --ui-color-neutral-400: var(--color-coffee-400);
+  --ui-color-neutral-500: var(--color-coffee-500);
+  --ui-color-neutral-600: var(--color-coffee-600);
+  --ui-color-neutral-700: var(--color-coffee-700);
   --ui-color-neutral-800: var(--color-coffee-800);
   --ui-color-neutral-900: var(--color-coffee-900);
   --ui-color-neutral-950: var(--color-coffee-950);
@@ -236,12 +292,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #253b16;
   --ui-color-neutral-50: var(--color-forest-50);
   --ui-color-neutral-100: var(--color-forest-100);
-  --ui-color-neutral-200: var(--color-neutral-200);
-  --ui-color-neutral-300: var(--color-neutral-300);
-  --ui-color-neutral-400: var(--color-neutral-400);
-  --ui-color-neutral-500: var(--color-neutral-500);
-  --ui-color-neutral-600: var(--color-neutral-600);
-  --ui-color-neutral-700: var(--color-neutral-700);
+  --ui-color-neutral-200: var(--color-forest-200);
+  --ui-color-neutral-300: var(--color-forest-300);
+  --ui-color-neutral-400: var(--color-forest-400);
+  --ui-color-neutral-500: var(--color-forest-500);
+  --ui-color-neutral-600: var(--color-forest-600);
+  --ui-color-neutral-700: var(--color-forest-700);
   --ui-color-neutral-800: var(--color-forest-800);
   --ui-color-neutral-900: var(--color-forest-900);
   --ui-color-neutral-950: var(--color-forest-950);
@@ -261,12 +317,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #4d1a05;
   --ui-color-neutral-50: var(--color-autumn-50);
   --ui-color-neutral-100: var(--color-autumn-100);
-  --ui-color-neutral-200: var(--color-stone-200);
-  --ui-color-neutral-300: var(--color-stone-300);
-  --ui-color-neutral-400: var(--color-stone-400);
-  --ui-color-neutral-500: var(--color-stone-500);
-  --ui-color-neutral-600: var(--color-stone-600);
-  --ui-color-neutral-700: var(--color-stone-700);
+  --ui-color-neutral-200: var(--color-autumn-200);
+  --ui-color-neutral-300: var(--color-autumn-300);
+  --ui-color-neutral-400: var(--color-autumn-400);
+  --ui-color-neutral-500: var(--color-autumn-500);
+  --ui-color-neutral-600: var(--color-autumn-600);
+  --ui-color-neutral-700: var(--color-autumn-700);
   --ui-color-neutral-800: var(--color-autumn-800);
   --ui-color-neutral-900: var(--color-autumn-900);
   --ui-color-neutral-950: var(--color-autumn-950);
@@ -286,12 +342,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #480923;
   --ui-color-neutral-50: var(--color-berry-50);
   --ui-color-neutral-100: var(--color-berry-100);
-  --ui-color-neutral-200: var(--color-neutral-200);
-  --ui-color-neutral-300: var(--color-neutral-300);
-  --ui-color-neutral-400: var(--color-neutral-400);
-  --ui-color-neutral-500: var(--color-neutral-500);
-  --ui-color-neutral-600: var(--color-neutral-600);
-  --ui-color-neutral-700: var(--color-neutral-700);
+  --ui-color-neutral-200: var(--color-berry-200);
+  --ui-color-neutral-300: var(--color-berry-300);
+  --ui-color-neutral-400: var(--color-berry-400);
+  --ui-color-neutral-500: var(--color-berry-500);
+  --ui-color-neutral-600: var(--color-berry-600);
+  --ui-color-neutral-700: var(--color-berry-700);
   --ui-color-neutral-800: var(--color-berry-800);
   --ui-color-neutral-900: var(--color-berry-900);
   --ui-color-neutral-950: var(--color-berry-950);
@@ -311,12 +367,12 @@ input:-webkit-autofill:active {
   --ui-color-primary-950: #172a3a;
   --ui-color-neutral-50: var(--color-frost-50);
   --ui-color-neutral-100: var(--color-frost-100);
-  --ui-color-neutral-200: var(--color-slate-200);
-  --ui-color-neutral-300: var(--color-slate-300);
-  --ui-color-neutral-400: var(--color-slate-400);
-  --ui-color-neutral-500: var(--color-slate-500);
-  --ui-color-neutral-600: var(--color-slate-600);
-  --ui-color-neutral-700: var(--color-slate-700);
+  --ui-color-neutral-200: var(--color-frost-200);
+  --ui-color-neutral-300: var(--color-frost-300);
+  --ui-color-neutral-400: var(--color-frost-400);
+  --ui-color-neutral-500: var(--color-frost-500);
+  --ui-color-neutral-600: var(--color-frost-600);
+  --ui-color-neutral-700: var(--color-frost-700);
   --ui-color-neutral-800: var(--color-frost-800);
   --ui-color-neutral-900: var(--color-frost-900);
   --ui-color-neutral-950: var(--color-frost-950);
