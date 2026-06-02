@@ -3,7 +3,7 @@
 <template>
   <div class="flex min-h-dvh flex-col">
     <AppHeader />
-    <UMain>
+    <UMain class="bg-muted dark:bg-(--ui-color-neutral-950)">
       <slot />
     </UMain>
     <AppFooter />

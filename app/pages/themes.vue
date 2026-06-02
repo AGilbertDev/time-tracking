@@ -265,7 +265,7 @@ function wash(hex: string) {
 </script>
 
 <template>
-  <div class="min-h-dvh bg-neutral-200 p-4 sm:p-8">
+  <div class="min-h-dvh p-4 sm:p-8">
     <header class="mx-auto mb-8 max-w-5xl">
       <div class="flex items-center gap-3">
         <img alt="" class="h-12 w-auto" src="/logo.svg" />
