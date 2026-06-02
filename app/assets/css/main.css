@@ -267,3 +267,11 @@ input:-webkit-autofill:active {
   --ui-color-neutral-900: var(--color-slate-900);
   --ui-color-neutral-950: var(--color-slate-950);
 }
+
+/* In dark mode Nuxt UI resolves --ui-border to neutral-800 and --ui-border-muted */
+/* to neutral-700. On very dark theme canvases these are nearly invisible. Lift */
+/* both to neutral-600 so nav, footer, and card separators read in every dark theme. */
+.dark {
+  --ui-border: var(--ui-color-neutral-600);
+  --ui-border-muted: var(--ui-color-neutral-700);
+}
