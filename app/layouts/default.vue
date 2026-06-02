@@ -3,7 +3,7 @@
 <template>
   <div class="flex min-h-dvh flex-col">
     <AppHeader />
-    <UMain class="bg-muted">
+    <UMain>
       <slot />
     </UMain>
     <USeparator />
