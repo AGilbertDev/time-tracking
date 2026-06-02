@@ -3,7 +3,7 @@ import { SESSION_MAX_AGE } from './app/constants/auth'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   modules: ['@nuxt/ui', '@nuxt/eslint', '@nuxt/fonts', 'nuxt-auth-utils', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css'],
   i18n: {

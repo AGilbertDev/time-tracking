@@ -35,3 +35,184 @@
     cursor: pointer;
   }
 }
+
+/* Seven atmospheres, each with a light and a dark variant, chosen via the */
+/* data-theme attribute on the html element. The light variant applies when the */
+/* page is not dark and the dark variant when it is, so color mode picks which. */
+
+/* Ember (orange) is the default and also covers the moment before the cookie applies. */
+:root {
+  --t-canvas: #fdf7f0;
+  --t-surface: #ffffff;
+  --t-chrome: #fde9dd;
+  --t-border: #f6d8c6;
+  --t-ink: #2e1f29;
+  --t-muted: #7a6a72;
+  --t-primary: #f2682c;
+}
+
+[data-theme="onyx"] {
+  --t-canvas: #f4f4f6;
+  --t-surface: #ffffff;
+  --t-chrome: #e8e9ec;
+  --t-border: #d6d8dd;
+  --t-ink: #1b1d22;
+  --t-muted: #5a5e67;
+  --t-primary: #2f333a;
+}
+
+[data-theme="coffee"] {
+  --t-canvas: #f7f1e8;
+  --t-surface: #ffffff;
+  --t-chrome: #efe1ce;
+  --t-border: #e3d2ba;
+  --t-ink: #2e2018;
+  --t-muted: #6e5c4b;
+  --t-primary: #6f4e37;
+}
+
+[data-theme="forest"] {
+  --t-canvas: #f4f7ec;
+  --t-surface: #ffffff;
+  --t-chrome: #e7eed6;
+  --t-border: #d4dfbb;
+  --t-ink: #26301a;
+  --t-muted: #5e6b4a;
+  --t-primary: #4d7c2f;
+}
+
+[data-theme="autumn"] {
+  --t-canvas: #fdf4ec;
+  --t-surface: #ffffff;
+  --t-chrome: #fbe6d2;
+  --t-border: #f4d4b2;
+  --t-ink: #3a2412;
+  --t-muted: #7c5f44;
+  --t-primary: #c2410c;
+}
+
+[data-theme="berry"] {
+  --t-canvas: #fdf2f7;
+  --t-surface: #ffffff;
+  --t-chrome: #fbdeec;
+  --t-border: #f4c5db;
+  --t-ink: #2f1c28;
+  --t-muted: #7d5366;
+  --t-primary: #be185d;
+}
+
+[data-theme="frost"] {
+  --t-canvas: #f4f7fb;
+  --t-surface: #ffffff;
+  --t-chrome: #e7eef5;
+  --t-border: #d3dde8;
+  --t-ink: #1c2733;
+  --t-muted: #5c6b7a;
+  --t-primary: #335c81;
+}
+
+/* Dark variants, matched hue-for-hue with the light theme of the same name. */
+/* Ember is the default dark palette and covers any unknown id. */
+.dark {
+  --t-canvas: #1b1317;
+  --t-surface: #251a20;
+  --t-chrome: #2d2027;
+  --t-border: #3a2c33;
+  --t-ink: #f5ece8;
+  --t-muted: #bba7b0;
+  --t-primary: #f2682c;
+}
+
+.dark[data-theme="onyx"] {
+  --t-canvas: #0b0c0f;
+  --t-surface: #14161a;
+  --t-chrome: #1b1e23;
+  --t-border: #2a2e36;
+  --t-ink: #eef0f3;
+  --t-muted: #99a1ac;
+  --t-primary: #ccd2da;
+}
+
+.dark[data-theme="coffee"] {
+  --t-canvas: #18120d;
+  --t-surface: #221a13;
+  --t-chrome: #2a2017;
+  --t-border: #38291c;
+  --t-ink: #f1e6d8;
+  --t-muted: #bcab97;
+  --t-primary: #c79a6a;
+}
+
+.dark[data-theme="forest"] {
+  --t-canvas: #131a0d;
+  --t-surface: #1c2614;
+  --t-chrome: #24301a;
+  --t-border: #344426;
+  --t-ink: #eef2e4;
+  --t-muted: #a7b595;
+  --t-primary: #8bc34a;
+}
+
+.dark[data-theme="autumn"] {
+  --t-canvas: #1a130b;
+  --t-surface: #241a0f;
+  --t-chrome: #2c2113;
+  --t-border: #3a2c1a;
+  --t-ink: #f3e9d9;
+  --t-muted: #bca88e;
+  --t-primary: #e2722e;
+}
+
+.dark[data-theme="berry"] {
+  --t-canvas: #1b1218;
+  --t-surface: #26181f;
+  --t-chrome: #2e1e27;
+  --t-border: #3b2833;
+  --t-ink: #f6e8ef;
+  --t-muted: #c2a0b2;
+  --t-primary: #ec4899;
+}
+
+.dark[data-theme="frost"] {
+  --t-canvas: #0b1226;
+  --t-surface: #121a33;
+  --t-chrome: #182142;
+  --t-border: #243057;
+  --t-ink: #e6eaf4;
+  --t-muted: #95a0bd;
+  --t-primary: #6d8bce;
+}
+
+/* Feed the active light atmosphere into the Nuxt UI tokens. */
+:root:not(.dark) {
+  --ui-bg: var(--t-surface);
+  --ui-bg-muted: var(--t-canvas);
+  --ui-bg-elevated: var(--t-chrome);
+  --ui-bg-accented: var(--t-border);
+  --ui-border: var(--t-border);
+  --ui-border-muted: var(--t-border);
+  --ui-border-accented: var(--t-border);
+  --ui-text: var(--t-ink);
+  --ui-text-highlighted: var(--t-ink);
+  --ui-text-toned: var(--t-muted);
+  --ui-text-muted: var(--t-muted);
+  --ui-text-dimmed: var(--t-muted);
+  --ui-primary: var(--t-primary);
+}
+
+/* Feed the active dark atmosphere into the Nuxt UI tokens. */
+.dark {
+  --ui-bg: var(--t-surface);
+  --ui-bg-muted: var(--t-canvas);
+  --ui-bg-elevated: var(--t-chrome);
+  --ui-bg-accented: var(--t-border);
+  --ui-border: var(--t-border);
+  --ui-border-muted: var(--t-border);
+  --ui-border-accented: var(--t-border);
+  --ui-text: var(--t-ink);
+  --ui-text-highlighted: var(--t-ink);
+  --ui-text-toned: var(--t-muted);
+  --ui-text-muted: var(--t-muted);
+  --ui-text-dimmed: var(--t-muted);
+  --ui-primary: var(--t-primary);
+}

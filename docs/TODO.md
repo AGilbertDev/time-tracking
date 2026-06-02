@@ -18,8 +18,21 @@ Working state as of **2026-05-31**. Read this with [`spec.md`](./spec.md). The o
 - Turso + Drizzle schema and migrations (`bunx drizzle-kit push`).
 - Full auth: magic-link invite, password login, onboarding, password policy + breach check, roles + deactivation fields, session, middleware gates.
 - Owner seed script. Deployed to Vercel at `time-tracker.agilbert.dev`.
+- Theming: 7 light + 7 dark atmospheres via `[data-theme]` tokens in `main.css`, `useTheme` composable (cookie-persisted, independent light/dark picks), sun/moon color-mode toggle in the nav, theme pickers in the profile dropdown, dynamic theme-colored logo (inline SVG) and favicon. Default `ember` (Ember & Teal). Persisting to `settings` is a follow-up (item 3).
 
 ## Next up (in rough priority order)
+
+### 0. Profile menu — header popover (spec §13) — *tonight, tutorial mode*
+
+Expand the header avatar dropdown ([`app/components/app/header.vue`](../app/components/app/header.vue)) into the full popover. Order: identity (avatar + name + email) · Profile · Manage users (admin only) · Language · Settings · Sign out.
+
+- [ ] Identity header block (avatar, full name, email) from the session — non-interactive.
+- [ ] Profile item → profile page (page TBD, can link ahead of building it).
+- [ ] Manage users item — render only when `role === 'admin'`.
+- [ ] Language item — keep the existing locale toggle behavior; persist to `users.locale` later.
+- [ ] Settings item → settings page (page TBD).
+- [ ] Sign out — existing `logout()`.
+- [ ] i18n keys (FR/EN) for every new label; verify copy.
 
 ### 1. Admin user-management panel (spec §12)
 
@@ -48,6 +61,7 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
 ### 3. Settings (spec §4)
 
 - [ ] `settings` table already exists (daily_work_minutes, work_days, quota_wph). Build the API + a settings page so the user can edit daily work duration, working days, default WPH quota, holidays.
+- [ ] Add `light_theme` / `dark_theme` columns and make them the **source of truth** for the theme — `useTheme` reads/writes via the settings API, persisting across devices. The current cookies (`ui-theme-light`, `ui-theme-dark`) are interim and at most a pre-auth default on the sign-in screens, not the store. See spec §4 "Theme persistence (decision)".
 
 ### 4. Stats (spec §5)
 

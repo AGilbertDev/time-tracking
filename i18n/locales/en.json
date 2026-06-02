@@ -43,5 +43,10 @@
     "logout": "Sign out"
   },
   "footer": { "rights": "All rights reserved." },
+  "theme": {
+    "light": "Light theme",
+    "dark": "Dark theme",
+    "mode": "Toggle light or dark mode"
+  },
   "a11y": { "switchLocale": "Switch language" }
 }

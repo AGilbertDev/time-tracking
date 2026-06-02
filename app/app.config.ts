@@ -2,6 +2,12 @@ export default defineAppConfig({
   ui: {
     colors: {
       primary: 'brand',
+      // Reserved semantic colors. Fixed across every theme so status always
+      // reads the same, never recolored by the active atmosphere.
+      success: 'green',
+      info: 'blue',
+      warning: 'amber',
+      error: 'red',
       neutral: 'stone'
     },
     button: {

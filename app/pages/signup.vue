@@ -31,19 +31,19 @@ async function submit() {
 
 <template>
   <div
-    class="relative flex min-h-screen items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
+    class="relative flex min-h-dvh items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-4 sm:p-6"
   >
-    <UCard class="w-full max-w-90" :ui="{ body: 'px-9 pt-20 pb-20' }">
+    <UCard class="w-full max-w-sm" :ui="{ body: 'px-6 pt-12 pb-12 sm:px-9 sm:pt-20 sm:pb-20' }">
       <div class="flex flex-col items-center text-center">
-        <AppLogo class="mb-4 h-14" />
+        <AppLogo class="mb-4 h-10 sm:h-12" />
 
-        <p class="mb-7 text-[13px] font-medium text-muted">{{ t('app.name') }}</p>
+        <p class="mb-5 text-sm font-medium text-muted sm:mb-7">{{ t('app.name') }}</p>
 
-        <h1 class="mb-7 text-[26px] font-bold tracking-tight text-highlighted">
+        <h1 class="mb-5 text-2xl font-bold tracking-tight text-highlighted sm:mb-7">
           {{ t('signup.subtitle') }}
         </h1>
 
-        <p class="mb-14 text-sm leading-relaxed text-muted">
+        <p class="mb-10 text-sm leading-relaxed text-muted sm:mb-14">
           {{ t('signup.invitation') }}
         </p>
 

@@ -43,5 +43,10 @@
     "logout": "Déconnexion"
   },
   "footer": { "rights": "Tous droits réservés." },
+  "theme": {
+    "light": "Thème clair",
+    "dark": "Thème sombre",
+    "mode": "Basculer en mode clair ou sombre"
+  },
   "a11y": { "switchLocale": "Changer de langue" }
 }

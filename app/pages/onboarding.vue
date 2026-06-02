@@ -46,19 +46,19 @@ async function submit() {
 
 <template>
   <div
-    class="flex min-h-screen items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-6"
+    class="flex min-h-dvh items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-4 sm:p-6"
   >
-    <UCard class="w-full max-w-90" :ui="{ body: 'px-9 pt-14 pb-14' }">
+    <UCard class="w-full max-w-sm" :ui="{ body: 'px-6 py-10 sm:px-9 sm:py-14' }">
       <div class="flex flex-col items-center text-center">
-        <AppLogo class="mb-4 h-14" />
+        <AppLogo class="mb-4 h-10 sm:h-12" />
 
-        <p class="mb-2 text-[13px] font-medium text-muted">{{ t('app.name') }}</p>
+        <p class="mb-2 text-sm font-medium text-muted">{{ t('app.name') }}</p>
 
-        <h1 class="mb-3 text-[26px] font-bold tracking-tight text-highlighted">
+        <h1 class="mb-3 text-2xl font-bold tracking-tight text-highlighted">
           {{ t('onboarding.title') }}
         </h1>
 
-        <p class="mb-10 max-w-[30ch] text-sm leading-relaxed text-muted">
+        <p class="mb-7 max-w-[30ch] text-sm leading-relaxed text-muted sm:mb-10">
           {{ t('onboarding.subtitle') }}
         </p>
 

@@ -101,7 +101,11 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 - `work_days` — text (JSON array of 0–6 day numbers, e.g. `[1,2,3,4,5]` for Mon–Fri)
 - `default_wph` — integer, default `450` (words per hour)
 - `timezone` — text, default `'America/Toronto'`
-- TBD: theme, default task category
+- `light_theme` — text, default `'ember'`. The chosen light atmosphere (one of the seven in `useTheme`).
+- `dark_theme` — text, default `'ember'`. The chosen dark atmosphere, independent of the light one.
+- TBD: default task category
+
+**Theme persistence (decision)**: the favorited light/dark atmospheres are **stored as user settings (`light_theme` / `dark_theme` on the `settings` row), not cookies**. They are part of the user's account and follow them across devices. `useTheme` should read from and write to the settings API. The current cookie implementation (`ui-theme-light`, `ui-theme-dark`) is an interim stand-in until the settings API exists, and at most stays as a pre-auth default for the sign-in/sign-up screens (where there is no user yet) — not as the source of truth.
 
 ### Auth tables
 - **`allowed_emails`** — `email` text primary key. Owner-managed allowlist. Seeded from `OWNER_EMAIL` env var.
@@ -316,7 +320,26 @@ All protected by the admin-role guard (except onboarding, which is any authentic
 
 ---
 
-## 13. Out of scope (for v1)
+## 13. Profile menu (header popover)
+
+The avatar in the header opens a popover — the single entry point for account info, navigation, and session actions. Replaces the current minimal dropdown (Profile / Language / Logout). Order, top to bottom:
+
+1. **Identity header** *(non-interactive)* — avatar, full name, and email of the signed-in user. Reads `firstName` / `lastName` / `email` from the session and `avatar_url` for the image; falls back to initials when no avatar is set (the existing `UAvatar` behavior).
+2. **Profile** — links to the user's own profile page (view / edit name, avatar, change password). Page itself TBD.
+3. **Manage users** — **admin only** (`role === 'admin'`). Links to the admin user-management panel (§12). Hidden entirely for non-admins, never just disabled.
+4. **Language** — switches locale. With two locales (FR/EN) it toggles to the other and shows the active one; becomes a submenu if a third locale is ever added. Persists to `users.locale` (i18n-first, §2).
+5. **Settings** — links to the settings page (per-user preferences: daily work minutes, working days, default WPH, timezone — §4).
+6. **Sign out** — clears the session and returns to the sign-in page.
+
+Notes:
+- Grouped with separators: *identity* — *Profile, Manage users* — *Language, Settings* — *Sign out*. Exact grouping TBD in build.
+- Built with Nuxt UI (`UDropdownMenu`) per component priority. Icons: Carbon (`i-carbon-*`).
+- Every label is an i18n key (FR default), copy verified (§2 non-negotiable). French uses a space before `? ! : ;`.
+- Items that link to not-yet-built pages (Profile, Manage users, Settings) can ship as the pages land; Identity, Language, and Sign out work today.
+
+---
+
+## 14. Out of scope (for v1)
 
 - Team / multi-translator collaboration.
 - Invoicing or client-facing exports.
