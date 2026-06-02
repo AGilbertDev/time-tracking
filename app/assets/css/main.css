@@ -36,227 +36,234 @@
   }
 }
 
-/* Browsers (notably mobile) paint a dirty-yellow background on autofilled */
-/* inputs, and the standard box-shadow cover-up also wipes the input's ring. */
-/* So repaint the surface AND draw an on-brand primary ring, so an autofilled */
-/* field reads as an intentional highlight instead of yellow or borderless. */
+/* Replace the browser's dirty-yellow autofill background with a low-opacity */
+/* primary tint, plus the normal input border so the edge stays visible. The */
+/* color-mix fill is opaque, so it still fully covers the browser yellow. */
+/* :autofill (Firefox) and :-webkit-autofill (Chromium) stay in separate rules; */
+/* grouped, an unknown pseudo invalidates the whole rule (that broke Firefox). */
 /* Left unlayered so it wins over the component styles. */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active,
 input:autofill {
   -webkit-text-fill-color: var(--ui-text);
-  -webkit-box-shadow:
-    inset 0 0 0 2px var(--ui-primary),
-    inset 0 0 0 1000px var(--ui-bg);
   box-shadow:
-    inset 0 0 0 2px var(--ui-primary),
-    inset 0 0 0 1000px var(--ui-bg);
+    inset 0 0 0 1px var(--ui-border-accented),
+    inset 0 0 0 1000px color-mix(in oklab, var(--ui-primary) 14%, var(--ui-bg));
   caret-color: var(--ui-text);
   transition: background-color 9999s ease-in-out 0s;
 }
 
-/* Eight atmospheres, each with a light and a dark variant, chosen via the */
-/* data-theme attribute on the html element. The light variant applies when the */
-/* page is not dark and the dark variant when it is, so color mode picks which. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--ui-text);
+  -webkit-box-shadow:
+    inset 0 0 0 1px var(--ui-border-accented),
+    inset 0 0 0 1000px color-mix(in oklab, var(--ui-primary) 14%, var(--ui-bg));
+  caret-color: var(--ui-text);
+  transition: background-color 9999s ease-in-out 0s;
+}
 
-/* Pastel (soft mint and lavender) is the default and covers the moment before */
-/* the cookie applies. It is the calm first impression. */
+/* Eight atmospheres. Each overrides the primary and neutral PALETTE scales; */
+/* Nuxt UI derives every surface, border (muted < default < accented), text */
+/* and hover shade from these, for both light and dark. Pastel is default. */
+/* Neutrals reuse Tailwind built-in scales; primaries are the brand colors. */
+
 :root {
-  --t-canvas: #f5faf8;
-  --t-surface: #ffffff;
-  --t-chrome: #e8f4ee;
-  --t-border: #d5e9e0;
-  --t-ink: #33483f;
-  --t-muted: #6f8a80;
-  --t-primary: #5cc9a0;
+  --ui-color-primary-50: #f2fbf7;
+  --ui-color-primary-100: #e0f5ed;
+  --ui-color-primary-200: #c2ebdb;
+  --ui-color-primary-300: #9bdec5;
+  --ui-color-primary-400: #6ee7b7;
+  --ui-color-primary-500: #5cc9a0;
+  --ui-color-primary-600: #3ab084;
+  --ui-color-primary-700: #30926d;
+  --ui-color-primary-800: #277759;
+  --ui-color-primary-900: #206048;
+  --ui-color-primary-950: #143d2e;
+  --ui-color-neutral-50: var(--color-slate-50);
+  --ui-color-neutral-100: var(--color-slate-100);
+  --ui-color-neutral-200: var(--color-slate-200);
+  --ui-color-neutral-300: var(--color-slate-300);
+  --ui-color-neutral-400: var(--color-slate-400);
+  --ui-color-neutral-500: var(--color-slate-500);
+  --ui-color-neutral-600: var(--color-slate-600);
+  --ui-color-neutral-700: var(--color-slate-700);
+  --ui-color-neutral-800: var(--color-slate-800);
+  --ui-color-neutral-900: var(--color-slate-900);
+  --ui-color-neutral-950: var(--color-slate-950);
 }
 
 [data-theme="ember"] {
-  --t-canvas: #fdf7f0;
-  --t-surface: #ffffff;
-  --t-chrome: #fde9dd;
-  --t-border: #f6d8c6;
-  --t-ink: #2e1f29;
-  --t-muted: #7a6a72;
-  --t-primary: #f2682c;
+  --ui-color-primary-50: #fef3ee;
+  --ui-color-primary-100: #fde3d9;
+  --ui-color-primary-200: #fac8b2;
+  --ui-color-primary-300: #f7a682;
+  --ui-color-primary-400: #f2682c;
+  --ui-color-primary-500: #f2682c;
+  --ui-color-primary-600: #dd4c0e;
+  --ui-color-primary-700: #b73f0b;
+  --ui-color-primary-800: #953409;
+  --ui-color-primary-900: #782a07;
+  --ui-color-primary-950: #4d1b05;
+  --ui-color-neutral-50: var(--color-stone-50);
+  --ui-color-neutral-100: var(--color-stone-100);
+  --ui-color-neutral-200: var(--color-stone-200);
+  --ui-color-neutral-300: var(--color-stone-300);
+  --ui-color-neutral-400: var(--color-stone-400);
+  --ui-color-neutral-500: var(--color-stone-500);
+  --ui-color-neutral-600: var(--color-stone-600);
+  --ui-color-neutral-700: var(--color-stone-700);
+  --ui-color-neutral-800: var(--color-stone-800);
+  --ui-color-neutral-900: var(--color-stone-900);
+  --ui-color-neutral-950: var(--color-stone-950);
 }
 
 [data-theme="onyx"] {
-  --t-canvas: #f4f4f6;
-  --t-surface: #ffffff;
-  --t-chrome: #e8e9ec;
-  --t-border: #d6d8dd;
-  --t-ink: #1b1d22;
-  --t-muted: #5a5e67;
-  --t-primary: #2f333a;
+  --ui-color-primary-50: #f5f6f7;
+  --ui-color-primary-100: #e9eaed;
+  --ui-color-primary-200: #d2d5da;
+  --ui-color-primary-300: #b6bbc3;
+  --ui-color-primary-400: #ccd2da;
+  --ui-color-primary-500: #3f444c;
+  --ui-color-primary-600: #6a7380;
+  --ui-color-primary-700: #585f6a;
+  --ui-color-primary-800: #484d56;
+  --ui-color-primary-900: #3a3e46;
+  --ui-color-primary-950: #25282d;
+  --ui-color-neutral-50: var(--color-zinc-50);
+  --ui-color-neutral-100: var(--color-zinc-100);
+  --ui-color-neutral-200: var(--color-zinc-200);
+  --ui-color-neutral-300: var(--color-zinc-300);
+  --ui-color-neutral-400: var(--color-zinc-400);
+  --ui-color-neutral-500: var(--color-zinc-500);
+  --ui-color-neutral-600: var(--color-zinc-600);
+  --ui-color-neutral-700: var(--color-zinc-700);
+  --ui-color-neutral-800: var(--color-zinc-800);
+  --ui-color-neutral-900: var(--color-zinc-900);
+  --ui-color-neutral-950: var(--color-zinc-950);
 }
 
 [data-theme="coffee"] {
-  --t-canvas: #f7f1e8;
-  --t-surface: #ffffff;
-  --t-chrome: #efe1ce;
-  --t-border: #e3d2ba;
-  --t-ink: #2e2018;
-  --t-muted: #6e5c4b;
-  --t-primary: #6f4e37;
+  --ui-color-primary-50: #f9f6f3;
+  --ui-color-primary-100: #f1e9e4;
+  --ui-color-primary-200: #e4d4c8;
+  --ui-color-primary-300: #d3b9a6;
+  --ui-color-primary-400: #c79a6a;
+  --ui-color-primary-500: #6f4e37;
+  --ui-color-primary-600: #9d6e4e;
+  --ui-color-primary-700: #825b40;
+  --ui-color-primary-800: #6a4a34;
+  --ui-color-primary-900: #553c2a;
+  --ui-color-primary-950: #37261b;
+  --ui-color-neutral-50: var(--color-stone-50);
+  --ui-color-neutral-100: var(--color-stone-100);
+  --ui-color-neutral-200: var(--color-stone-200);
+  --ui-color-neutral-300: var(--color-stone-300);
+  --ui-color-neutral-400: var(--color-stone-400);
+  --ui-color-neutral-500: var(--color-stone-500);
+  --ui-color-neutral-600: var(--color-stone-600);
+  --ui-color-neutral-700: var(--color-stone-700);
+  --ui-color-neutral-800: var(--color-stone-800);
+  --ui-color-neutral-900: var(--color-stone-900);
+  --ui-color-neutral-950: var(--color-stone-950);
 }
 
 [data-theme="forest"] {
-  --t-canvas: #f4f7ec;
-  --t-surface: #ffffff;
-  --t-chrome: #e7eed6;
-  --t-border: #d4dfbb;
-  --t-ink: #26301a;
-  --t-muted: #5e6b4a;
-  --t-primary: #4d7c2f;
+  --ui-color-primary-50: #f5faf2;
+  --ui-color-primary-100: #e9f4e1;
+  --ui-color-primary-200: #d2e9c4;
+  --ui-color-primary-300: #b6db9f;
+  --ui-color-primary-400: #8bc34a;
+  --ui-color-primary-500: #4d7c2f;
+  --ui-color-primary-600: #6aaa40;
+  --ui-color-primary-700: #578d35;
+  --ui-color-primary-800: #47732b;
+  --ui-color-primary-900: #395c23;
+  --ui-color-primary-950: #253b16;
+  --ui-color-neutral-50: var(--color-neutral-50);
+  --ui-color-neutral-100: var(--color-neutral-100);
+  --ui-color-neutral-200: var(--color-neutral-200);
+  --ui-color-neutral-300: var(--color-neutral-300);
+  --ui-color-neutral-400: var(--color-neutral-400);
+  --ui-color-neutral-500: var(--color-neutral-500);
+  --ui-color-neutral-600: var(--color-neutral-600);
+  --ui-color-neutral-700: var(--color-neutral-700);
+  --ui-color-neutral-800: var(--color-neutral-800);
+  --ui-color-neutral-900: var(--color-neutral-900);
+  --ui-color-neutral-950: var(--color-neutral-950);
 }
 
 [data-theme="autumn"] {
-  --t-canvas: #fdf4ec;
-  --t-surface: #ffffff;
-  --t-chrome: #fbe6d2;
-  --t-border: #f4d4b2;
-  --t-ink: #3a2412;
-  --t-muted: #7c5f44;
-  --t-primary: #c2410c;
+  --ui-color-primary-50: #fef3ee;
+  --ui-color-primary-100: #fde3d9;
+  --ui-color-primary-200: #fac7b2;
+  --ui-color-primary-300: #f7a482;
+  --ui-color-primary-400: #e2722e;
+  --ui-color-primary-500: #c2410c;
+  --ui-color-primary-600: #dd4a0e;
+  --ui-color-primary-700: #b73d0b;
+  --ui-color-primary-800: #953209;
+  --ui-color-primary-900: #782807;
+  --ui-color-primary-950: #4d1a05;
+  --ui-color-neutral-50: var(--color-stone-50);
+  --ui-color-neutral-100: var(--color-stone-100);
+  --ui-color-neutral-200: var(--color-stone-200);
+  --ui-color-neutral-300: var(--color-stone-300);
+  --ui-color-neutral-400: var(--color-stone-400);
+  --ui-color-neutral-500: var(--color-stone-500);
+  --ui-color-neutral-600: var(--color-stone-600);
+  --ui-color-neutral-700: var(--color-stone-700);
+  --ui-color-neutral-800: var(--color-stone-800);
+  --ui-color-neutral-900: var(--color-stone-900);
+  --ui-color-neutral-950: var(--color-stone-950);
 }
 
 [data-theme="berry"] {
-  --t-canvas: #fdf2f7;
-  --t-surface: #ffffff;
-  --t-chrome: #fbdeec;
-  --t-border: #f4c5db;
-  --t-ink: #2f1c28;
-  --t-muted: #7d5366;
-  --t-primary: #be185d;
+  --ui-color-primary-50: #fdeff5;
+  --ui-color-primary-100: #fadbe8;
+  --ui-color-primary-200: #f6b7d1;
+  --ui-color-primary-300: #f089b4;
+  --ui-color-primary-400: #ec4899;
+  --ui-color-primary-500: #be185d;
+  --ui-color-primary-600: #d01a66;
+  --ui-color-primary-700: #ac1654;
+  --ui-color-primary-800: #8c1245;
+  --ui-color-primary-900: #710e37;
+  --ui-color-primary-950: #480923;
+  --ui-color-neutral-50: var(--color-neutral-50);
+  --ui-color-neutral-100: var(--color-neutral-100);
+  --ui-color-neutral-200: var(--color-neutral-200);
+  --ui-color-neutral-300: var(--color-neutral-300);
+  --ui-color-neutral-400: var(--color-neutral-400);
+  --ui-color-neutral-500: var(--color-neutral-500);
+  --ui-color-neutral-600: var(--color-neutral-600);
+  --ui-color-neutral-700: var(--color-neutral-700);
+  --ui-color-neutral-800: var(--color-neutral-800);
+  --ui-color-neutral-900: var(--color-neutral-900);
+  --ui-color-neutral-950: var(--color-neutral-950);
 }
 
 [data-theme="frost"] {
-  --t-canvas: #f4f7fb;
-  --t-surface: #ffffff;
-  --t-chrome: #e7eef5;
-  --t-border: #d3dde8;
-  --t-ink: #1c2733;
-  --t-muted: #5c6b7a;
-  --t-primary: #335c81;
-}
-
-/* Dark variants, matched hue-for-hue with the light theme of the same name. */
-/* Pastel is the default dark palette and covers any unknown id. */
-.dark {
-  --t-canvas: #0b1120;
-  --t-surface: #0f172a;
-  --t-chrome: #1e293b;
-  --t-border: #334155;
-  --t-ink: #e2e8f0;
-  --t-muted: #94a3b8;
-  --t-primary: #6ee7b7;
-}
-
-.dark[data-theme="ember"] {
-  --t-canvas: #1b1317;
-  --t-surface: #251a20;
-  --t-chrome: #2d2027;
-  --t-border: #3a2c33;
-  --t-ink: #f5ece8;
-  --t-muted: #bba7b0;
-  --t-primary: #f2682c;
-}
-
-.dark[data-theme="onyx"] {
-  --t-canvas: #0b0c0f;
-  --t-surface: #14161a;
-  --t-chrome: #1b1e23;
-  --t-border: #2a2e36;
-  --t-ink: #eef0f3;
-  --t-muted: #99a1ac;
-  --t-primary: #ccd2da;
-}
-
-.dark[data-theme="coffee"] {
-  --t-canvas: #18120d;
-  --t-surface: #221a13;
-  --t-chrome: #2a2017;
-  --t-border: #38291c;
-  --t-ink: #f1e6d8;
-  --t-muted: #bcab97;
-  --t-primary: #c79a6a;
-}
-
-.dark[data-theme="forest"] {
-  --t-canvas: #131a0d;
-  --t-surface: #1c2614;
-  --t-chrome: #24301a;
-  --t-border: #344426;
-  --t-ink: #eef2e4;
-  --t-muted: #a7b595;
-  --t-primary: #8bc34a;
-}
-
-.dark[data-theme="autumn"] {
-  --t-canvas: #1a130b;
-  --t-surface: #241a0f;
-  --t-chrome: #2c2113;
-  --t-border: #3a2c1a;
-  --t-ink: #f3e9d9;
-  --t-muted: #bca88e;
-  --t-primary: #e2722e;
-}
-
-.dark[data-theme="berry"] {
-  --t-canvas: #1b1218;
-  --t-surface: #26181f;
-  --t-chrome: #2e1e27;
-  --t-border: #3b2833;
-  --t-ink: #f6e8ef;
-  --t-muted: #c2a0b2;
-  --t-primary: #ec4899;
-}
-
-.dark[data-theme="frost"] {
-  --t-canvas: #0b1226;
-  --t-surface: #121a33;
-  --t-chrome: #182142;
-  --t-border: #243057;
-  --t-ink: #e6eaf4;
-  --t-muted: #95a0bd;
-  --t-primary: #6d8bce;
-}
-
-/* Feed the active light atmosphere into the Nuxt UI tokens. */
-:root:not(.dark) {
-  --ui-bg: var(--t-surface);
-  --ui-bg-muted: var(--t-canvas);
-  --ui-bg-elevated: var(--t-chrome);
-  --ui-bg-accented: var(--t-border);
-  --ui-border: var(--t-border);
-  --ui-border-muted: var(--t-border);
-  --ui-border-accented: var(--t-border);
-  --ui-text: var(--t-ink);
-  --ui-text-highlighted: var(--t-ink);
-  --ui-text-toned: var(--t-muted);
-  --ui-text-muted: var(--t-muted);
-  --ui-text-dimmed: var(--t-muted);
-  --ui-primary: var(--t-primary);
-}
-
-/* Feed the active dark atmosphere into the Nuxt UI tokens. */
-.dark {
-  --ui-bg: var(--t-surface);
-  --ui-bg-muted: var(--t-canvas);
-  --ui-bg-elevated: var(--t-chrome);
-  --ui-bg-accented: var(--t-border);
-  --ui-border: var(--t-border);
-  --ui-border-muted: var(--t-border);
-  /* Accented is the prominent border level Nuxt UI uses for form inputs. On */
-  /* dark surfaces the theme border is nearly invisible, so lift it toward white. */
-  --ui-border-accented: rgba(255, 255, 255, 0.22);
-  --ui-text: var(--t-ink);
-  --ui-text-highlighted: var(--t-ink);
-  --ui-text-toned: var(--t-muted);
-  --ui-text-muted: var(--t-muted);
-  --ui-text-dimmed: var(--t-muted);
-  --ui-primary: var(--t-primary);
+  --ui-color-primary-50: #f2f6fa;
+  --ui-color-primary-100: #e2ebf3;
+  --ui-color-primary-200: #c5d7e8;
+  --ui-color-primary-300: #a0bed9;
+  --ui-color-primary-400: #6d8bce;
+  --ui-color-primary-500: #335c81;
+  --ui-color-primary-600: #4278a8;
+  --ui-color-primary-700: #37638b;
+  --ui-color-primary-800: #2d5171;
+  --ui-color-primary-900: #24415b;
+  --ui-color-primary-950: #172a3a;
+  --ui-color-neutral-50: var(--color-slate-50);
+  --ui-color-neutral-100: var(--color-slate-100);
+  --ui-color-neutral-200: var(--color-slate-200);
+  --ui-color-neutral-300: var(--color-slate-300);
+  --ui-color-neutral-400: var(--color-slate-400);
+  --ui-color-neutral-500: var(--color-slate-500);
+  --ui-color-neutral-600: var(--color-slate-600);
+  --ui-color-neutral-700: var(--color-slate-700);
+  --ui-color-neutral-800: var(--color-slate-800);
+  --ui-color-neutral-900: var(--color-slate-900);
+  --ui-color-neutral-950: var(--color-slate-950);
 }
