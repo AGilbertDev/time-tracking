@@ -66,10 +66,7 @@ const items = computed(() => {
 </script>
 
 <template>
-  <UHeader
-    :toggle="false"
-    :ui="{ root: 'bg-elevated', container: 'max-w-full px-4 sm:px-6 lg:px-8' }"
-  >
+  <UHeader :toggle="false" :ui="{ container: 'max-w-full px-4 sm:px-6 lg:px-8' }">
     <template #title>
       <NuxtLink :aria-label="t('app.name')" :to="localePath('index')">
         <AppLogo class="h-8 sm:h-10" />

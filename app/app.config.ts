@@ -34,6 +34,16 @@ export default defineAppConfig({
         link: 'text-md'
       }
     },
+    header: {
+      slots: {
+        root: 'bg-elevated/75 backdrop-blur border-b border-default h-(--ui-header-height) sticky top-0 z-50'
+      }
+    },
+    footer: {
+      slots: {
+        root: 'bg-elevated border-t border-default'
+      }
+    },
     main: {
       base: 'min-h-0 flex-1'
     }
