@@ -6,6 +6,21 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   modules: ['@nuxt/ui', '@nuxt/eslint', '@nuxt/fonts', 'nuxt-auth-utils', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css'],
+  // Persist the color mode in a cookie (not localStorage) so the server reads it
+  // on every request and renders the correct light/dark atmosphere before paint,
+  // eliminating the flash-of-wrong-theme. We keep our own data-theme attribute for
+  // the atmosphere id, so color-mode only manages the .dark class here.
+  colorMode: {
+    preference: 'system',
+    fallback: 'light',
+    storage: 'cookie',
+    storageKey: 'nuxt-color-mode',
+    cookieAttrs: {
+      'max-age': '31536000',
+      path: '/',
+      SameSite: 'Lax'
+    }
+  },
   i18n: {
     defaultLocale: 'fr',
     customRoutes: 'config',
