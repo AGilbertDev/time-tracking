@@ -46,7 +46,17 @@
   "theme": {
     "light": "Light theme",
     "dark": "Dark theme",
-    "mode": "Toggle light or dark mode"
+    "mode": "Toggle light or dark mode",
+    "names": {
+      "pastel": { "light": "Seafoam", "dark": "Ocean" },
+      "ember": { "light": "Flame", "dark": "Ember" },
+      "onyx": { "light": "Marble", "dark": "Onyx" },
+      "mocha": { "light": "Latte", "dark": "Mocha" },
+      "forest": { "light": "Fern", "dark": "Pine" },
+      "autumn": { "light": "Maple", "dark": "Mahogany" },
+      "berry": { "light": "Raspberry", "dark": "Mulberry" },
+      "frost": { "light": "Frost", "dark": "Glacier" }
+    }
   },
   "a11y": { "switchLocale": "Switch language" }
 }
