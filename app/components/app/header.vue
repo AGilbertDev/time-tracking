@@ -36,7 +36,9 @@ async function logout() {
 const items = computed(() => {
   const current = isDark.value ? darkTheme : lightTheme
   const atmospheres = themes.map((option) => ({
-    label: (isDark.value ? option.darkName : option.name) + (option.default ? ' (default)' : ''),
+    label:
+      t(`theme.names.${option.id}.${isDark.value ? 'dark' : 'light'}`) +
+      (option.default ? ` ${t('theme.default')}` : ''),
     swatch: isDark.value ? option.dark : option.light,
     active: current.value === option.id,
     onSelect: () => {

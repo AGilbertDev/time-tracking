@@ -98,7 +98,7 @@ const themes: Theme[] = [
     }
   },
   {
-    id: 'mocha',
+    id: 'coffee',
     story: 'Warm graphite · latte + teal',
     light: {
       canvas: '#f7f1e8',
@@ -224,7 +224,7 @@ const shapes: Record<string, string> = {
   pastel: 'Triadic',
   ember: 'Complementary',
   onyx: 'Complementary',
-  mocha: 'Complementary',
+  coffee: 'Complementary',
   forest: 'Analogous',
   autumn: 'Analogous',
   berry: 'Complementary',

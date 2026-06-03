@@ -47,11 +47,12 @@
     "light": "Thème clair",
     "dark": "Thème sombre",
     "mode": "Basculer en mode clair ou sombre",
+    "default": "(défaut)",
     "names": {
       "pastel": { "light": "Écume", "dark": "Océan" },
       "ember": { "light": "Flamme", "dark": "Braise" },
       "onyx": { "light": "Marbre", "dark": "Onyx" },
-      "mocha": { "light": "Latte", "dark": "Moka" },
+      "coffee": { "light": "Latte", "dark": "Moka" },
       "forest": { "light": "Fougère", "dark": "Pin" },
       "autumn": { "light": "Érable", "dark": "Acajou" },
       "berry": { "light": "Framboise", "dark": "Mûre" },
