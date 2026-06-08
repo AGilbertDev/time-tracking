@@ -30,3 +30,7 @@ Copy `.env.example` to `.env` and fill in values.
 
 - [`docs/concept.md`](docs/concept.md) — what the original planning app did (reference only)
 - [`docs/spec.md`](docs/spec.md) — v1 product spec for the rebuild
+
+## License
+
+Copyright (c) 2026 Alexandre Gilbert. All rights reserved. This code is published for viewing only. See [LICENSE](./LICENSE).
