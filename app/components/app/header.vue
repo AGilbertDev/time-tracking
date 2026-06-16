@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui'
+
+// The menu carries custom fields on the atmosphere rows, so the slot props know about them.
+interface MenuItem extends DropdownMenuItem {
+  active?: boolean
+  swatch?: ThemePalette
+}
+
 const { t, locale, setLocale } = useI18n()
 const { clear, user } = useUserSession()
 const localePath = useLocalePath()
@@ -33,7 +41,7 @@ async function logout() {
 
 // Only the picker for the current mode is shown, and each atmosphere previews its
 // own swatch for that mode. The active one gets a check via the trailing slot.
-const items = computed(() => {
+const items = computed<MenuItem[][]>(() => {
   const current = isDark.value ? darkTheme : lightTheme
   const atmospheres = themes.map((option) => ({
     label:
