@@ -1,0 +1,23 @@
+{
+	"name": "Claude Code Sandbox",
+
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+
+	"remoteUser": "node",
+
+	"remoteEnv": {
+		"ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+	},
+
+	"runArgs": ["--name", "claude-code-sandbox-${localWorkspaceFolderBasename}", "--security-opt=label=disable"],
+
+	"customizations": {
+		"vscode": {
+			"extensions": ["anthropic.claude-code"]
+		}
+	},
+
+	"postCreateCommand": "mkdir -p ~/.claude"
+}
