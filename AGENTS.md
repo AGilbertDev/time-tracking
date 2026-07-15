@@ -12,6 +12,14 @@ Pipeline-driven, not hand-written. Every feature, page, route, or non-trivial ch
 
 This replaces the old tutorial mode. The project used to be a learning exercise where the code was written by hand, step by step. It is now a demonstration of the pipeline, so the agents do the building and the trail they leave is the artifact.
 
+## Maintaining the build trail
+
+This repo is the proof of concept for the pipeline, so the record of how each feature was built is part of what the repo delivers. Keeping that record current is the orchestrator's job. Every feature that ships through the pipeline gets an entry in the "How this project was built" section of [docs/pipeline.md](docs/pipeline.md), written as part of the same feature rather than batched later. Each entry names the feature, lists which stages ran and which were skipped with the reason, notes how it was verified, and links the spec in `docs/specs/` and the pull request.
+
+A missing or stale trail means the demonstration failed even when the product works, so the documentation is a pipeline output rather than an afterthought.
+
+The coverage numbers in that section are derived from an append-only ledger at [docs/pipeline-trace.md](docs/pipeline-trace.md). Every feature that lands gets one row there, added during the pipeline run so any container on any machine records its own work and the totals survive across sandboxes. Append the row when the feature lands and refresh the derived coverage line in pipeline.md from it, and never rewrite existing rows or hand-maintain a total, since the total is the row count. A feature counts as fully sandboxed only when every applicable stage ran through an agent inside the devcontainer sandbox with no hand-written implementation code, from spec to opened pull request. The ledger is the source of truth, so keep it honest rather than flattering. The portfolio tells its story from these counts.
+
 ## Conventions and skills
 
 This repo uses the shared [agilbertdev-recipes](https://github.com/AGilbertDev/agilbertdev-recipes) (vendored as the `.recipes` submodule). Personal conventions and the curated skill set come from there, not from this file. After cloning:
