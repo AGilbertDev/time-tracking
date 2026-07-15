@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 import type { CompleteOnboardingSchema } from '../../../models/onboarding'
 
 import { useDb } from '../../../db/index'
-import { users } from '../../../db/schema'
+import { settings, users } from '../../../db/schema'
 import { isPasswordBreached } from '../../../utils/checkPasswordBreached'
 
 export async function completeOnboarding(
@@ -35,6 +35,30 @@ export async function completeOnboarding(
     })
     .where(eq(users.id, user.id))
 
+  // Create the settings row so every user onboarded after this migration has exactly one
+  // from the start, and the preference read paths can assume a row exists. Carry the
+  // session's current preferences onto it, which are the defaults plus whatever locale the
+  // user is already on, so an in-session choice is not discarded. Skip the insert if a row
+  // already exists, since the settings userId has no unique constraint to conflict on.
+  const existingSettings = await db
+    .select({ id: settings.id })
+    .from(settings)
+    .where(eq(settings.userId, user.id))
+    .get()
+
+  if (!existingSettings) {
+    await db.insert(settings).values({
+      userId: user.id,
+      lightTheme: user.lightTheme,
+      darkTheme: user.darkTheme,
+      locale: user.locale
+    })
+  }
+
+  // Read back the persisted preferences through the single read path so the session and
+  // cookies reflect exactly what the database holds.
+  const preferences = await loadUserPreferences(user.id)
+
   // Refresh the session so the middleware stops redirecting to onboarding.
   await setUserSession(event, {
     user: {
@@ -42,9 +66,15 @@ export async function completeOnboarding(
       email: user.email,
       firstName: body.firstName,
       lastName: body.lastName,
-      onboarded: true
+      onboarded: true,
+      lightTheme: preferences.lightTheme,
+      darkTheme: preferences.darkTheme,
+      locale: preferences.locale
     }
   })
+
+  // Mirror the preferences into the client-readable cookies the no-flash guard reads.
+  applyPreferenceCookies(event, preferences)
 
   return { success: true }
 }

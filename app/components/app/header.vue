@@ -11,6 +11,7 @@ const { t, locale, setLocale } = useI18n()
 const { clear, user } = useUserSession()
 const localePath = useLocalePath()
 const { isDark, lightTheme, darkTheme, themes, activeOnPrimary } = useTheme()
+const { savePreferences } = usePreferences()
 
 // The language menu item shows the active locale and toggles to the other on click.
 const otherLocale = computed(() => (locale.value === 'fr' ? 'en' : 'fr'))
@@ -50,7 +51,9 @@ const items = computed<MenuItem[][]>(() => {
     swatch: isDark.value ? option.dark : option.light,
     active: current.value === option.id,
     onSelect: () => {
+      // Update in memory for responsiveness, then persist the mode that changed.
       current.value = option.id
+      savePreferences(isDark.value ? { darkTheme: option.id } : { lightTheme: option.id })
     }
   }))
 
@@ -67,7 +70,12 @@ const items = computed<MenuItem[][]>(() => {
       {
         label: t('header.language', { code: locale.value.toUpperCase() }),
         icon: 'i-ph-translate',
-        onSelect: () => setLocale(otherLocale.value)
+        onSelect: () => {
+          // Switch the interface immediately, then persist so the choice follows the
+          // user to another device.
+          setLocale(otherLocale.value)
+          savePreferences({ locale: otherLocale.value })
+        }
       }
     ],
     [{ label: t('header.logout'), icon: 'i-ph-sign-out', onSelect: logout }]

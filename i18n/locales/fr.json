@@ -59,5 +59,8 @@
       "frost": { "light": "Givre", "dark": "Glacier" }
     }
   },
-  "a11y": { "switchLocale": "Changer de langue" }
+  "a11y": { "switchLocale": "Changer de langue" },
+  "preferences": {
+    "saveError": "Votre préférence n'a pas pu être enregistrée. Elle s'appliquera pour cette session seulement."
+  }
 }

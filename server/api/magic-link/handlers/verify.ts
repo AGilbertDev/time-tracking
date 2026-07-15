@@ -45,6 +45,11 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
     return sendRedirect(event, '/')
   }
 
+  // Load the persisted preferences so the session and the client cookies carry them
+  // from the first render. A brand-new user has no settings row yet, so this returns
+  // the coded defaults until onboarding creates the row.
+  const preferences = await loadUserPreferences(user!.id)
+
   // Set the session cookie so subsequent requests are authenticated.
   await setUserSession(event, {
     user: {
@@ -52,9 +57,15 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
       email: user!.email,
       firstName: user!.firstName,
       lastName: user!.lastName,
-      onboarded: !!user!.passwordHash
+      onboarded: !!user!.passwordHash,
+      lightTheme: preferences.lightTheme,
+      darkTheme: preferences.darkTheme,
+      locale: preferences.locale
     }
   })
+
+  // Mirror the preferences into the client-readable cookies the no-flash guard reads.
+  applyPreferenceCookies(event, preferences)
 
   return sendRedirect(event, '/')
 }

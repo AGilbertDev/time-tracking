@@ -13,7 +13,8 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "prepare": "husky",
-    "seed": "bun run --env-file=.env scripts/seed.ts"
+    "seed": "bun run --env-file=.env scripts/seed.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",
@@ -41,7 +42,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "prettier": "^3.8.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   },
   "lint-staged": {
     "*.{js,ts,vue}": [
