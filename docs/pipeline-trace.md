@@ -23,3 +23,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | #   | Date       | Feature             | Agent-driven | Fully sandboxed | Spec                                  | PR   |
 | --- | ---------- | ------------------- | ------------ | --------------- | ------------------------------------- | ---- |
 | 1   | 2026-07-15 | Visual theme rework | yes          | no              | [spec](specs/visual-theme-rework.md)  | none |
+| 2   | 2026-07-15 | Persist user preferences | yes      | no              | [spec](specs/persist-user-preferences.md) | none |

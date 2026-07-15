@@ -88,3 +88,124 @@ None remaining. All decisions above are settled. Design-stage judgement is still
 - Relevant files: `app/composables/useTheme.ts` (theme store and defaults), `app/components/app/header.vue` (pickers and locale toggle), `app/app.vue` (the current pre-paint no-flash guard and `useHead` injection), `app/types/auth.d.ts` (the session type, which gains the preference fields), `server/db/schema.ts` (the `settings` and `users` tables), the four session-creation handlers listed under Read and server-side resolution, and `i18n/locales/fr.json` and `i18n/locales/en.json` (existing verified copy).
 - Docs to reconcile when this lands: `spec.md` §13 (the language item now persists to `settings.locale`, not `users.locale`) and `docs/TODO.md` (the item-1 notes referencing `users.locale`).
 - This is the specs stage only. No implementation code is written here, and no later stage runs until the owner confirms this spec is correct.
+
+## Design blueprint
+
+This feature is plumbing, not visible UI. There are no new layout regions, no new components, and no new visual states. The header dropdown, the atmosphere swatches, and the language row all stay exactly as they render today. What follows is the data-flow and architecture contract the backend and frontend stages implement. The only user-facing visual addition is one error toast on a failed save, covered under "Write-failure behaviour".
+
+### Shared theme id source
+
+The theme id list currently lives only in `app/composables/useTheme.ts` (`themeOptions`), which the server cannot import. To validate ids server-side without drifting from the real list, extract the canonical ids into a shared module both sides import. Create `shared/theme.ts` (Nuxt 4 loads `shared/` for both app and server) exporting:
+
+- `export const THEME_IDS = ['pastel', 'ember', 'onyx', 'coffee', 'forest', 'autumn', 'berry', 'frost'] as const`
+- `export type ThemeId = (typeof THEME_IDS)[number]`
+- `export const DEFAULT_THEME_ID: ThemeId = 'pastel'`
+- `export const LOCALES = ['fr', 'en'] as const` and `export type Locale = (typeof LOCALES)[number]`
+
+`useTheme.ts` keeps `themeOptions` (it owns the palettes and names) but its `DEFAULT_THEME` re-exports or references `DEFAULT_THEME_ID` so there is one default. The Zod model and the session types both import from `shared/theme.ts`. This is what "validated against the real `themeOptions` ids" means in practice, one list, imported in three places.
+
+### 1. Session payload shape
+
+The three preferences are added as flat fields on the session `user` object, matching how `firstName`, `lastName`, and `onboarded` already sit there. No sibling object, so consumers read `user.lightTheme` with no extra nesting and the four handlers change the least.
+
+In `app/types/auth.d.ts` the `User` interface gains:
+
+- `lightTheme: string`
+- `darkTheme: string`
+- `locale: Locale` (the `'fr' | 'en'` type from `shared/theme.ts`)
+
+These stay non-optional. Every session-creation site populates them, using the user's `settings` row when one exists and the coded defaults (`pastel`, `pastel`, `fr`) when it does not. That covers the pre-onboarding window where a magic-link user has no `settings` row yet, so consumers never handle `undefined`.
+
+### 2. Cookie mirror flow
+
+The database is the authority. Two client-readable cookies mirror the theme choice for the pre-paint guard, and one cookie mirrors the locale for `@nuxtjs/i18n`.
+
+- `ui-theme-light` and `ui-theme-dark` hold the resolved theme ids. They must stay readable by the inline `noFlashTheme` script, so they are written with `httpOnly: false`, `sameSite: 'lax'`, `path: '/'`, and `maxAge` of one year. Writing them `httpOnly` would silently break the no-flash guarantee, which is the single most important thing to get right here.
+- `i18n_redirected` is the locale mirror. It is the cookie `@nuxtjs/i18n` already reads through `detectBrowserLanguage` (default `useCookie: true`, `cookieKey: 'i18n_redirected'`, `redirectOn: 'root'`). Writing it server-side is what lets the module resolve the persisted locale on the first request. Write it with the module's own attributes (`path: '/'`, not `httpOnly`).
+
+Who writes them:
+
+- The four session-creation handlers write all three cookies from the `settings` row (or defaults) at the moment they call `setUserSession`.
+- The `PATCH /api/me/preferences` handler rewrites the affected cookies in its response so the next render, and the next hard reload, both read the new value with no re-login.
+
+To avoid five copies of the same `setCookie` calls, add one server util, `applyPreferenceCookies(event, { lightTheme, darkTheme, locale })` in `server/utils/`, called by every site above. Pair it with a `loadUserPreferences(userId)` util that returns `{ lightTheme, darkTheme, locale }` from the `settings` row and falls back to the defaults, reused by the session sites, the GET handler, and the PATCH handler so the read path exists once.
+
+The `app/app.vue` guard needs no logic change. It still reads `nuxt-color-mode`, resolves dark via `matchMedia`, and reads `ui-theme-dark` / `ui-theme-light`. The only change is upstream, those cookies are now written from the database rather than only by the client. Confirmed: the guard stays byte-for-byte as written.
+
+### 3. `useTheme` refactor plan
+
+The public surface stays stable so `header.vue` and `app.vue` do not change for theme. `useTheme` still returns `colorMode`, `isDark`, `lightTheme`, `darkTheme`, `themes`, `activeId`, `active`, and `activeOnPrimary`, and `lightTheme` / `darkTheme` stay writable `useState` refs. `header.vue` keeps setting `current.value = option.id` with no edit.
+
+Two things change inside:
+
+- **Initial read.** The `useState` initializers read the session first, then fall back to the cookie default. Bring in `const { user } = useUserSession()` and initialize `lightTheme` with `() => user.value?.lightTheme ?? lightCookie.value ?? DEFAULT_THEME_ID`, same for dark. During SSR the session is present, so an authenticated user gets the correct atmosphere in the rendered HTML with no client fetch. A signed-out visitor falls through to the cookie default, unchanged from today.
+- **On a pick.** The existing `watch(lightTheme, ...)` / `watch(darkTheme, ...)` keep writing the client cookie mirror (harmless and useful for the next reload), and additionally call the new `usePreferences().savePreferences({ lightTheme: value })`. Watchers do not fire on the initializer, only on a real change, so setting the value from the session at init never triggers a write and there is no loop. The session refresh after a successful PATCH updates the `user` ref, not the theme `useState` refs, so it also cannot loop back.
+
+New composable `usePreferences()` owns the write side so both theme and locale share one path. It exposes `savePreferences(patch: Partial<{ lightTheme: ThemeId; darkTheme: ThemeId; locale: Locale }>)`, which no-ops when there is no session (signed-out picks stay cookie-only, matching the spec), otherwise `PATCH`es `/api/me/preferences`, and on failure shows the toast under decision 5. Keeping the write here means `useTheme` does not grow an HTTP dependency and the header locale toggle reuses the same function.
+
+### 4. API contract
+
+One route, `/api/me/preferences`, two methods, following the backend conventions. Route files stay thin, logic lives in `server/api/me/handlers/`, the Zod model lives in `server/models/preferences.ts`, and both methods run behind the session.
+
+Zod model in `server/models/preferences.ts`:
+
+```
+PreferencesPatchSchema = z.object({
+  lightTheme: z.enum(THEME_IDS).optional(),
+  darkTheme: z.enum(THEME_IDS).optional(),
+  locale: z.enum(LOCALES).optional()
+}).refine(has at least one defined field)
+```
+
+All three fields optional is the partial-PATCH contract, the body carries only what changed. The `.refine` rejects an empty object so a client bug does not send a meaningless write. An unknown theme id or a locale outside `fr` / `en` fails the enum and returns 422 through the existing `sendZodError` helper, which the client already knows how to read.
+
+`GET /api/me/preferences`
+
+- Request: none.
+- Handler: `defineAuthenticatedEventHandler`, reads the current user's `settings` via `loadUserPreferences`.
+- Response `200`: `{ lightTheme: string, darkTheme: string, locale: 'fr' | 'en' }`.
+- The client's primary read path is the session, so GET is not on the hot path. It exists per the spec for verification and future use.
+
+`PATCH /api/me/preferences`
+
+- Route: `requireUserSession`, then `readValidatedBody(event, PreferencesPatchSchema.safeParse)`, then `sendZodError` on failure, then call the handler, mirroring `server/api/onboarding/complete.post.ts`.
+- Handler: resolve `userId` from the session, update the user's `settings` row with the provided fields only. If the row is missing (the edge the backfill and onboarding creation are meant to prevent), insert it with defaults plus the provided fields rather than failing. Then refresh the session with `setUserSession` merging the new values onto the existing `user`, call `applyPreferenceCookies` for the affected cookies, and return the full updated set.
+- Response `200`: `{ lightTheme, darkTheme, locale }` (the full current state, not just the patched fields, so the client can reconcile).
+- Writes are always scoped to the session user, never a user id from the body. A user cannot write another user's preferences.
+
+### 5. The two deferred design decisions
+
+**(a) Write-failure behaviour.** On a failed PATCH the in-memory pick stays applied, the value is not reverted, and a non-blocking toast tells the user the choice did not persist. Reverting would fight the product non-negotiable of not policing the user, and a silent failure would hide a real problem, so a toast plus keep-the-pick is the middle path the spec's edge case already leans toward. Use `useToast()` with `color: 'warning'`. This adds one user-facing string, so it needs a researched FR/EN key under a new `preferences` namespace, French first, and the frontend stage confirms the final wording before it ships. Proposed copy, chosen to avoid the space-before-punctuation cases entirely:
+
+- `preferences.saveError` FR: "Votre préférence n'a pas pu être enregistrée. Elle s'appliquera pour cette session seulement."
+- `preferences.saveError` EN: "Your preference could not be saved. It will apply for this session only."
+
+If the confirmed wording introduces `? ! : ;`, the French copy takes the space before it.
+
+**(b) `system` color-mode guard, end to end.** Confirmed working with no logic change to the guard. A `system`-mode user's dark-versus-light choice is only knowable on the client, which is why SSR alone cannot render their atmosphere. The flow is: at session creation `applyPreferenceCookies` writes `ui-theme-light` and `ui-theme-dark` from the database, non-`httpOnly` so the inline script can read them. On load the `noFlashTheme` script runs before paint, reads `nuxt-color-mode`, resolves dark via `matchMedia`, reads the matching theme cookie, and sets `data-theme`, so a `system` user in OS dark mode lands on their persisted dark atmosphere with no flash. On a pick, PATCH rewrites the cookies, so the next load stays correct. The one way this breaks is a stale or `httpOnly` cookie, which is why every write site must go through `applyPreferenceCookies` and why the `httpOnly: false` note above is load-bearing.
+
+### 6. Locale on first paint
+
+Locale rides in the session for authenticated users and is mirrored to the `i18n_redirected` cookie that `@nuxtjs/i18n` already consumes. Because the app uses localised route paths (`/connexion` vs `/signin`) under the default strategy, the cookie mirror is the mechanism that keeps the module, the URL, and the persisted choice in agreement without a fragile SSR `setLocale` call. On the first request to the root the module reads `i18n_redirected` (written from `settings.locale` at session creation) and resolves the persisted locale, so the first rendered copy is already in the right language.
+
+The header toggle keeps working unchanged in behaviour. `setLocale(other)` still switches the UI immediately and updates `i18n_redirected` client-side as it does today. The single addition is a `savePreferences({ locale: other })` call right after `setLocale`, so the choice reaches the database and follows the user to another device. That is the only edit to `header.vue`.
+
+### Files touched (for the build stages)
+
+- `shared/theme.ts` (new): `THEME_IDS`, `ThemeId`, `DEFAULT_THEME_ID`, `LOCALES`, `Locale`.
+- `app/types/auth.d.ts`: add `lightTheme`, `darkTheme`, `locale` to `User`.
+- `app/composables/useTheme.ts`: session-first initial read, watchers call `savePreferences`, default sourced from `shared/theme.ts`.
+- `app/composables/usePreferences.ts` (new): `savePreferences` with the failure toast.
+- `app/components/app/header.vue`: one added `savePreferences({ locale })` call after `setLocale`.
+- `server/models/preferences.ts` (new): `PreferencesPatchSchema`.
+- `server/utils/applyPreferenceCookies.ts` and `server/utils/loadUserPreferences.ts` (new).
+- `server/api/me/preferences.get.ts`, `server/api/me/preferences.patch.ts`, and `server/api/me/handlers/` (new).
+- `server/api/magic-link/handlers/verify.ts`, `server/api/auth/handlers/login.ts`, `server/routes/auth/google.get.ts`, `server/api/onboarding/handlers/complete.ts`: load preferences, attach to session, write cookies.
+- `server/db/schema.ts` and a Drizzle migration: the three `settings` columns, the backfill, and dropping `users.locale`, per the spec's schema section.
+- `i18n/locales/fr.json` and `i18n/locales/en.json`: the `preferences.saveError` key.
+
+### Note for the backend stage: Google OAuth site
+
+`server/routes/auth/google.get.ts` currently sets a session with `{ email, name, picture }`, which does not match the `User` type (no `id`, `firstName`, `lastName`, `onboarded`) and looks incomplete or unwired. Adding the preference fields there is only meaningful once that handler resolves or creates a real `users` row like the other sites do. Flag this to the owner: either the handler is brought in line with the others (resolve a user row, then `loadUserPreferences` and `applyPreferenceCookies`), or it is confirmed dead and left alone. Do not silently paper over the mismatch.
+
+Backend stage note: Google auth was ruled out of scope and left untouched as dead scaffolding (no OAuth client config in `nuxt.config.ts`, no UI entry point, and its session shape already predates the `User` type), so if that handler is ever completed it must also call `loadUserPreferences` and `applyPreferenceCookies` and populate `lightTheme`, `darkTheme`, and `locale` on the session like the three live session-creation sites now do.
