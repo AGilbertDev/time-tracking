@@ -4,10 +4,10 @@ Working state as of **2026-05-31**. Read this with [`spec.md`](./spec.md). The o
 
 ## How to work on this repo
 
-- **Tutorial mode is the default.** The owner (AGilbertDev) is learning backend; teach step by step, give a one-line "why it's good practice" before each step, point at exact components/APIs, then stop and wait. Only write code directly when the owner says "do it" / "show me" / "override tutorial".
+- **Pipeline-driven now, not tutorial mode.** This repo is the proof of concept for the multi-agent pipeline. Build one feature at a time through the full pipeline (specs, design, build, review, commit). See [`AGENTS.md`](../AGENTS.md) and [`docs/pipeline.md`](./pipeline.md). Tutorial mode is retired here.
 - **Comment style**: end every comment with a period; no dashes or colons in comments — full sentences.
 - **Copy quality is non-negotiable** (the user is a translator). Every visible FR/EN string must be correct. French uses a space before `? ! : ;`.
-- **Component priority**: Nuxt UI → Nuxt → Tailwind. No custom CSS unless unavoidable. Icons: Carbon (`i-carbon-*`), brand icons via Simple Icons.
+- **Component priority**: Nuxt UI → Nuxt → Tailwind. No custom CSS unless unavoidable. Icons: Phosphor (`i-ph-*`), brand icons via Simple Icons.
 - **Backend conventions** live in the portfolio repo: `AGilbertDev/my-portfolio` → `docs/backend-standards.md` (thin route files, handlers in `handlers/`, Zod models in `server/models/`, `sendZodError`, validate every route).
 - **Git**: commit/push only when asked. Push as the **AGilbertDev** gh account (`gh auth switch --user AGilbertDev`, set git user, then switch back to AlexHubelia after). Husky runs eslint + prettier on commit.
 - **Restart the dev server** after any `nuxt.config.ts` i18n/route change (HMR does not pick those up). The owner runs the dev server.
