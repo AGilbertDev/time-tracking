@@ -4,6 +4,9 @@ import { SESSION_MAX_AGE } from './app/constants/auth'
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
+  // Pin the dev server to 8080 as the source of truth. The dev script passes
+  // the same port, so any nuxt dev invocation lands here.
+  devServer: { host: 'localhost', port: 8080 },
   modules: ['@nuxt/ui', '@nuxt/eslint', '@nuxt/fonts', 'nuxt-auth-utils', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css'],
   // Persist the color mode in a cookie (not localStorage) so the server reads it
