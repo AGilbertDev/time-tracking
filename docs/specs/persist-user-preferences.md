@@ -2,54 +2,53 @@
 
 ## Intent
 
-The theme selector (seven light and seven dark atmospheres) and the FR/EN language toggle already ship in the header, but both persist only to cookies today. This feature makes the user's account the source of truth for those preferences so they follow the user across devices instead of living in one browser. It wires the existing UI to a real settings API, demotes cookies to a pre-auth default only, and keeps the no-flash guarantee on first paint by resolving the chosen atmosphere server-side. Nothing new is added to the visible UI. This is plumbing behind controls that already exist.
+The theme selector (the light and dark atmospheres defined in `useTheme`) and the FR/EN language toggle already ship in the header, but both persist only to cookies today. This feature makes the user's account the source of truth for those preferences so they follow the user across devices instead of living in one browser. It wires the existing UI to a real settings API, demotes cookies to a pre-auth default only, and keeps the no-flash guarantee on first paint by resolving the chosen atmosphere server-side. Nothing new is added to the visible UI. This is plumbing behind controls that already exist.
 
 The feature is being pulled forward because building the pickers without wiring real persistence risks the persistence being forgotten now that the visible parts look finished. See `AGENTS.md`, `docs/spec.md` §4, and `docs/TODO.md`.
 
 ## Storage decisions (settled, do not re-derive)
 
-These come from `docs/spec.md` §4 and §13 and from the current schema. They are inputs to this spec, not open questions.
-
-- **Theme** lives on the `settings` row as two independent columns, `light_theme` and `dark_theme`. Each holds a theme id from `themeOptions` in `app/composables/useTheme.ts`. This is the "Theme persistence (decision)" paragraph in `spec.md` §4.
-- **Locale** lives on `users.locale`. That column already exists in `server/db/schema.ts` (`text`, not null, default `'fr'`) and `spec.md` §13 states the language item "persists to `users.locale`". Locale is not moved onto `settings`.
-- Theme and locale therefore live in two different tables. Both are user preferences, but they sit where each existing decision already placed them. The split is called out in Open questions in case it should be consolidated, but this spec treats it as settled and keeps both tables in play.
-- Cookies (`ui-theme-light`, `ui-theme-dark`) stop being the source of truth. They survive only as a pre-auth default on the sign-in and sign-up screens, where there is no user yet. The `nuxt-color-mode` cookie/localStorage keeps driving light vs dark mode as it does today. This feature does not change light/dark mode persistence, only which atmosphere is chosen within each mode.
+- **All three preferences live on the `settings` row.** Theme is two independent columns, `light_theme` and `dark_theme`, each holding a theme id from `themeOptions` in `app/composables/useTheme.ts`. Locale is a third column, `locale`. Keeping the three together means one row, one read path, and one write path for a "save preferences" action.
+- **Locale moves off `users`.** `users.locale` exists today (`text`, not null, default `'fr'`) but nothing in the server or client reads it, so it is a defined-but-unused column. This feature retires it and makes `settings.locale` the source of truth. `spec.md` §13 previously said locale "persists to `users.locale`", and that reference is now updated to `settings.locale`.
+- **Theme default is `pastel`.** The column default matches `DEFAULT_THEME` in `useTheme.ts`. The owner confirmed the coded value is authoritative over the older `ember` mention in the docs, which were corrected.
+- Cookies (`ui-theme-light`, `ui-theme-dark`) stop being the source of truth, but they do not go away. The database becomes the authority and the cookies become a client-readable cache derived from it, refreshed from the user's `settings` on session creation and on every preference write. They are needed because the server cannot know a `system`-mode user's light-versus-dark choice at render time, so a value has to be readable by the pre-paint guard in `app/app.vue`, and the encrypted session cookie is not readable by that inline script. On the pre-auth screens the same cookies serve as the display default with no user attached. The `nuxt-color-mode` cookie/localStorage keeps driving light versus dark mode as it does today. This feature does not change light/dark mode persistence, only which atmosphere is chosen within each mode.
 
 ## Inputs
 
-- **Read on load (authenticated user)**: the current user's `light_theme`, `dark_theme` (from `settings`) and `locale` (from `users`), resolved server-side so they are present on first paint.
+- **Read on load (authenticated user)**: the current user's `light_theme`, `dark_theme`, and `locale` from the `settings` row, carried in the session payload so they are present on first paint with no per-render database read.
 - **Read on load (pre-auth screens)**: the `ui-theme-light` / `ui-theme-dark` cookie values, read server-side per request, used only as a display default with no user attached.
-- **Write, theme**: a request from `useTheme` when the user picks an atmosphere in the header picker. Body carries the mode being changed and the chosen theme id, for example `{ mode: 'light' | 'dark', theme: <themeId> }`. The exact route shape is defined under Outputs.
-- **Write, locale**: a request when the user toggles language in the header. Body carries the target locale, for example `{ locale: 'fr' | 'en' }`.
-- Both write paths are user-initiated actions on controls that already exist in `app/components/app/header.vue`.
+- **Write**: a single request from the client when the user picks an atmosphere or toggles language in the header. Body carries only the changed fields, for example `{ lightTheme: <themeId> }`, `{ darkTheme: <themeId> }`, or `{ locale: 'fr' | 'en' }`. The exact route shape is defined under Outputs.
+- Both write triggers are user-initiated actions on controls that already exist in `app/components/app/header.vue`.
 
 ## Outputs and acceptance criteria
 
 ### Schema and migration
 
-- `settings` gains `light_theme` (text, not null) and `dark_theme` (text, not null) with a default of `pastel`, matching `DEFAULT_THEME` in `useTheme.ts`. The coded default is authoritative and `spec.md` was corrected to match it.
-- A Drizzle migration adds both columns. Existing `settings` rows take the column default. See Open questions on the fact that no code path creates `settings` rows today, so the migration alone does not guarantee every user has a row.
-- `users.locale` needs no schema change. It already exists.
+- `settings` gains three columns: `light_theme` (text, not null, default `'pastel'`), `dark_theme` (text, not null, default `'pastel'`), and `locale` (text, not null, default `'fr'`). The theme defaults match `DEFAULT_THEME` in `useTheme.ts`.
+- A Drizzle migration adds the three columns, backfills a `settings` row for every existing user who lacks one, and copies each existing `users.locale` value into the new `settings.locale` during the backfill so no one's language is lost. After the backfill, the migration drops `users.locale`. Dropping it is safe because nothing reads it, which was verified against the server and client code.
+- The `settings` row is also created when a user completes onboarding, in `server/api/onboarding/handlers/complete.ts`, so every user onboarded after this migration has a row from the start. Between the migration backfill and onboarding creation, every user ends up with exactly one row.
 
-### Read API and server-side resolution
+### Read and server-side resolution (no flash)
 
-- The atmosphere is resolved on the server and written into the initial HTML (`<html data-theme="...">` and the `.dark` class) before anything renders. On a hard refresh there is no flash of the default atmosphere followed by a swap to the user's choice. This is the primary acceptance criterion and it restates the "No flash of the wrong theme (requirement)" paragraph in `spec.md` §4.
-- For an authenticated user, the resolved atmosphere comes from that user's `settings`, not from a cookie and not from a client fetch after mount.
-- For the pre-auth screens, the same no-flash guarantee holds by reading the cookie default server-side on each request. A signed-out visitor on the sign-in or sign-up page never sees a flash either.
-- Locale is likewise resolved server-side from `users.locale` for authenticated users so the first rendered copy is already in the persisted language.
+- The resolved atmosphere is written into the initial HTML (`<html data-theme="...">` and the `.dark` class) before anything renders. On a hard refresh there is no flash of the default atmosphere followed by a swap to the user's choice. This is the primary acceptance criterion and it restates the "No flash of the wrong theme (requirement)" paragraph in `spec.md` §4.
+- The mechanism is a hybrid, because no single layer can cover every case. The `nuxt-auth-utils` session payload carries `light_theme`, `dark_theme`, and `locale`, already loads server-side on every request, and is the source the server uses to render the atmosphere at SSR time for a user whose color mode is an explicit light or dark. There is no client fetch after mount and no database query per render.
+- For a `system`-mode user the server cannot know the OS color scheme, so the existing synchronous pre-paint guard in `app/app.vue` still resolves dark versus light on the client via `matchMedia` and reads the atmosphere from the `ui-theme-light` / `ui-theme-dark` cookies before paint. Those cookies are kept in sync with the user's `settings` (see the storage decisions), so the guard reads the persisted choice rather than a stale one. The guard's logic does not need to change; what changes is that the cookies it reads are now written from the database.
+- The session payload and the cookie mirror are both populated from the user's `settings` row at every session-creation site: `server/api/magic-link/handlers/verify.ts`, `server/api/auth/handlers/login.ts`, `server/routes/auth/google.get.ts`, and `server/api/onboarding/handlers/complete.ts`. A change made through the write API refreshes both the session and the cookies so the new value is present on the next render without a re-login.
+- For the pre-auth screens, the same no-flash guarantee holds by reading the cookie default server-side and in the client guard on each request. A signed-out visitor on the sign-in or sign-up page never sees a flash either.
+- Locale is resolved server-side from the session for authenticated users so the first rendered copy is already in the persisted language.
 
 ### Write API
 
-- A settings read/write API exists for these preferences, following the backend conventions in the `my-backend-conventions` skill. Route files stay thin, business logic lives in a `handlers/` directory, Zod schemas live in `server/models/`, and every route validates its input with `readValidatedBody` / `getValidatedQuery` and `.safeParse`. Protected routes use the authenticated-handler wrapper.
-- A theme write persists the chosen id to the correct column (`light_theme` or `dark_theme`) on the current user's `settings` row and returns success. An invalid theme id (not one of the known `themeOptions` ids) is rejected by validation with a 422.
-- A locale write persists the chosen value to `users.locale` and returns success. A value outside the supported locales (`fr`, `en`) is rejected with a 422.
+- A single endpoint, `/api/me/preferences`, serves this feature, following the backend conventions in the `my-backend-conventions` skill. Route files stay thin, business logic lives in a `handlers/` directory, the Zod model lives in `server/models/`, and every route validates its input with `readValidatedBody` and `.safeParse`. The route uses the authenticated-handler wrapper.
+- `GET /api/me/preferences` returns the current user's `light_theme`, `dark_theme`, and `locale`. `PATCH /api/me/preferences` accepts a partial body of those fields, validates them, writes them to the current user's `settings` row, refreshes the session payload, and returns the updated values.
+- The Zod model rejects an invalid theme id (not one of the known `themeOptions` ids) and a locale outside `fr` and `en` with a 422.
 - Writes are scoped to the current user from the session. A user can never write another user's preferences.
-- The write path creates the `settings` row if the user has none yet, so a first-ever theme pick does not silently fail. See Open questions for whether row creation belongs here or elsewhere.
+- If the user somehow has no `settings` row when a write arrives (an edge that the backfill and onboarding creation are meant to prevent), the write creates it rather than failing silently.
 
 ### Rewiring the client
 
-- `useTheme` reads its initial `lightTheme` / `darkTheme` from the server-resolved user values for an authenticated user, and from the cookie default only when there is no user. It writes a pick to the theme API, and the cookie is no longer the store for a signed-in user.
-- The header language toggle writes to the locale API in addition to calling `setLocale`, so the choice survives a new session on another device. The visible toggle behavior does not change.
+- `useTheme` reads its initial `lightTheme` / `darkTheme` from the server-resolved session values for an authenticated user, and from the cookie default only when there is no user. It writes a pick to `PATCH /api/me/preferences`, and the cookie is no longer the store for a signed-in user.
+- The header language toggle calls the same endpoint with `{ locale }` in addition to calling `setLocale`, so the choice survives a new session on another device. The visible toggle behavior does not change.
 - After a successful write, a page reload or a move to another device shows the persisted preference with no flash.
 
 ### Copy and i18n
@@ -62,26 +61,30 @@ These come from `docs/spec.md` §4 and §13 and from the current schema. They ar
 
 ## Edge cases
 
-- **No `settings` row for the user**. Reads fall back to the default theme id. The first theme write creates the row. This matters because no current code path creates `settings` rows, so most or all existing users have none.
 - **Stored theme id no longer exists** (an atmosphere was renamed or removed). The resolver falls back to the default id rather than rendering a broken `data-theme`.
-- **`system` color mode on first paint**. The server cannot know the OS color scheme for a `system` user, so the SSR-rendered `data-theme` may not match the mode the client resolves. The existing pre-paint guard in `app/app.vue` handles this today by reading cookies. That guard must keep working, or its logic must move to read the server-resolved user atmospheres, so a `system` user in dark mode still lands on the correct dark atmosphere with no flash. This is the trickiest interaction between server resolution and the client guard and needs care in the design stage.
+- **`system` color mode on first paint**. The server cannot know the OS color scheme for a `system` user, so the SSR-rendered `data-theme` may not match the mode the client resolves. This is why the cookie mirror exists. The pre-paint guard in `app/app.vue` reads the `ui-theme-light` / `ui-theme-dark` cookies (now DB-synced) and resolves dark versus light via `matchMedia` before paint, so a `system` user in dark mode still lands on the correct dark atmosphere with no flash. The design stage must confirm the write API and every session-creation site update these cookies so the guard never reads a stale value, since a stale cookie here is the one way the flash comes back.
+- **New user between session creation and onboarding**. The magic-link `verify` handler can create a user before onboarding, so a brand-new user may briefly have no `settings` row while on the onboarding screens. During that window the session carries no preferences and the app falls back to the documented defaults, which is acceptable on the onboarding flow. Onboarding completion creates the row.
 - **Write fails** (network or DB error). The in-memory pick still applies for the session so the UI is responsive, but the failure is surfaced and the persisted value is unchanged. Retry behavior is a design decision.
 - **Signed-out user picks a theme on a pre-auth screen**. The choice updates the cookie default only. It is not written to any account and does not leak into another user's settings.
-- **Locale toggle before the write resolves**. `setLocale` already switches the UI immediately. The persisted value catches up on the write. A failed write leaves `users.locale` unchanged while the current session stays on the toggled locale.
+- **Locale toggle before the write resolves**. `setLocale` already switches the UI immediately. The persisted value catches up on the write. A failed write leaves `settings.locale` unchanged while the current session stays on the toggled locale.
 - **Concurrent devices**. Two devices can hold different in-memory picks. The last write wins in the database, and each device reflects its own last action until the next reload. No merge is attempted.
 
 ## Resolved decisions
 
-- **Default atmosphere is `pastel`**. `spec.md` §4 previously documented the column default as `'ember'`, but `useTheme.ts` sets `DEFAULT_THEME = 'pastel'`, marks `pastel` as `default: true`, and the FR copy treats `pastel` as the default. The owner confirmed the coded value is authoritative, so the column default is `pastel` and `spec.md` and `TODO.md` were corrected to match.
+These were settled with the owner during the specs stage.
+
+- **Locale consolidates onto `settings`.** Rather than leaving theme on `settings` and locale on `users`, all three preferences live on the `settings` row so one save touches one table. `users.locale` is unused and is dropped by the migration after its values are backfilled.
+- **No-flash mechanism is the session payload, plus a DB-synced cookie mirror for the client guard.** The resolved theme and locale ride in the `nuxt-auth-utils` session, which already loads server-side, so there is no per-render database read. Because a `system`-mode user's light-versus-dark choice is only known on the client, the `ui-theme-*` cookies stay as a client-readable mirror of the settings values so the existing `app/app.vue` pre-paint guard keeps working. The tradeoff accepted is that both the session and the cookies must be refreshed when a preference changes, which the write endpoint does.
+- **Row creation is backfill plus onboarding.** The migration backfills a `settings` row for every existing user, and onboarding completion creates the row for new users, so read paths can assume a row exists.
+- **One endpoint, not two.** A single `/api/me/preferences` route reads and writes all three fields. The client saves "preferences" without knowing the storage layout.
+- **Default atmosphere is `pastel`.** Confirmed against `useTheme.ts`; the older `ember` mentions in `spec.md` and `TODO.md` were corrected.
 
 ## Open questions
 
-- **Locale on `users` vs `settings`**. Theme sits on `settings` and locale sits on `users`, so the two preferences this feature persists live in different tables. This follows the existing decisions, but it means two read paths and two write paths for one conceptual "preferences" save. Should locale move onto `settings` alongside the theme columns, or stay on `users`? Staying on `users` is assumed unless changed.
-- **No-flash mechanism, session payload vs SSR load**. `spec.md` §4 leaves open whether the server carries the resolved atmosphere in the session payload or loads it during SSR from the database. Session payload avoids a per-request DB read but means the session must be updated on every theme change. An SSR load keeps the session minimal but adds a query per render. This needs a decision in the design or backend stage.
-- **Where `settings` row creation lives**. No code path creates `settings` rows today. Options are to create the row lazily on the first preference write, to create it at onboarding or first sign-in, or to backfill all existing users in the migration. The choice affects the migration and the read fallbacks.
-- **Whether the write is one endpoint or two**. Theme and locale could share a single preferences endpoint or use separate routes given they touch different tables. Either fits the backend conventions. A choice is needed so the route files can be scaffolded.
+None remaining. All decisions above are settled. Design-stage judgement is still needed on the `system` color-mode guard interaction and on write-failure retry behavior, both captured under Edge cases.
 
 ## Notes for later stages
 
-- Relevant files: `app/composables/useTheme.ts` (theme store and defaults), `app/components/app/header.vue` (pickers and locale toggle), `app/app.vue` (the current pre-paint no-flash guard and `useHead` injection), `server/db/schema.ts` (the `settings` and `users` tables), `i18n/locales/fr.json` and `i18n/locales/en.json` (existing verified copy).
+- Relevant files: `app/composables/useTheme.ts` (theme store and defaults), `app/components/app/header.vue` (pickers and locale toggle), `app/app.vue` (the current pre-paint no-flash guard and `useHead` injection), `app/types/auth.d.ts` (the session type, which gains the preference fields), `server/db/schema.ts` (the `settings` and `users` tables), the four session-creation handlers listed under Read and server-side resolution, and `i18n/locales/fr.json` and `i18n/locales/en.json` (existing verified copy).
+- Docs to reconcile when this lands: `spec.md` §13 (the language item now persists to `settings.locale`, not `users.locale`) and `docs/TODO.md` (the item-1 notes referencing `users.locale`).
 - This is the specs stage only. No implementation code is written here, and no later stage runs until the owner confirms this spec is correct.
