@@ -55,28 +55,28 @@ const items = computed<MenuItem[][]>(() => {
   }))
 
   return [
-    [{ label: t('header.profile'), icon: 'i-carbon-user' }],
+    [{ label: t('header.profile'), icon: 'i-ph-user' }],
     [
       {
         label: isDark.value ? t('theme.dark') : t('theme.light'),
-        icon: isDark.value ? 'i-carbon-moon' : 'i-carbon-sun',
+        icon: isDark.value ? 'i-ph-moon' : 'i-ph-sun',
         children: atmospheres
       }
     ],
     [
       {
         label: t('header.language', { code: locale.value.toUpperCase() }),
-        icon: 'i-carbon-language',
+        icon: 'i-ph-translate',
         onSelect: () => setLocale(otherLocale.value)
       }
     ],
-    [{ label: t('header.logout'), icon: 'i-carbon-logout', onSelect: logout }]
+    [{ label: t('header.logout'), icon: 'i-ph-sign-out', onSelect: logout }]
   ]
 })
 </script>
 
 <template>
-  <UHeader :toggle="false" :ui="{ container: 'max-w-full px-4 sm:px-6 lg:px-8' }">
+  <UHeader :toggle="false" :ui="{ container: 'max-w-full px-6 sm:px-6 lg:px-8' }">
     <template #title>
       <NuxtLink :aria-label="t('app.name')" :to="localePath('index')">
         <AppLogo class="h-8 sm:h-10" />
@@ -118,8 +118,8 @@ const items = computed<MenuItem[][]>(() => {
 
           <!-- Restore the submenu chevron, and mark the active atmosphere. -->
           <template #item-trailing="{ item }">
-            <UIcon v-if="item.children" class="size-4 text-dimmed" name="i-carbon-chevron-right" />
-            <UIcon v-else-if="item.active" class="size-4 text-primary" name="i-carbon-checkmark" />
+            <UIcon v-if="item.children" class="size-4 text-dimmed" name="i-ph-caret-right" />
+            <UIcon v-else-if="item.active" class="size-4 text-primary" name="i-ph-check" />
           </template>
         </UDropdownMenu>
       </div>

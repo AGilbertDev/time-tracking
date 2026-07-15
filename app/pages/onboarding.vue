@@ -45,9 +45,7 @@ async function submit() {
 </script>
 
 <template>
-  <div
-    class="flex min-h-dvh items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-4 sm:p-6"
-  >
+  <div class="page-radial flex min-h-dvh items-center justify-center bg-muted p-4 sm:p-6">
     <UCard class="w-full max-w-sm" :ui="{ body: 'px-6 py-10 sm:px-9 sm:py-14' }">
       <div class="flex flex-col items-center text-center">
         <AppLogo class="mb-4 h-10 sm:h-12" />
@@ -107,7 +105,14 @@ async function submit() {
 
           <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
-          <UButton block class="mt-2" :loading="loading" size="lg" type="submit">
+          <UButton
+            block
+            class="btn-glow mt-2"
+            :loading="loading"
+            size="lg"
+            trailing-icon="i-ph-arrow-right-bold"
+            type="submit"
+          >
             {{ t('onboarding.submit') }}
           </UButton>
         </form>

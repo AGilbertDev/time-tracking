@@ -36,9 +36,7 @@ async function submit() {
 </script>
 
 <template>
-  <div
-    class="relative flex min-h-dvh items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-4 sm:p-6"
-  >
+  <div class="page-radial relative flex min-h-dvh items-center justify-center bg-muted p-4 sm:p-6">
     <UCard class="w-full max-w-sm" :ui="{ body: 'px-6 pt-12 pb-12 sm:px-9 sm:pt-20 sm:pb-20' }">
       <div class="flex flex-col items-center text-center">
         <AppLogo class="mb-4 h-10 sm:h-12" />
@@ -54,7 +52,7 @@ async function submit() {
             v-model="email"
             autocomplete="email"
             class="w-full"
-            icon="i-carbon-email"
+            icon="i-ph-envelope-simple"
             :placeholder="t('signin.email')"
             required
             size="lg"
@@ -65,7 +63,7 @@ async function submit() {
             v-model="password"
             autocomplete="current-password"
             class="w-full"
-            icon="i-carbon-locked"
+            icon="i-ph-lock"
             :placeholder="t('signin.password')"
             required
             size="lg"
@@ -74,7 +72,14 @@ async function submit() {
 
           <p v-if="error" class="text-left text-sm text-error">{{ error }}</p>
 
-          <UButton block :loading="loading" size="lg" type="submit">
+          <UButton
+            block
+            class="btn-glow"
+            :loading="loading"
+            size="lg"
+            trailing-icon="i-ph-arrow-right-bold"
+            type="submit"
+          >
             {{ t('signin.submit') }}
           </UButton>
         </form>

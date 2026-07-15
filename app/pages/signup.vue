@@ -30,9 +30,7 @@ async function submit() {
 </script>
 
 <template>
-  <div
-    class="relative flex min-h-dvh items-center justify-center bg-muted bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.035)_1px,transparent_1px)] bg-size-[22px_22px] p-4 sm:p-6"
-  >
+  <div class="page-radial relative flex min-h-dvh items-center justify-center bg-muted p-4 sm:p-6">
     <UCard class="w-full max-w-sm" :ui="{ body: 'px-6 pt-12 pb-12 sm:px-9 sm:pt-20 sm:pb-20' }">
       <div class="flex flex-col items-center text-center">
         <AppLogo class="mb-4 h-10 sm:h-12" />
@@ -53,7 +51,7 @@ async function submit() {
             autocomplete="email"
             class="w-full"
             :disabled="sent"
-            icon="i-carbon-email"
+            icon="i-ph-envelope-simple"
             :placeholder="t('signup.email')"
             required
             size="lg"
@@ -65,7 +63,15 @@ async function submit() {
           <p v-if="sent" class="mt-4 text-center text-sm text-success">
             {{ t('signup.sent') }}
           </p>
-          <UButton v-else block class="mt-4" :loading="loading" size="lg" type="submit">
+          <UButton
+            v-else
+            block
+            class="btn-glow mt-4"
+            :loading="loading"
+            size="lg"
+            trailing-icon="i-ph-arrow-right-bold"
+            type="submit"
+          >
             {{ t('signup.submit') }}
           </UButton>
         </form>

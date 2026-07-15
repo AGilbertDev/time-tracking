@@ -10,10 +10,22 @@ export default defineAppConfig({
       error: 'red',
       neutral: 'stone'
     },
+    // One global container padding scale so every section agrees. Keep Nuxt UI's
+    // own centering and max-width, override only the horizontal padding.
+    container: {
+      base: 'mx-auto w-full max-w-(--ui-container) px-6 sm:px-6 lg:px-8'
+    },
     button: {
       variants: {
         size: {
-          md: { base: 'text-md' }
+          md: { base: 'text-md' },
+          // Oversized CTA for future landing/hero use. Scales down on mobile and
+          // pairs with `block` so long bilingual labels stack full width, never truncate.
+          '2xl': {
+            base: 'text-base px-5 py-3 gap-2 sm:text-xl sm:px-7 sm:py-4',
+            leadingIcon: 'size-5 sm:size-6',
+            trailingIcon: 'size-5 sm:size-6'
+          }
         }
       },
       defaultVariants: { size: 'md' }

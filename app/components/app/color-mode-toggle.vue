@@ -16,7 +16,7 @@ const isDark = computed({
     <UButton
       :aria-label="t('theme.mode')"
       color="neutral"
-      :icon="isDark ? 'i-carbon-moon' : 'i-carbon-sun'"
+      :icon="isDark ? 'i-ph-moon' : 'i-ph-sun'"
       variant="ghost"
       @click="isDark = !isDark"
     />

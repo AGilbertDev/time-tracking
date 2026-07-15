@@ -85,6 +85,8 @@ The discipline is the demonstration. A feature goes all the way from spec to mer
 
 This section is the trail. Each feature shipped through the pipeline gets an entry here, linking its spec and its pull request, so the methodology can be read end to end without digging through git.
 
-### Feature 1 — Visual theme rework (in progress)
+### Feature 1 — Visual theme rework
 
-Bringing the app's visual identity in line with the reworked portfolio conventions: Phosphor icons, the signature glow accent, oklch-derived accents, the global container config, and the oversized CTA, all derived from the active theme so they work across all eight atmospheres. Spec and design blueprint at [docs/specs/visual-theme-rework.md](specs/visual-theme-rework.md). Stages completed so far: specs, design.
+Bringing the app's visual identity in line with the reworked portfolio conventions. The change swaps every icon from Carbon to Phosphor and bundles the Phosphor set locally, adds the signature glow ring to the primary calls to action, gives the auth pages a faint theme-derived page glow, registers the global container padding and an oversized button size, and derives every new accent from the active theme through oklch relative color so it works across all eight atmospheres in light and dark. Spec and design blueprint at [docs/specs/visual-theme-rework.md](specs/visual-theme-rework.md).
+
+Stages run: specs, design, frontend, accessibility, code review, commit. Compliance, SEO, and unit tests were skipped because nothing about data handling, search surface, or business logic changed. Verification confirmed the icons render, the app boots, and lint and the accessibility pass are clean; the look across the eight atmospheres is a manual eyeball at `localhost:8080`. This first run was driven from the main environment rather than the devcontainer sandbox, which is the tracked next step for the process itself.

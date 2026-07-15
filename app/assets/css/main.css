@@ -173,6 +173,96 @@ input:-webkit-autofill:active {
   transition: background-color 9999s ease-in-out 0s;
 }
 
+/* Signature glow. A slow conic-gradient ring masked to a thin border on ::before, */
+/* plus a soft box-shadow, revealed on hover. All colors derived from the active */
+/* theme's --ui-primary via oklch relative color, so every atmosphere gets its own */
+/* on-brand sweep. The hue is nudged +25 toward cyan and lightened for the glint. */
+@property --btn-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.btn-glow {
+  position: relative;
+  isolation: isolate;
+  /* Soft glow lives on the element itself, not on ::before: a mask clips box-shadow, */
+  /* so a shadow on the masked ring would never paint. Hidden until hover. */
+  transition: box-shadow 0.3s ease;
+}
+
+.btn-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1; /* above the button content so the ring shows over edge-to-edge media */
+  border-radius: inherit;
+  padding: 2px; /* ring thickness */
+  background: conic-gradient(
+    from var(--btn-angle),
+    var(--ui-primary),
+    oklch(from var(--ui-primary) l c calc(h + 25)),
+    oklch(from var(--ui-primary) calc(l * 1.1) c calc(h + 25)),
+    oklch(from var(--ui-primary) l c calc(h + 25)),
+    var(--ui-primary)
+  );
+  /* Mask the fill down to just the padding ring. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  animation: btn-glow-spin 7s linear infinite;
+}
+
+.btn-glow:hover,
+.btn-glow.glow-on {
+  box-shadow: 0 0 1.5rem
+    oklch(from var(--ui-primary) calc(l * 1.1) c calc(h + 25) / 0.45);
+}
+
+.btn-glow:hover::before,
+.btn-glow.glow-on::before {
+  opacity: 1;
+}
+
+@keyframes btn-glow-spin {
+  to {
+    --btn-angle: 360deg;
+  }
+}
+
+/* Spin is decorative. Keep the static ring and glow, drop the motion. */
+@media (prefers-reduced-motion: reduce) {
+  .btn-glow::before {
+    animation: none;
+  }
+}
+
+/* Faint page-level radial of the primary (hue-shifted), anchored top-right. */
+/* Auth surfaces only. Fainter on dark so it never muddies the darkest atmospheres. */
+.page-radial {
+  background-image: radial-gradient(
+    120% 80% at 100% 0%,
+    oklch(from var(--ui-primary) calc(l * 1.1) c calc(h + 25) / 0.14),
+    transparent 60%
+  );
+}
+
+.dark .page-radial {
+  background-image: radial-gradient(
+    120% 80% at 100% 0%,
+    oklch(from var(--ui-primary) calc(l * 1.1) c calc(h + 25) / 0.07),
+    transparent 55%
+  );
+}
+
 /* Eight atmospheres. Each overrides the primary and neutral PALETTE scales; */
 /* Nuxt UI derives every surface, border (muted < default < accented), text */
 /* and hover shade from these, for both light and dark. Pastel is default. */
