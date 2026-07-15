@@ -18,23 +18,37 @@ Working state as of **2026-05-31**. Read this with [`spec.md`](./spec.md). The o
 - Turso + Drizzle schema and migrations (`bunx drizzle-kit push`).
 - Full auth: magic-link invite, password login, onboarding, password policy + breach check, roles + deactivation fields, session, middleware gates.
 - Owner seed script. Deployed to Vercel at `time-tracker.agilbert.dev`.
-- Theming: 7 light + 7 dark atmospheres via `[data-theme]` tokens in `main.css`, `useTheme` composable (cookie-persisted, independent light/dark picks), sun/moon color-mode toggle in the nav, theme pickers in the profile dropdown, dynamic theme-colored logo (inline SVG) and favicon. Default `ember` (Ember & Teal). Persisting to `settings` is a follow-up (item 3).
+- Theming: 7 light + 7 dark atmospheres via `[data-theme]` tokens in `main.css`, `useTheme` composable (cookie-persisted, independent light/dark picks), sun/moon color-mode toggle in the nav, theme pickers in the profile dropdown, dynamic theme-colored logo (inline SVG) and favicon. Default `pastel` (Seafoam light, Ocean dark). Persisting to `settings` is now item 1 (preference persistence), pulled to the front of the backlog.
 
 ## Next up (in rough priority order)
 
-### 0. Profile menu — header popover (spec §13) — *tonight, tutorial mode*
+### 0. Profile menu — header popover (spec §13)
 
 Expand the header avatar dropdown ([`app/components/app/header.vue`](../app/components/app/header.vue)) into the full popover. Order: identity (avatar + name + email) · Profile · Manage users (admin only) · Language · Settings · Sign out.
+
+**Status: unfinished hand-written WIP.** There is uncommitted work sitting in `header.vue` right now that predates the pipeline rule. It was written by hand, not through the pipeline, so it does not count as a pipeline-built feature and should be reconciled (rebuilt through the pipeline or discarded) rather than committed as-is.
 
 - [ ] Identity header block (avatar, full name, email) from the session — non-interactive.
 - [ ] Profile item → profile page (page TBD, can link ahead of building it).
 - [ ] Manage users item — render only when `role === 'admin'`.
-- [ ] Language item — keep the existing locale toggle behavior; persist to `users.locale` later.
+- [ ] Language item — keep the existing locale toggle behavior. Persisting the choice to `users.locale` is now item 1 (preference persistence), not a deferred follow-up.
 - [ ] Settings item → settings page (page TBD).
 - [ ] Sign out — existing `logout()`.
 - [ ] i18n keys (FR/EN) for every new label; verify copy.
 
-### 1. Admin user-management panel (spec §12)
+### 1. Persist user preferences — theme + language (spec §4, §13) — *next*
+
+Spec: [`docs/specs/persist-user-preferences.md`](./specs/persist-user-preferences.md). The theme pickers (7 light + 7 dark) and the FR/EN toggle already ship in the header but persist only to cookies. Make the account the source of truth so preferences follow the user across devices. Pulled ahead of the admin panel and the planning view because the visible UI already looks finished, which risks the persistence being forgotten.
+
+- [ ] Add `light_theme` / `dark_theme` columns to `settings` + a Drizzle migration. Column default is `pastel`, matching `DEFAULT_THEME` in `useTheme`.
+- [ ] Locale stays on `users.locale` (column already exists). Reconcile the two-table split per the spec's open questions.
+- [ ] Settings read/write API for these preferences (thin routes, `handlers/`, Zod models in `server/models/`, validate every route). Create the `settings` row on first write, since no code path creates one today.
+- [ ] Rewire `useTheme` to read the server-resolved user values and write to the API. Demote cookies (`ui-theme-light`, `ui-theme-dark`) to a pre-auth default only.
+- [ ] Rewire the header locale toggle to write to `users.locale` alongside `setLocale`.
+- [ ] Server-side atmosphere resolution injected into the initial HTML (`<html data-theme>` + `.dark`) so there is no flash on first paint, including the pre-auth cookie path. Keep the `app.vue` pre-paint guard working for `system` color mode.
+- [ ] Any new visible string (e.g. a save-failed toast) gets verified FR/EN copy; French uses a space before `? ! : ;`.
+
+### 2. Admin user-management panel (spec §12)
 
 Owner-only (`role === 'admin'`). Lets the owner invite, deactivate, reactivate users.
 
@@ -48,7 +62,7 @@ Owner-only (`role === 'admin'`). Lets the owner invite, deactivate, reactivate u
 - [ ] i18n keys for the admin UI (FR/EN).
 - Note: the magic-link `verify` handler currently does find-**or-create**. Once invite always creates the stub row, tighten it to find-**or-reject** (a valid invitee always has a row). See spec §4.
 
-### 2. Planning week view — the core app (spec §6, §7)
+### 3. Planning week view — the core app (spec §6, §7)
 
 The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart of the product.
 
@@ -58,12 +72,12 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
 - [ ] Task interactions: inline expand-to-edit, status cycle on click, drag-and-drop across days, copy-paste, delete.
 - [ ] Estimated duration auto-calc (wordCount / quota, rounded to 5 min); actual auto-syncs until edited.
 
-### 3. Settings (spec §4)
+### 4. Settings page (spec §4)
 
 - [ ] `settings` table already exists (daily_work_minutes, work_days, quota_wph). Build the API + a settings page so the user can edit daily work duration, working days, default WPH quota, holidays.
-- [ ] Add `light_theme` / `dark_theme` columns and make them the **source of truth** for the theme — `useTheme` reads/writes via the settings API, persisting across devices. The current cookies (`ui-theme-light`, `ui-theme-dark`) are interim and at most a pre-auth default on the sign-in screens, not the store. See spec §4 "Theme persistence (decision)".
+- Note: the theme columns and the `useTheme` rewrite moved to item 1 (preference persistence). This item is now only the settings *page* for the work-related fields, which is separate from persisting theme/locale.
 
-### 4. Stats (spec §5)
+### 5. Stats (spec §5)
 
 - [ ] Corrected WPH (group by project, max words per project) for day / week / month / year. Confirm the employer's exact formula with the primary user first (open decision #1).
 

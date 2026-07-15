@@ -101,8 +101,8 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 - `work_days` — text (JSON array of 0–6 day numbers, e.g. `[1,2,3,4,5]` for Mon–Fri)
 - `default_wph` — integer, default `450` (words per hour)
 - `timezone` — text, default `'America/Toronto'`
-- `light_theme` — text, default `'ember'`. The chosen light atmosphere (one of the seven in `useTheme`).
-- `dark_theme` — text, default `'ember'`. The chosen dark atmosphere, independent of the light one.
+- `light_theme` — text, default `'pastel'`. The chosen light atmosphere (one of the seven in `useTheme`). The default matches `DEFAULT_THEME` in `useTheme.ts`.
+- `dark_theme` — text, default `'pastel'`. The chosen dark atmosphere, independent of the light one.
 - TBD: default task category
 
 **Theme persistence (decision)**: the favorited light/dark atmospheres are **stored as user settings (`light_theme` / `dark_theme` on the `settings` row), not cookies**. They are part of the user's account and follow them across devices. `useTheme` should read from and write to the settings API. The current cookie implementation (`ui-theme-light`, `ui-theme-dark`) is an interim stand-in until the settings API exists, and at most stays as a pre-auth default for the sign-in/sign-up screens (where there is no user yet) — not as the source of truth.
