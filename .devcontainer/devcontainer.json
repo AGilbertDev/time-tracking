@@ -19,5 +19,5 @@
 		}
 	},
 
-	"postCreateCommand": "mkdir -p ~/.claude"
+	"postCreateCommand": "bash .devcontainer/setup.sh"
 }
