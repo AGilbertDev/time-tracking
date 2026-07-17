@@ -83,7 +83,6 @@ export const themeOptions: ThemeOption[] = THEME_IDS.map((id) => ({
 }))
 
 const DEFAULT_THEME = DEFAULT_THEME_ID
-const ONE_YEAR = 60 * 60 * 24 * 365
 
 // Build the favicon, which is the clock alone (no calendar). The ring uses the
 // primary and the needles and pivot use the ink color, framed tight to the clock.
@@ -113,43 +112,12 @@ export function useTheme() {
   const colorMode = useColorMode()
   const { user } = useUserSession()
 
-  // Separate cookies so the light and dark picks stay independent. Both are
-  // readable during SSR so the html attribute renders without a flash. For a
-  // signed-in user the cookies are now a mirror of the persisted settings rather
-  // than the source of truth, kept for the pre-paint guard and pre-auth screens.
-  const lightCookie = useCookie<string>('ui-theme-light', {
-    default: () => DEFAULT_THEME,
-    maxAge: ONE_YEAR,
-    sameSite: 'lax'
-  })
-  const darkCookie = useCookie<string>('ui-theme-dark', {
-    default: () => DEFAULT_THEME,
-    maxAge: ONE_YEAR,
-    sameSite: 'lax'
-  })
-
   // Prefer the authenticated session value so the server-resolved atmosphere is
-  // present on first paint, then the cookie default for the pre-auth screens, then
-  // the coded default. The initializer does not trigger the watchers below, so
-  // reading the session here never causes a write on load.
-  const lightTheme = useState<string>(
-    'ui-theme-light',
-    () => user.value?.lightTheme ?? lightCookie.value ?? DEFAULT_THEME
-  )
-  const darkTheme = useState<string>(
-    'ui-theme-dark',
-    () => user.value?.darkTheme ?? darkCookie.value ?? DEFAULT_THEME
-  )
-
-  // A pick updates the cookie mirror for the next reload. Persistence to the account
-  // happens at the pick site in header.vue so exactly one write fires per pick, since
-  // useTheme is instantiated by more than one component at once.
-  watch(lightTheme, (value) => {
-    lightCookie.value = value
-  })
-  watch(darkTheme, (value) => {
-    darkCookie.value = value
-  })
+  // present on first paint, otherwise fall back to the coded default. A signed-out
+  // visitor has no theme picker, so the default is all they ever need. SSR writes
+  // these ids onto the html element for the pre-paint guard to read, no cookie.
+  const lightTheme = useState<string>('theme-light', () => user.value?.lightTheme ?? DEFAULT_THEME)
+  const darkTheme = useState<string>('theme-dark', () => user.value?.darkTheme ?? DEFAULT_THEME)
 
   const isDark = computed(() => colorMode.value === 'dark')
   const activeId = computed(() => (isDark.value ? darkTheme.value : lightTheme.value))
