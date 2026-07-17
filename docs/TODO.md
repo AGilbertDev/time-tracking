@@ -19,7 +19,7 @@ Working state as of **2026-05-31**. Read this with [`spec.md`](./spec.md). The o
 - Full auth: magic-link invite, password login, onboarding, password policy + breach check, roles + deactivation fields, session, middleware gates.
 - Owner seed script. Deployed to Vercel at `time-tracker.agilbert.dev`.
 - Theming: 8 atmospheres via `[data-theme]` tokens in `main.css`, `useTheme` composable (independent light/dark picks), sun/moon color-mode toggle in the nav, theme pickers in the profile dropdown, dynamic theme-colored logo (inline SVG) and favicon. Default `pastel` (Seafoam light, Ocean dark).
-- Persist user preferences: theme and language now live on the `settings` row as the source of truth and follow the user across devices, resolved server-side for no flash on first paint. Built through the pipeline, spec at [`docs/specs/persist-user-preferences.md`](./specs/persist-user-preferences.md), Feature 2 in [`docs/pipeline.md`](./pipeline.md). The migration still needs applying against the DB and the PR still needs opening (sandbox has no DB creds or `gh`).
+- Persist user preferences: theme and language now live on the `settings` row as the source of truth and follow the user across devices, resolved server-side for no flash on first paint. Built through the pipeline, spec at [`docs/specs/settings/preference-persistence.md`](./specs/settings/preference-persistence.md), Feature 2 in [`docs/pipeline.md`](./pipeline.md). The migration still needs applying against the DB and the PR still needs opening (sandbox has no DB creds or `gh`).
 
 ## Next up (in rough priority order)
 

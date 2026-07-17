@@ -22,5 +22,5 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 
 | #   | Date       | Feature             | Agent-driven | Fully sandboxed | Spec                                  | PR   |
 | --- | ---------- | ------------------- | ------------ | --------------- | ------------------------------------- | ---- |
-| 1   | 2026-07-15 | Visual theme rework | yes          | no              | [spec](specs/visual-theme-rework.md)  | none |
-| 2   | 2026-07-15 | Persist user preferences | yes      | no              | [spec](specs/persist-user-preferences.md) | [#1](https://github.com/AGilbertDev/time-tracking/pull/1) |
+| 1   | 2026-07-15 | Visual theme rework | yes          | no              | [spec](specs/appearance/visual-theme-rework.md)  | none |
+| 2   | 2026-07-15 | Persist user preferences | yes      | no              | [spec](specs/settings/preference-persistence.md) | [#1](https://github.com/AGilbertDev/time-tracking/pull/1) |
