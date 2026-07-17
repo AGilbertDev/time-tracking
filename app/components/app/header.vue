@@ -28,7 +28,15 @@ const initials = computed(() => {
   return (first + last).toUpperCase()
 })
 
+// The greeting depends on the visitor's local hour, which the server cannot know,
+// so deriving it during SSR mismatches on hydration. It is gated on mount and stays
+// empty until then, then reacts to the name and the locale like any other computed.
+const isMounted = ref(false)
+onMounted(() => {
+  isMounted.value = true
+})
 const greeting = computed(() => {
+  if (!isMounted.value) return ''
   const hour = new Date().getHours()
   if (hour < 12) return t('header.greetingMorning', { name: firstName.value })
   if (hour < 18) return t('header.greetingAfternoon', { name: firstName.value })
@@ -85,7 +93,7 @@ const items = computed<MenuItem[][]>(() => {
 
 <template>
   <UHeader :toggle="false" :ui="{ container: 'max-w-full px-6 sm:px-6 lg:px-8' }">
-    <template #title>
+    <template #left>
       <NuxtLink :aria-label="t('app.name')" :to="localePath('index')">
         <AppLogo class="h-8 sm:h-10" />
       </NuxtLink>
