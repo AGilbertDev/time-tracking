@@ -13,6 +13,11 @@
 
 	"runArgs": ["--name", "claude-code-sandbox-${localWorkspaceFolderBasename}", "--security-opt=label=disable"],
 
+	// Persist the GitHub CLI login on a named volume shared by every recipe
+	// project on this machine. Log in once with "gh auth login" and it survives
+	// rebuilds and carries across projects, instead of logging in per container.
+	"mounts": ["source=agilbertdev-gh-config,target=/home/node/.config/gh,type=volume"],
+
 	"customizations": {
 		"vscode": {
 			"extensions": ["anthropic.claude-code"]
