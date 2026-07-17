@@ -11,6 +11,7 @@ const { t, locale, setLocale } = useI18n()
 const { clear, user } = useUserSession()
 const localePath = useLocalePath()
 const { isDark, lightTheme, darkTheme, themes, activeOnPrimary } = useTheme()
+const { savePreferences } = usePreferences()
 
 // The language menu item shows the active locale and toggles to the other on click.
 const otherLocale = computed(() => (locale.value === 'fr' ? 'en' : 'fr'))
@@ -27,7 +28,15 @@ const initials = computed(() => {
   return (first + last).toUpperCase()
 })
 
+// The greeting depends on the visitor's local hour, which the server cannot know,
+// so deriving it during SSR mismatches on hydration. It is gated on mount and stays
+// empty until then, then reacts to the name and the locale like any other computed.
+const isMounted = ref(false)
+onMounted(() => {
+  isMounted.value = true
+})
 const greeting = computed(() => {
+  if (!isMounted.value) return ''
   const hour = new Date().getHours()
   if (hour < 12) return t('header.greetingMorning', { name: firstName.value })
   if (hour < 18) return t('header.greetingAfternoon', { name: firstName.value })
@@ -50,7 +59,9 @@ const items = computed<MenuItem[][]>(() => {
     swatch: isDark.value ? option.dark : option.light,
     active: current.value === option.id,
     onSelect: () => {
+      // Update in memory for responsiveness, then persist the mode that changed.
       current.value = option.id
+      savePreferences(isDark.value ? { darkTheme: option.id } : { lightTheme: option.id })
     }
   }))
 
@@ -67,7 +78,12 @@ const items = computed<MenuItem[][]>(() => {
       {
         label: t('header.language', { code: locale.value.toUpperCase() }),
         icon: 'i-ph-translate',
-        onSelect: () => setLocale(otherLocale.value)
+        onSelect: () => {
+          // Switch the interface immediately, then persist so the choice follows the
+          // user to another device.
+          setLocale(otherLocale.value)
+          savePreferences({ locale: otherLocale.value })
+        }
       }
     ],
     [{ label: t('header.logout'), icon: 'i-ph-sign-out', onSelect: logout }]
@@ -77,7 +93,7 @@ const items = computed<MenuItem[][]>(() => {
 
 <template>
   <UHeader :toggle="false" :ui="{ container: 'max-w-full px-6 sm:px-6 lg:px-8' }">
-    <template #title>
+    <template #left>
       <NuxtLink :aria-label="t('app.name')" :to="localePath('index')">
         <AppLogo class="h-8 sm:h-10" />
       </NuxtLink>

@@ -27,15 +27,25 @@ export async function loginWithPassword(event: H3Event, body: z.infer<typeof Log
     throw createError({ statusCode: 403, statusMessage: 'account_deactivated' })
   }
 
+  // Load the persisted preferences so the session and the client cookies carry them
+  // from the first render, matching the atmosphere and locale across devices.
+  const preferences = await loadUserPreferences(user.id)
+
   await setUserSession(event, {
     user: {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      onboarded: true
+      onboarded: true,
+      lightTheme: preferences.lightTheme,
+      darkTheme: preferences.darkTheme,
+      locale: preferences.locale
     }
   })
+
+  // Mirror the preferences into the client-readable cookies the no-flash guard reads.
+  applyPreferenceCookies(event, preferences)
 
   return { success: true }
 }
