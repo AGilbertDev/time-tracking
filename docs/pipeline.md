@@ -6,7 +6,7 @@ This document is the source of truth for that process. The portfolio project pag
 
 ## The flow at a glance
 
-A feature moves through ten steps. Some are mine to decide, some are run by an agent, and one is automation. The design, build, and test steps run inside an isolated devcontainer sandbox so the autonomous work never touches my machine directly.
+A feature moves through nine steps. Some are mine to decide, some are run by an agent, and one is automation. The design, build, test, and commit steps run inside an isolated devcontainer sandbox so the autonomous work never touches my machine directly, and the aim is for that block to run hands-off from the approved spec through to an opened pull request.
 
 | Step | Who | What happens |
 | --- | --- | --- |
@@ -16,16 +16,15 @@ A feature moves through ten steps. Some are mine to decide, some are run by an a
 | 4. Design | Agent (sandbox) | The `design` agent produces a visual blueprint. |
 | 5. Build | Agent (sandbox) | The `frontend` and `backend` agents implement it, with `compliance`, `seo`, and `accessibility` passes where they apply. |
 | 6. Tests | Agent (sandbox) | The `unit-test` agent writes Vitest coverage for the logic. |
-| 7. Test review | Me | I review the implementation and the test results. |
-| 8. Commit | Agent | The `code-review` agent reviews the diff, then the `commit` agent commits under the AGilbertDev identity. |
-| 9. CI | Automation | The CI action runs on the push and reports on the pull request. |
-| 10. PR review | Me | I read the pull request and merge. |
+| 7. Commit and PR | Agent (sandbox) | The `code-review` agent reviews the diff, then the `commit` agent commits under the AGilbertDev identity and opens the pull request. |
+| 8. CI | Automation | The CI action runs on the push and reports on the pull request. |
+| 9. PR review | Me | I review the diff and the CI report on the pull request, then merge. |
 
-The human gates at steps 1, 3, 7, and 10 are the point. The agents do the work, but I stay responsible for intent, correctness, and the final merge.
+The human gates at steps 1, 3, and 9 are the point. I set the intent, approve the spec before any code exists, and review the pull request before it merges. The sandbox block in between runs hands-off. The agents do the work, but I stay responsible for intent, correctness, and the final merge.
 
 ## The devcontainer sandbox
 
-Steps 4 through 6 are meant to run inside the devcontainer defined in `.devcontainer/`. That is a Node base image with git, Bun, and the Claude Code CLI, so an agent can design, build, and test a feature in isolation without reaching into my working environment. The sandbox is what makes "let the agents build it autonomously" safe rather than reckless.
+Steps 4 through 7 are meant to run inside the devcontainer defined in `.devcontainer/`. That is a Node base image with git, Bun, and the Claude Code CLI, so an agent can design, build, test, and ship a feature to a pull request in isolation without reaching into my working environment. The sandbox is what makes "let the agents build it autonomously" safe rather than reckless. Fully sandboxed means that block ran as a single hands-off pass, spec approval to opened pull request, with no intervention in between.
 
 Status as of the current pass: the flow is documented and the sandbox is installed, but the pipeline is being driven from the main environment for now. Wiring each build stage to actually execute inside the container is a tracked follow-up, not yet done. This section will be updated to past tense once real isolation is in place, so the doc never claims something the repo does not do.
 
@@ -85,7 +84,7 @@ The discipline is the demonstration. A feature goes all the way from spec to mer
 
 This section is the trail. Each feature shipped through the pipeline gets an entry here, linking its spec and its pull request, so the methodology can be read end to end without digging through git.
 
-**Pipeline coverage.** 0 of 2 features (0 percent) have been built fully start to finish through the sandboxed pipeline. 2 of 2 (100 percent) were built agent-driven with no hand-written implementation code, from spec to commit. A feature counts toward the sandboxed figure only when every applicable stage ran through an agent inside the devcontainer sandbox, from spec to an opened pull request. Both features so far are agent-driven but not fully sandboxed. Feature 1 ran the agents from the main environment. Feature 2 ran its build stages through agents in the devcontainer but was orchestrated interactively rather than as an isolated autonomous run, so it counts as agent-driven and not fully sandboxed. Its pull request was opened once the owner authenticated `gh` in the container. Both numbers update as each feature lands and feed the story told on the portfolio. These counts are derived from the append-only ledger in [pipeline-trace.md](pipeline-trace.md), which every container updates as it lands a feature.
+**Pipeline coverage.** 0 of 2 features (0 percent) have been built fully start to finish through the sandboxed pipeline. 2 of 2 (100 percent) were built agent-driven with no hand-written implementation code, from spec to commit. A feature counts toward the sandboxed figure only when the design, build, test, and commit stages ran hands-off as one autonomous pass in the devcontainer, spec approval to opened pull request, with no intervention in between. Both features so far are agent-driven but not fully sandboxed. Feature 1 ran the agents from the main environment. Feature 2 ran its build stages through agents in the devcontainer but was orchestrated interactively rather than as an isolated autonomous run, so it counts as agent-driven and not fully sandboxed. Its pull request was opened once the owner authenticated `gh` in the container. Both numbers update as each feature lands and feed the story told on the portfolio. These counts are derived from the append-only ledger in [pipeline-trace.md](pipeline-trace.md), which every container updates as it lands a feature.
 
 ### Feature 1 — Visual theme rework
 

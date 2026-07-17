@@ -9,7 +9,7 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 ## Columns
 
 - **Agent-driven** is `yes` when every applicable stage ran through an agent with no hand-written implementation code, from spec to commit.
-- **Fully sandboxed** is `yes` when, on top of agent-driven, every stage ran inside the devcontainer sandbox, from spec to opened pull request. This is the headline portfolio number.
+- **Fully sandboxed** is `yes` when, on top of agent-driven, the design, build, test, and commit stages ran hands-off as one autonomous pass in the devcontainer, with no intervention between spec approval and the opened pull request. The human gates, spec review and PR review, are expected; intervening inside the sandboxed block is what makes it `no`. This is the headline portfolio number.
 - **Spec** links the file in `specs/`. **PR** links the pull request, or reads `none` when the feature landed without one.
 
 ## Stats
