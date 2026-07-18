@@ -43,6 +43,22 @@ export default defineNuxtConfig({
       onboarding: {
         fr: '/accueil',
         en: '/onboarding'
+      },
+      // These destination pages do not exist yet, so these entries stay inert until
+      // the page files land. The header popover links ahead to them today. Because
+      // customRoutes only localizes a key once a matching page file exists, the
+      // component computes these localized paths directly for now.
+      profile: {
+        fr: '/profil',
+        en: '/profile'
+      },
+      settings: {
+        fr: '/parametres',
+        en: '/settings'
+      },
+      'admin-users': {
+        fr: '/utilisateurs',
+        en: '/users'
       }
     }
   },

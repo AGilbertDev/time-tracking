@@ -39,6 +39,9 @@
     "greetingAfternoon": "Bonjour, {name}",
     "greetingEvening": "Bonsoir, {name}",
     "profile": "Profil",
+    "settings": "Paramètres",
+    "manageUsers": "Gérer les utilisateurs",
+    "accountMenu": "Menu du compte",
     "language": "Langue : {code}",
     "logout": "Déconnexion"
   },
@@ -48,6 +51,7 @@
     "dark": "Thème sombre",
     "mode": "Basculer en mode clair ou sombre",
     "default": "(défaut)",
+    "active": "actif",
     "names": {
       "pastel": { "light": "Écume", "dark": "Océan" },
       "ember": { "light": "Flamme", "dark": "Braise" },

@@ -20,22 +20,9 @@ Working state as of **2026-05-31**. Read this with [`spec.md`](./spec.md). The o
 - Owner seed script. Deployed to Vercel at `time-tracker.agilbert.dev`.
 - Theming: 8 atmospheres via `[data-theme]` tokens in `main.css`, `useTheme` composable (independent light/dark picks), sun/moon color-mode toggle in the nav, theme pickers in the profile dropdown, dynamic theme-colored logo (inline SVG) and favicon. Default `pastel` (Seafoam light, Ocean dark).
 - Persist user preferences: theme and language now live on the `settings` row as the source of truth and follow the user across devices, resolved server-side for no flash on first paint. Built through the pipeline, spec at [`docs/specs/settings/preference-persistence.md`](./specs/settings/preference-persistence.md), Feature 2 in [`docs/pipeline.md`](./pipeline.md). The migration still needs applying against the DB and the PR still needs opening (sandbox has no DB creds or `gh`).
+- Profile menu — header popover (spec §13): the header avatar dropdown is now the full grouped account popover (identity block, Profile, Settings, admin-only Manage users, the atmosphere theme picker, Language, Sign out). `role` is surfaced on the session so the admin item gates on it, and Profile, Settings, and Manage users link ahead to their final localized routes (the pages themselves are separate later features and 404 until built). Built through the pipeline as the first fully sandboxed autonomous run, spec at [`docs/specs/settings/profile-menu-popover.md`](./specs/settings/profile-menu-popover.md), Feature 3 in [`docs/pipeline.md`](./pipeline.md). No migration was needed. Two copy strings still need the owner's final read, the French `header.manageUsers` wording and the two accessibility labels.
 
 ## Next up (in rough priority order)
-
-### 0. Profile menu — header popover (spec §13)
-
-Expand the header avatar dropdown ([`app/components/app/header.vue`](../app/components/app/header.vue)) into the full popover. Order: identity (avatar + name + email) · Profile · Manage users (admin only) · Language · Settings · Sign out.
-
-**Status: unfinished hand-written WIP.** There is uncommitted work sitting in `header.vue` right now that predates the pipeline rule. It was written by hand, not through the pipeline, so it does not count as a pipeline-built feature and should be reconciled (rebuilt through the pipeline or discarded) rather than committed as-is.
-
-- [ ] Identity header block (avatar, full name, email) from the session — non-interactive.
-- [ ] Profile item → profile page (page TBD, can link ahead of building it).
-- [ ] Manage users item — render only when `role === 'admin'`.
-- [ ] Language item — keep the existing locale toggle behavior. Persisting the choice to `settings.locale` is now item 1 (preference persistence), not a deferred follow-up.
-- [ ] Settings item → settings page (page TBD).
-- [ ] Sign out — existing `logout()`.
-- [ ] i18n keys (FR/EN) for every new label; verify copy.
 
 ### 1. Admin user-management panel (spec §12)
 

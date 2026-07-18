@@ -58,6 +58,7 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
       firstName: user!.firstName,
       lastName: user!.lastName,
       onboarded: !!user!.passwordHash,
+      role: user!.role,
       lightTheme: preferences.lightTheme,
       darkTheme: preferences.darkTheme,
       locale: preferences.locale

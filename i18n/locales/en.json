@@ -39,6 +39,9 @@
     "greetingAfternoon": "Good afternoon, {name}",
     "greetingEvening": "Good evening, {name}",
     "profile": "Profile",
+    "settings": "Settings",
+    "manageUsers": "Manage users",
+    "accountMenu": "Account menu",
     "language": "Language: {code}",
     "logout": "Sign out"
   },
@@ -48,6 +51,7 @@
     "dark": "Dark theme",
     "mode": "Toggle light or dark mode",
     "default": "(default)",
+    "active": "active",
     "names": {
       "pastel": { "light": "Seafoam", "dark": "Ocean" },
       "ember": { "light": "Flame", "dark": "Ember" },
