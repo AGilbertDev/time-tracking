@@ -7,7 +7,7 @@ import {
   DEFAULT_THEME_ID,
   LOCALES,
   THEME_IDS
-} from './theme'
+} from '#shared/theme'
 
 // These invariants are what the server validation and the session types rely on.
 // Locking them here catches an accidental rename, a dropped id, or a default that

@@ -1,8 +1,7 @@
+import { PreferencesPatchSchema } from '~~/server/models/preferences'
 import { describe, expect, it } from 'vitest'
 
 import { LOCALES, THEME_IDS } from '#shared/theme'
-
-import { PreferencesPatchSchema } from './preferences'
 
 // The schema is the validation boundary for PATCH /api/me/preferences. These tests
 // lock the partial-body contract, the enum guards, and the non-empty refine so a
