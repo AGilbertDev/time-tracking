@@ -24,4 +24,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | --- | ---------- | ------------------- | ------------ | --------------- | ------------------------------------- | ---- |
 | 1   | 2026-07-15 | Visual theme rework | yes          | no              | [spec](specs/appearance/visual-theme-rework.md)  | none |
 | 2   | 2026-07-15 | Persist user preferences | yes      | no              | [spec](specs/settings/preference-persistence.md) | [#1](https://github.com/AGilbertDev/time-tracking/pull/1) |
-| 3   | 2026-07-18 | Profile menu header popover | yes   | yes             | [spec](specs/settings/profile-menu-popover.md) | PR_URL_PLACEHOLDER |
+| 3   | 2026-07-18 | Profile menu header popover | yes   | yes             | [spec](specs/settings/profile-menu-popover.md) | [#2](https://github.com/AGilbertDev/time-tracking/pull/2) |
