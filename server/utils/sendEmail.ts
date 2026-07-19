@@ -1,5 +1,7 @@
 import { Resend } from 'resend'
 
+import { APP_NAME } from '#shared/brand'
+
 interface SendEmailOptions {
   html: string
   subject: string
@@ -15,10 +17,11 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   const config = useRuntimeConfig()
   const resend = new Resend(config.resendApiKey as string)
 
-  // Show a human sender name in the inbox rather than the bare noreply local part. If the
-  // configured value already carries a display name in angle-bracket form it is used as is.
+  // Show the product name as the sender in the inbox rather than the bare noreply local part, so a
+  // recipient knows which app the message is from. If the configured value already carries a
+  // display name in angle-bracket form it is used as is.
   const fromEmail = config.resendFromEmail as string
-  const from = fromEmail.includes('<') ? fromEmail : `Alexandre Gilbert <${fromEmail}>`
+  const from = fromEmail.includes('<') ? fromEmail : `${APP_NAME} <${fromEmail}>`
 
   const { error } = await resend.emails.send({ from, to, subject, html })
 
