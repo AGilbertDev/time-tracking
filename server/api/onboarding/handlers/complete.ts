@@ -16,6 +16,18 @@ export async function completeOnboarding(
   const { user } = await requireUserSession(event)
   const db = useDb()
 
+  // Onboarding completes exactly once. If this account already has a password hash it is
+  // onboarded, so a second submit (for example by reopening the wizard URL) is rejected rather
+  // than allowed to overwrite the existing profile.
+  const existing = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .get()
+  if (existing?.passwordHash) {
+    throw createError({ statusCode: 409, statusMessage: 'already_onboarded' })
+  }
+
   // Reject passwords known to be compromised. statusMessage is a stable code the client maps to a localized message.
   if (await isPasswordBreached(body.password)) {
     throw createError({ statusCode: 422, statusMessage: 'password_breached' })
@@ -35,24 +47,31 @@ export async function completeOnboarding(
     })
     .where(eq(users.id, user.id))
 
-  // Create the settings row so every user onboarded after this migration has exactly one
-  // from the start, and the preference read paths can assume a row exists. Carry the
-  // session's current preferences onto it, which are the defaults plus whatever locale the
-  // user is already on, so an in-session choice is not discarded. Skip the insert if a row
-  // already exists, since the settings userId has no unique constraint to conflict on.
+  // Upsert the settings row with every submitted appearance and work value. The work_days
+  // array is serialized to its JSON text form because the column stores text. The settings
+  // userId has no unique constraint to conflict on, so the row is updated when one already
+  // exists (for example a backfilled user) and inserted otherwise (the common magic-link case
+  // that reaches onboarding without a row). Both branches write the same full set of columns.
+  const settingsValues = {
+    lightTheme: body.lightTheme,
+    darkTheme: body.darkTheme,
+    locale: body.locale,
+    dailyWorkMinutes: body.dailyWorkMinutes,
+    workDays: JSON.stringify(body.workDays),
+    quotaWph: body.quotaWph,
+    timezone: body.timezone
+  }
+
   const existingSettings = await db
     .select({ id: settings.id })
     .from(settings)
     .where(eq(settings.userId, user.id))
     .get()
 
-  if (!existingSettings) {
-    await db.insert(settings).values({
-      userId: user.id,
-      lightTheme: user.lightTheme,
-      darkTheme: user.darkTheme,
-      locale: user.locale
-    })
+  if (existingSettings) {
+    await db.update(settings).set(settingsValues).where(eq(settings.userId, user.id))
+  } else {
+    await db.insert(settings).values({ userId: user.id, ...settingsValues })
   }
 
   // Read back the persisted preferences through the single read path so the session and

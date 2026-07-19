@@ -24,6 +24,7 @@
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/ui": "^4.8.0",
     "@nuxtjs/i18n": "^10.4.0",
+    "@tanstack/vue-query": "^5.101.2",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "eslint": "^10.4.0",

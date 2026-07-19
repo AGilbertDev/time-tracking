@@ -9,7 +9,7 @@ import {
   THEME_IDS
 } from '#shared/theme'
 
-// The theme-system-redesign spec (docs/specs/appearance/theme-system-redesign.md)
+// The theme-system spec (docs/specs/appearance/theme-system.md)
 // locks the theme set to exactly five subject-grounded ids and folds every removed
 // atmosphere to the default at read time. These invariants back the server validation,
 // the session types, and the no-flash guard, so section A of the spec is asserted here.

@@ -1,0 +1,24 @@
+-- Add the timezone column to settings.
+--
+-- The onboarding wizard captures the user's IANA timezone so the dashboard can
+-- render day boundaries and quota windows in the user's local time. The column
+-- is text, not null, and defaults to America/Toronto so every existing settings
+-- row takes the primary user's zone without a separate backfill.
+--
+-- This add matches how 0000 and 0001 are authored in this project, as plain
+-- statement-broken SQL applied by hand rather than by a snapshot-diffing runner,
+-- because the project keeps no drizzle-kit meta snapshot directory.
+--
+-- Idempotency note. SQLite does not support IF NOT EXISTS on ALTER TABLE ADD
+-- COLUMN, so this statement is applied through a runner that tolerates the benign
+-- duplicate column name error and continues, which makes a re-run safe. The
+-- default America/Toronto always validates against the onboarding schema, so a
+-- row taking the default is never rejected on read.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso
+-- database, matching 0000 and 0001. It must not be pointed at a live database by
+-- CI, a deploy hook, or a dev-boot migration runner. There are no database
+-- credentials in this environment.
+
+ALTER TABLE `settings` ADD `timezone` text DEFAULT 'America/Toronto' NOT NULL;

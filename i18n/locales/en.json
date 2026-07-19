@@ -6,15 +6,15 @@
     "submit": "Sign in",
     "error": "Invalid credentials.",
     "deactivated": "Your account has been deactivated. Please contact the administrator.",
-    "noAccount": "First time? Activate your account"
+    "noAccount": "First time? Create your account"
   },
   "signup": {
-    "subtitle": "Activate account",
-    "invitation": "Access by invitation only. You need an invitation email to activate your account.",
+    "subtitle": "Create account",
+    "invitation": "You must have received an invitation email for your email address to be able to create a new account.",
     "description": "Enter your email to receive a sign-in link.",
-    "email": "Email address",
-    "submit": "Send link",
-    "sent": "A sign-in link has been sent. Check your inbox.",
+    "email": "Authorized email address",
+    "submit": "Create account",
+    "sent": "If your email is authorized by the admin, you should receive a one-time link in your inbox to activate your new account.",
     "error": "Something went wrong. Please try again.",
     "hasAccount": "Already have an account? Sign in"
   },
@@ -29,7 +29,61 @@
     "passwordMismatch": "Passwords do not match.",
     "passwordBreached": "This password has appeared in a known data breach. Please choose another.",
     "submit": "Finish",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "stepProgress": "Step {current} of {total}",
+    "steps": {
+      "identity": {
+        "title": "Identity",
+        "subtitle": "Your name and password."
+      },
+      "appearance": {
+        "title": "Appearance",
+        "subtitle": "Interface theme and language."
+      },
+      "work": {
+        "title": "Work",
+        "subtitle": "Your hours, days, and quota."
+      }
+    },
+    "nav": {
+      "back": "Back",
+      "next": "Next"
+    },
+    "appearance": {
+      "lightTheme": "Light theme",
+      "darkTheme": "Dark theme",
+      "language": "Language",
+      "languageFr": "French",
+      "languageEn": "English"
+    },
+    "work": {
+      "dailyHours": "Work hours per day",
+      "unitHours": "h",
+      "unitMinutes": "min",
+      "workDays": "Work days",
+      "quota": "Base quota",
+      "unitWph": "words/hour",
+      "timezone": "Timezone",
+      "timezoneSearch": "Search a timezone…",
+      "dayNames": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "dayShort": {
+        "0": "S",
+        "1": "M",
+        "2": "T",
+        "3": "W",
+        "4": "T",
+        "5": "F",
+        "6": "S"
+      }
+    }
   },
   "app": {
     "name": "Translation Planner"
