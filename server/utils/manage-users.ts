@@ -56,6 +56,15 @@ export interface UserListRow {
   status: UserStatus
 }
 
+// The whitelist of sortable columns, as a runtime array so it is the single source of truth: the
+// SortColumn type is derived from it here, and the Zod enum in server/models/admin.ts is built from
+// the same array. Never sort by a raw query-string value; only a member of this list is accepted.
+export const SORT_COLUMNS = ['firstName', 'lastName', 'email', 'role', 'status', 'date'] as const
+export type SortColumn = (typeof SORT_COLUMNS)[number]
+
+export const SORT_ORDERS = ['asc', 'desc'] as const
+export type SortOrder = (typeof SORT_ORDERS)[number]
+
 // Maps one merged record into the list row contract. Name and role only surface for real
 // accounts; the date is createdAt for accounts and invitedAt for invited-only rows, matching the
 // spec's date column. The epoch fallback keeps date non-null even in the impossible case where
@@ -76,6 +85,72 @@ export function shapeUserListRow(record: JoinedUserRecord): UserListRow {
     status,
     date: date ?? new Date(0)
   }
+}
+
+// Fold accents and case so search and sort compare on the bare letters. NFD splits an accented
+// character into its base letter plus a combining diacritic, the diacritic is stripped, and the
+// result is lowercased. Used on both the search term and each field so "eloise" matches "Éloïse".
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+}
+
+// Case-insensitive and accent-insensitive substring filter over email, firstName, and lastName.
+// The term is normalized once; an empty or whitespace-only term returns every row unchanged. Null
+// name fields (invited-only rows) simply do not match on that field rather than throwing.
+export function filterUserRows(rows: UserListRow[], search: string | undefined): UserListRow[] {
+  const term = normalizeText((search ?? '').trim())
+  if (term === '') return rows
+
+  return rows.filter((row) => {
+    const fields = [row.email, row.firstName, row.lastName]
+    return fields.some((field) => field != null && normalizeText(field).includes(term))
+  })
+}
+
+// Canonical status order for sorting, independent of any localized label so the order never shifts
+// with the UI locale: invited, then active, then deactivated.
+const STATUS_RANK: Record<UserStatus, number> = {
+  invited: 0,
+  active: 1,
+  deactivated: 2
+}
+
+// Compares one column of two rows in the requested direction, before the email tie-break. Returns 0
+// when the values are equal for the column. Null firstName/lastName/role always sort last, in both
+// asc and desc, so invited-only rows never lead a name- or role-sorted page.
+function compareColumn(a: UserListRow, b: UserListRow, sort: SortColumn, dir: number): number {
+  if (sort === 'status') return dir * (STATUS_RANK[a.status] - STATUS_RANK[b.status])
+  if (sort === 'date') return dir * (a.date.getTime() - b.date.getTime())
+
+  const av = a[sort]
+  const bv = b[sort]
+  // Null last regardless of direction, so it is decided before dir is applied.
+  if (av == null && bv == null) return 0
+  if (av == null) return 1
+  if (bv == null) return -1
+
+  return dir * normalizeText(av).localeCompare(normalizeText(bv))
+}
+
+// Sorts a copy of the rows by the chosen column and order, leaving the input untouched. Every
+// comparison is tie-broken by email ascending so pagination is stable across requests. The default
+// call sortUserRows(rows, 'date', 'desc') reproduces the historical order: newest effective date
+// first, ties broken by email ascending.
+export function sortUserRows(
+  rows: UserListRow[],
+  sort: SortColumn,
+  order: SortOrder
+): UserListRow[] {
+  const dir = order === 'asc' ? 1 : -1
+
+  return [...rows].sort((a, b) => {
+    const byColumn = compareColumn(a, b, sort, dir)
+    if (byColumn !== 0) return byColumn
+    return a.email.localeCompare(b.email)
+  })
 }
 
 export interface PageBounds {

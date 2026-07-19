@@ -5,7 +5,13 @@ import type { JoinedUserRecord, UserListRow } from '../../../../utils/manage-use
 
 import { useDb } from '../../../../db/index'
 import { allowedEmails, users } from '../../../../db/schema'
-import { getPageBounds, getTotalPages, shapeUserListRow } from '../../../../utils/manage-users'
+import {
+  filterUserRows,
+  getPageBounds,
+  getTotalPages,
+  shapeUserListRow,
+  sortUserRows
+} from '../../../../utils/manage-users'
 
 export interface UserListResponse {
   page: number
@@ -21,7 +27,7 @@ export interface UserListResponse {
 // deterministic, and free of raw SQL, which the spec explicitly permits.
 export async function listUsers(query: z.infer<typeof ListQuerySchema>): Promise<UserListResponse> {
   const db = useDb()
-  const { page, pageSize } = query
+  const { page, pageSize, sort, order, search } = query
 
   const accountRows = await db
     .select({
@@ -77,20 +83,18 @@ export async function listUsers(query: z.infer<typeof ListQuerySchema>): Promise
     }
   }
 
-  const allRows = [...merged.values()].map(shapeUserListRow)
+  const shaped = [...merged.values()].map(shapeUserListRow)
 
-  // Deterministic order: newest effective date first, ties broken by email ascending, so pages
-  // are stable across requests.
-  allRows.sort((a, b) => {
-    const byDate = b.date.getTime() - a.date.getTime()
-    if (byDate !== 0) return byDate
-    return a.email.localeCompare(b.email)
-  })
-
-  const total = allRows.length
+  // Filter and sort the whole merged dataset before slicing the page, so search and sort consider
+  // every row rather than one page's worth. Order is fixed: filter, then count, then sort, then
+  // slice. `total` is the filtered count so pagination reflects the search. The default
+  // sort/order (date desc) reproduces the historical order: newest first, ties by email ascending.
+  const filtered = filterUserRows(shaped, search)
+  const total = filtered.length
   const totalPages = getTotalPages(total, pageSize)
+  const sorted = sortUserRows(filtered, sort, order)
   const { offset, limit } = getPageBounds(page, pageSize)
-  const rows = allRows.slice(offset, offset + limit)
+  const rows = sorted.slice(offset, offset + limit)
 
   return { rows, page, pageSize, total, totalPages }
 }

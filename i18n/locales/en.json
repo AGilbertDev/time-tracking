@@ -99,6 +99,16 @@
         "invalid": "This email address is invalid."
       }
     },
+    "search": {
+      "placeholder": "Search by name or email…",
+      "label": "Search users",
+      "clear": "Clear search"
+    },
+    "sort": {
+      "ascending": "{column}, sorted ascending",
+      "descending": "{column}, sorted descending",
+      "none": "{column}, not sorted, activate to sort"
+    },
     "table": {
       "firstName": "First name",
       "lastName": "Last name",
@@ -147,7 +157,9 @@
     },
     "empty": {
       "title": "No users yet",
-      "hint": "Invite your first person using the field above."
+      "hint": "Invite your first person using the field above.",
+      "noResultsTitle": "No results",
+      "noResultsHint": "No user matches your search."
     },
     "toast": {
       "invited": "Invitation sent.",
