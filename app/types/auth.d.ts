@@ -10,6 +10,7 @@ declare module '#auth-utils' {
     lightTheme: string
     locale: Locale
     onboarded: boolean
+    role: string
   }
 }
 export {}

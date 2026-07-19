@@ -7,7 +7,7 @@
     "dev": "nuxt dev --host localhost --port 8080",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "git submodule update --init --recursive && nuxt prepare",
+    "postinstall": "( [ -n \"$VERCEL\" ] || git submodule update --init --recursive ) && nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",

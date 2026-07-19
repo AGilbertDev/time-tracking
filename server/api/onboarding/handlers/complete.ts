@@ -67,6 +67,9 @@ export async function completeOnboarding(
       firstName: body.firstName,
       lastName: body.lastName,
       onboarded: true,
+      // Carry the real role forward from the session minted at magic-link verify. Onboarding
+      // never changes the role, so the session value is the user's true role.
+      role: user.role,
       lightTheme: preferences.lightTheme,
       darkTheme: preferences.darkTheme,
       locale: preferences.locale
