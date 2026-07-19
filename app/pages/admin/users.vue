@@ -51,11 +51,17 @@ type MutationResult =
 const PAGE_SIZE = 20
 const page = ref(1)
 
+// Forward the session cookie on SSR. A browser request attaches it automatically, but Nuxt's
+// server-side $fetch to an internal route does not, so on a hard reload the admin API would see
+// no session, reject the request, and the list would render empty until a client navigation.
+const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+
 const { data, status, refresh } = await useAsyncData(
   'admin-users',
   () =>
     $fetch<UsersResponse>('/api/admin/users', {
-      query: { page: page.value, pageSize: PAGE_SIZE }
+      query: { page: page.value, pageSize: PAGE_SIZE },
+      headers: requestHeaders
     }),
   { watch: [page] }
 )

@@ -44,10 +44,9 @@ export default defineNuxtConfig({
         fr: '/accueil',
         en: '/onboarding'
       },
-      // These destination pages do not exist yet, so these entries stay inert until
-      // the page files land. The header popover links ahead to them today. Because
-      // customRoutes only localizes a key once a matching page file exists, the
-      // component computes these localized paths directly for now.
+      // profile and settings pages do not exist yet, so these entries stay inert until the page
+      // files land. The header popover links ahead to them today, computing the localized paths
+      // directly since customRoutes only localizes a key once a matching page file exists.
       profile: {
         fr: '/profil',
         en: '/profile'
@@ -56,7 +55,10 @@ export default defineNuxtConfig({
         fr: '/parametres',
         en: '/settings'
       },
-      'admin-users': {
+      // The admin users page exists at app/pages/admin/users.vue. i18n keys pages by file path,
+      // so this must be 'admin/users', not the 'admin-users' route name. The route-name form left
+      // the localized paths ungenerated, so /utilisateurs resolved to a 404.
+      'admin/users': {
         fr: '/utilisateurs',
         en: '/users'
       }
