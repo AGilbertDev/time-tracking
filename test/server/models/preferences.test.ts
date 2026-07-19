@@ -3,23 +3,29 @@ import { describe, expect, it } from 'vitest'
 
 import { LOCALES, THEME_IDS } from '#shared/theme'
 
-// The schema is the validation boundary for PATCH /api/me/preferences. These tests
-// lock the partial-body contract, the enum guards, and the non-empty refine so a
-// regression in any branch is caught before it reaches the write handler.
+// PreferencesPatchSchema is the validation boundary for PATCH /api/me/preferences.
+// Per the theme-system-redesign spec, both theme fields now validate against the five
+// redesigned ids (F1/F2: two independent columns, same five-id namespace), so a body
+// carrying a removed atmosphere must be rejected here. These tests lock the partial-body
+// contract, the enum guards on the new set, and the non-empty refine.
+
+// Removed atmospheres from the old eight-theme world. The schema must reject each now.
+const REMOVED_THEME_IDS = ['ember', 'onyx', 'coffee', 'forest', 'autumn', 'berry', 'frost']
+
 describe('PreferencesPatchSchema', () => {
   describe('valid partial bodies', () => {
     it('accepts a lightTheme field on its own', () => {
-      const result = PreferencesPatchSchema.safeParse({ lightTheme: 'ember' })
+      const result = PreferencesPatchSchema.safeParse({ lightTheme: 'encre' })
 
       expect(result.success).toBe(true)
-      expect(result.data).toEqual({ lightTheme: 'ember' })
+      expect(result.data).toEqual({ lightTheme: 'encre' })
     })
 
     it('accepts a darkTheme field on its own', () => {
-      const result = PreferencesPatchSchema.safeParse({ darkTheme: 'onyx' })
+      const result = PreferencesPatchSchema.safeParse({ darkTheme: 'foret' })
 
       expect(result.success).toBe(true)
-      expect(result.data).toEqual({ darkTheme: 'onyx' })
+      expect(result.data).toEqual({ darkTheme: 'foret' })
     })
 
     it('accepts a locale field on its own', () => {
@@ -29,19 +35,25 @@ describe('PreferencesPatchSchema', () => {
       expect(result.data).toEqual({ locale: 'en' })
     })
 
-    it('accepts all three fields together', () => {
-      const body = { lightTheme: 'frost', darkTheme: 'coffee', locale: 'fr' }
+    // Mixed light/dark selection is an explicit spec edge case: the two columns are
+    // independent, so a body may pair one theme's light with another's dark.
+    it('accepts all three fields together with a mixed light/dark theme pair', () => {
+      const body = { lightTheme: 'encre', darkTheme: 'foret', locale: 'fr' }
       const result = PreferencesPatchSchema.safeParse(body)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual(body)
     })
 
-    it.each(THEME_IDS)('accepts every known theme id %s as lightTheme', (id) => {
+    it.each(THEME_IDS)('accepts the redesigned id %s as lightTheme', (id) => {
       expect(PreferencesPatchSchema.safeParse({ lightTheme: id }).success).toBe(true)
     })
 
-    it.each(LOCALES)('accepts every supported locale %s', (locale) => {
+    it.each(THEME_IDS)('accepts the redesigned id %s as darkTheme', (id) => {
+      expect(PreferencesPatchSchema.safeParse({ darkTheme: id }).success).toBe(true)
+    })
+
+    it.each(LOCALES)('accepts the supported locale %s', (locale) => {
       expect(PreferencesPatchSchema.safeParse({ locale }).success).toBe(true)
     })
   })
@@ -66,20 +78,21 @@ describe('PreferencesPatchSchema', () => {
   })
 
   describe('invalid values', () => {
-    it('rejects a theme id that is not in THEME_IDS', () => {
-      const result = PreferencesPatchSchema.safeParse({ lightTheme: 'neon' })
-
-      expect(result.success).toBe(false)
+    // Every removed atmosphere id must now fail the enum on either theme column.
+    it.each(REMOVED_THEME_IDS)('rejects the removed atmosphere %s as lightTheme', (removed) => {
+      expect(PreferencesPatchSchema.safeParse({ lightTheme: removed }).success).toBe(false)
     })
 
-    it('rejects a darkTheme id that is not in THEME_IDS', () => {
-      expect(PreferencesPatchSchema.safeParse({ darkTheme: 'sunset' }).success).toBe(false)
+    it.each(REMOVED_THEME_IDS)('rejects the removed atmosphere %s as darkTheme', (removed) => {
+      expect(PreferencesPatchSchema.safeParse({ darkTheme: removed }).success).toBe(false)
+    })
+
+    it('rejects a theme id that was never in any set', () => {
+      expect(PreferencesPatchSchema.safeParse({ lightTheme: 'neon' }).success).toBe(false)
     })
 
     it('rejects a locale outside fr and en', () => {
-      const result = PreferencesPatchSchema.safeParse({ locale: 'de' })
-
-      expect(result.success).toBe(false)
+      expect(PreferencesPatchSchema.safeParse({ locale: 'de' }).success).toBe(false)
     })
 
     it('rejects a non-string theme id', () => {
@@ -88,21 +101,18 @@ describe('PreferencesPatchSchema', () => {
   })
 
   describe('unknown keys', () => {
-    // The schema is a plain z.object, not .strict(), so an unknown key is stripped
-    // rather than rejected as long as at least one known field is present. This test
-    // documents that real behaviour rather than asserting a strictness the schema
-    // does not implement.
+    // The schema is a plain z.object, not .strict(), so an unknown key is stripped as long
+    // as at least one known field is present. This documents the real behaviour rather than
+    // asserting a strictness the schema does not implement.
     it('strips an unknown key and keeps the known field', () => {
-      const result = PreferencesPatchSchema.safeParse({ lightTheme: 'ember', bogus: 'x' })
+      const result = PreferencesPatchSchema.safeParse({ lightTheme: 'encre', bogus: 'x' })
 
       expect(result.success).toBe(true)
-      expect(result.data).toEqual({ lightTheme: 'ember' })
+      expect(result.data).toEqual({ lightTheme: 'encre' })
     })
 
     it('rejects a body of only unknown keys because no known field is present', () => {
-      const result = PreferencesPatchSchema.safeParse({ bogus: 'x' })
-
-      expect(result.success).toBe(false)
+      expect(PreferencesPatchSchema.safeParse({ bogus: 'x' }).success).toBe(false)
     })
   })
 })

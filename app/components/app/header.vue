@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-// The menu carries custom fields on the atmosphere rows, so the slot props know about them.
+// The menu carries custom fields on the theme rows, so the slot props know about them.
 interface MenuItem extends DropdownMenuItem {
   active?: boolean
   swatch?: ThemePalette
@@ -13,8 +13,14 @@ const localePath = useLocalePath()
 const { isDark, lightTheme, darkTheme, themes, activeOnPrimary } = useTheme()
 const { savePreferences } = usePreferences()
 
-// The language menu item shows the active locale and toggles to the other on click.
+// The language control lives inside the account popover, not the nav bar. It targets
+// whichever locale is not active, switches the interface immediately for responsiveness,
+// then persists the choice so it follows the user to another device.
 const otherLocale = computed(() => oppositeLocale(locale.value))
+function switchLocale() {
+  setLocale(otherLocale.value)
+  savePreferences({ locale: otherLocale.value })
+}
 
 const firstName = computed(() => user.value?.firstName ?? '')
 const username = computed(() => accountName(user.value?.firstName, user.value?.lastName))
@@ -49,14 +55,13 @@ async function logout() {
 // and selects the path for the active locale so each link reaches its real localized
 // route and cleanly 404s. Swap this for useLocalePath once the destination pages exist.
 
-// Only the picker for the current mode is shown, and each atmosphere previews its
-// own swatch for that mode. The active one gets a check via the trailing slot.
+// Only the picker for the current mode is shown, and each theme previews its own
+// swatch for that mode. Theme names are one proper noun per theme, identical across
+// modes and locales. The active one gets a check via the trailing slot.
 const items = computed<MenuItem[][]>(() => {
   const current = isDark.value ? darkTheme : lightTheme
-  const atmospheres = themes.map((option) => ({
-    label:
-      t(`theme.names.${option.id}.${isDark.value ? 'dark' : 'light'}`) +
-      (option.default ? ` ${t('theme.default')}` : ''),
+  const themeRows = themes.map((option) => ({
+    label: t(`theme.names.${option.id}`) + (option.default ? ` ${t('theme.default')}` : ''),
     swatch: isDark.value ? option.dark : option.light,
     active: current.value === option.id,
     onSelect: () => {
@@ -86,21 +91,18 @@ const items = computed<MenuItem[][]>(() => {
     navigation,
     [
       {
-        // The fixed palette icon distinguishes the atmosphere picker from the navbar
+        // The fixed palette icon distinguishes the theme picker from the navbar
         // light and dark mode toggle. The label still tracks the current mode.
         label: isDark.value ? t('theme.dark') : t('theme.light'),
         icon: 'i-ph-palette',
-        children: atmospheres
+        children: themeRows
       },
       {
-        label: t('header.language', { code: locale.value.toUpperCase() }),
+        // The language row toggles to the other locale and persists it. Its label
+        // shows the target code so it reads as an action, not the current state.
+        label: t('header.language', { code: otherLocale.value.toUpperCase() }),
         icon: 'i-ph-translate',
-        onSelect: () => {
-          // Switch the interface immediately, then persist so the choice follows the
-          // user to another device.
-          setLocale(otherLocale.value)
-          savePreferences({ locale: otherLocale.value })
-        }
+        onSelect: () => switchLocale()
       }
     ],
     [{ label: t('header.logout'), icon: 'i-ph-sign-out', color: 'error', onSelect: logout }]
@@ -111,7 +113,14 @@ const items = computed<MenuItem[][]>(() => {
 <template>
   <UHeader :toggle="false" :ui="{ container: 'max-w-full px-6 sm:px-6 lg:px-8' }">
     <template #left>
-      <NuxtLink :aria-label="t('app.name')" :to="localePath('index')">
+      <!-- The brand mark scales up gently on hover. The scale is gated by motion-safe
+           so it never moves for users who opt out of motion; inline-block gives the
+           anchor a box to transform. -->
+      <NuxtLink
+        :aria-label="t('app.name')"
+        class="inline-block transition-transform duration-200 motion-safe:hover:scale-110"
+        :to="localePath('index')"
+      >
         <AppLogo class="h-8 sm:h-10" />
       </NuxtLink>
     </template>
@@ -124,9 +133,12 @@ const items = computed<MenuItem[][]>(() => {
           <!-- The name is the friendliest accessible name, but it is empty before
                onboarding, so the label falls back to the email and finally to a
                static account label so the trigger always has an accessible name. -->
+          <!-- The filled account circle. hover:text-primary is meaningless on a solid
+               fill, so it gains a soft primary ring plus a motion-safe scale instead, at
+               the quiet end of the range. The focus ring stays for keyboard users. -->
           <button
             :aria-label="triggerLabel(username, user?.email, t('header.accountMenu'))"
-            class="grid size-9 cursor-pointer place-items-center rounded-full bg-primary text-sm font-semibold"
+            class="grid size-9 cursor-pointer place-items-center rounded-full bg-primary text-sm font-semibold transition duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:hover:scale-105"
             :style="{ color: activeOnPrimary }"
             type="button"
           >
@@ -155,7 +167,8 @@ const items = computed<MenuItem[][]>(() => {
             </div>
           </template>
 
-          <!-- Atmosphere rows show a swatch, every other row keeps its icon. -->
+          <!-- Theme rows show a swatch (canvas, primary, accent) so the picker previews
+               each theme's agencement; every other row keeps its icon. -->
           <template #item-leading="{ item }">
             <span v-if="item.swatch" class="flex -space-x-1">
               <span
@@ -174,9 +187,9 @@ const items = computed<MenuItem[][]>(() => {
             <UIcon v-else-if="item.icon" class="size-5 text-dimmed" :name="item.icon" />
           </template>
 
-          <!-- Restore the submenu chevron, and mark the active atmosphere. The check
-               icon is decorative, so a visually hidden label carries the active state
-               to a screen reader as well as to the eye. -->
+          <!-- Restore the submenu chevron, and mark the active theme. The check icon is
+               decorative, so a visually hidden label carries the active state to a
+               screen reader as well as to the eye. -->
           <template #item-trailing="{ item }">
             <UIcon v-if="item.children" class="size-4 text-dimmed" name="i-ph-caret-right" />
             <template v-else-if="item.active">

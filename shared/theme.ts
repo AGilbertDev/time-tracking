@@ -2,23 +2,15 @@
 // everything under shared/ into both the app and the Nitro server, so this is the one
 // place theme ids and locales are declared and both sides validate against the same list.
 
-// The eight atmosphere ids. These mirror the palettes defined in app/composables/useTheme.ts.
+// The five theme ids. These mirror the palettes defined in app/composables/useTheme.ts.
 // useTheme owns the palettes and display names, but its themeOptions must reference this
-// list so the ids cannot drift from what the server validates.
-export const THEME_IDS = [
-  'pastel',
-  'ember',
-  'onyx',
-  'coffee',
-  'forest',
-  'autumn',
-  'berry',
-  'frost'
-] as const
+// list so the ids cannot drift from what the server validates. The order is the locked
+// contract order from the theme-system-redesign spec.
+export const THEME_IDS = ['pastel', 'encre', 'cafe', 'automne', 'foret'] as const
 
 export type ThemeId = (typeof THEME_IDS)[number]
 
-// The default atmosphere. Matches DEFAULT_THEME in useTheme.ts and the settings column defaults.
+// The default theme. Matches DEFAULT_THEME in useTheme.ts and the settings column defaults.
 export const DEFAULT_THEME_ID: ThemeId = 'pastel'
 
 // The supported interface locales.

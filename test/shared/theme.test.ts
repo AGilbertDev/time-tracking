@@ -9,75 +9,121 @@ import {
   THEME_IDS
 } from '#shared/theme'
 
-// These invariants are what the server validation and the session types rely on.
-// Locking them here catches an accidental rename, a dropped id, or a default that
-// drifts out of its own set before it reaches the schema or the no-flash guard.
+// The theme-system-redesign spec (docs/specs/appearance/theme-system-redesign.md)
+// locks the theme set to exactly five subject-grounded ids and folds every removed
+// atmosphere to the default at read time. These invariants back the server validation,
+// the session types, and the no-flash guard, so section A of the spec is asserted here.
+
+// The four ids that existed in the old eight-atmosphere world but are gone now. The spec
+// (A1, A4, edge cases) requires each to be treated as invalid input, not a known theme.
+const REMOVED_THEME_IDS = ['ember', 'onyx', 'coffee', 'forest', 'autumn', 'berry', 'frost']
+
 describe('shared/theme', () => {
-  it('exposes exactly the eight expected atmosphere ids in order', () => {
-    expect(THEME_IDS).toEqual([
-      'pastel',
-      'ember',
-      'onyx',
-      'coffee',
-      'forest',
-      'autumn',
-      'berry',
-      'frost'
-    ])
+  // A1: THEME_IDS equals exactly the five ids in the locked contract order, no others.
+  it('exposes exactly the five redesigned theme ids in the locked order', () => {
+    expect(THEME_IDS).toEqual(['pastel', 'encre', 'cafe', 'automne', 'foret'])
+  })
+
+  // A1: none of the removed atmospheres survives in the set.
+  it.each(REMOVED_THEME_IDS)('no longer contains the removed atmosphere %s', (removed) => {
+    expect(THEME_IDS as readonly string[]).not.toContain(removed)
   })
 
   it('has no duplicate theme ids', () => {
     expect(new Set(THEME_IDS).size).toBe(THEME_IDS.length)
   })
 
-  it('defaults the theme to a member of THEME_IDS', () => {
+  // A2: the default theme is pastel.
+  it('defaults the theme to pastel', () => {
+    expect(DEFAULT_THEME_ID).toBe('pastel')
+  })
+
+  it('keeps the default theme inside THEME_IDS', () => {
     expect(THEME_IDS).toContain(DEFAULT_THEME_ID)
   })
 
+  // A6: locales are unchanged by this feature.
   it('exposes exactly the fr and en locales', () => {
     expect(LOCALES).toEqual(['fr', 'en'])
   })
 
-  it('defaults the locale to a member of LOCALES', () => {
+  // A6: the default locale is fr.
+  it('defaults the locale to fr', () => {
+    expect(DEFAULT_LOCALE).toBe('fr')
+  })
+
+  it('keeps the default locale inside LOCALES', () => {
     expect(LOCALES).toContain(DEFAULT_LOCALE)
   })
 })
 
-// The coercers guard the free-text theme and locale columns so a renamed, removed, or
-// junk stored value resolves to the documented default rather than reaching the session
-// and <html data-theme>. This is the read path's fallback that the no-flash guard relies on.
+// A3 + A4: coerceThemeId is identity on the valid set and folds everything else to pastel.
 describe('coerceThemeId', () => {
-  it('passes through every known theme id unchanged', () => {
-    for (const id of THEME_IDS) {
-      expect(coerceThemeId(id)).toBe(id)
-    }
+  // A3: identity on each of the five valid ids.
+  it.each(THEME_IDS)('returns %s unchanged for the valid id', (id) => {
+    expect(coerceThemeId(id)).toBe(id)
   })
 
-  it('falls back to the default for an unknown id', () => {
-    expect(coerceThemeId('sunset')).toBe(DEFAULT_THEME_ID)
+  // A4: every removed atmosphere id resolves to the default. This is the "invalid stored
+  // value falls back to the default" guarantee, so it is exercised id by id.
+  it.each(REMOVED_THEME_IDS)('folds the removed atmosphere %s to pastel', (removed) => {
+    expect(coerceThemeId(removed)).toBe('pastel')
   })
 
-  it('falls back to the default for empty, null, and undefined values', () => {
-    expect(coerceThemeId('')).toBe(DEFAULT_THEME_ID)
-    expect(coerceThemeId(null)).toBe(DEFAULT_THEME_ID)
-    expect(coerceThemeId(undefined)).toBe(DEFAULT_THEME_ID)
+  it('returns the default pastel for an arbitrary unknown string', () => {
+    expect(coerceThemeId('nope')).toBe('pastel')
+  })
+
+  it('returns the default pastel for the empty string', () => {
+    expect(coerceThemeId('')).toBe('pastel')
+  })
+
+  it('returns the default pastel for null', () => {
+    expect(coerceThemeId(null)).toBe('pastel')
+  })
+
+  it('returns the default pastel for undefined', () => {
+    expect(coerceThemeId(undefined)).toBe('pastel')
+  })
+
+  it('returns the default pastel for a number', () => {
+    expect(coerceThemeId(42)).toBe('pastel')
+  })
+
+  it('returns the default pastel for an object', () => {
+    expect(coerceThemeId({ id: 'pastel' })).toBe('pastel')
+  })
+
+  // Cross-check against the documented default rather than the literal, so a default drift
+  // is caught here too.
+  it('uses DEFAULT_THEME_ID as the fallback value', () => {
+    expect(coerceThemeId('anything-invalid')).toBe(DEFAULT_THEME_ID)
   })
 })
 
+// A5: coerceLocale is unchanged by this feature. Identity on fr/en, everything else to fr.
 describe('coerceLocale', () => {
-  it('passes through every supported locale unchanged', () => {
-    for (const locale of LOCALES) {
-      expect(coerceLocale(locale)).toBe(locale)
-    }
+  it.each(LOCALES)('returns %s unchanged for the valid locale', (locale) => {
+    expect(coerceLocale(locale)).toBe(locale)
   })
 
-  it('falls back to the default for an unsupported locale', () => {
-    expect(coerceLocale('de')).toBe(DEFAULT_LOCALE)
+  it('returns the default fr for an unknown locale string', () => {
+    expect(coerceLocale('de')).toBe('fr')
   })
 
-  it('falls back to the default for empty, null, and undefined values', () => {
-    expect(coerceLocale('')).toBe(DEFAULT_LOCALE)
-    expect(coerceLocale(null)).toBe(DEFAULT_LOCALE)
-    expect(coerceLocale(undefined)).toBe(DEFAULT_LOCALE)
+  it('returns the default fr for the empty string', () => {
+    expect(coerceLocale('')).toBe('fr')
+  })
+
+  it('returns the default fr for null', () => {
+    expect(coerceLocale(null)).toBe('fr')
+  })
+
+  it('returns the default fr for undefined', () => {
+    expect(coerceLocale(undefined)).toBe('fr')
+  })
+
+  it('uses DEFAULT_LOCALE as the fallback value', () => {
+    expect(coerceLocale('anything-invalid')).toBe(DEFAULT_LOCALE)
   })
 })

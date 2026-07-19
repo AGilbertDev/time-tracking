@@ -1,9 +1,12 @@
 import { DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '#shared/theme'
 
-// Eight atmospheres, each with a light and a dark variant. The id maps to a
-// [data-theme] block in main.css that recolors the Nuxt UI tokens. The colors
-// here drive the dynamic favicon, so they must stay in sync with main.css. The
-// light and dark picks are independent and the active one follows the color mode.
+// Five themes, each with a matched light and dark rendering under one name. The id
+// maps to a [data-theme] block in main.css that recolors the Nuxt UI tokens. The
+// colors here drive the dynamic favicon and the header swatch dots, so they must stay
+// in sync with main.css. The light and dark picks are independent and the active one
+// follows the color mode. Display names live in i18n (theme.names.<id>), one per theme,
+// so they are not duplicated here. accent is the theme's agencement (the secondary
+// token); it is the third swatch dot the header renders so the picker shows the pairing.
 export interface ThemePalette {
   accent: string
   canvas: string
@@ -13,65 +16,36 @@ export interface ThemePalette {
 
 export interface ThemeOption {
   dark: ThemePalette
-  darkName: string
   default?: boolean
   id: ThemeId
   light: ThemePalette
-  name: string
 }
 
-// The palettes and display names for each atmosphere, keyed by the shared theme id.
-// The id list itself lives in #shared/theme so the client cannot drift from what the
-// server validates, and this record must cover every id in THEME_IDS.
+// The palettes for each theme, keyed by the shared theme id. The id list itself lives
+// in #shared/theme so the client cannot drift from what the server validates, and this
+// record must cover every id in THEME_IDS. Values are the anchors from the
+// theme-system-redesign design doc (canvas, primary, accent, and text as ink).
 const themeDefinitions: Record<ThemeId, Omit<ThemeOption, 'id'>> = {
   pastel: {
-    name: 'Pastel',
-    darkName: 'Pastel Night',
     default: true,
-    light: { canvas: '#f5faf8', primary: '#5cc9a0', accent: '#b3a4f0', ink: '#33483f' },
-    dark: { canvas: '#0b1120', primary: '#6ee7b7', accent: '#c4b5fd', ink: '#e2e8f0' }
+    light: { canvas: '#f1faf6', primary: '#00866f', accent: '#7e62b7', ink: '#12312b' },
+    dark: { canvas: '#10201c', primary: '#34c3a3', accent: '#b9a0ea', ink: '#e4f2ec' }
   },
-  ember: {
-    name: 'Ember & Teal',
-    darkName: 'Ember Dusk',
-    light: { canvas: '#fdf7f0', primary: '#f2682c', accent: '#0d9488', ink: '#2e1f29' },
-    dark: { canvas: '#1b1317', primary: '#f2682c', accent: '#2dd4bf', ink: '#f5ece8' }
+  encre: {
+    light: { canvas: '#f5f7fb', primary: '#2a5cb8', accent: '#007d86', ink: '#14203a' },
+    dark: { canvas: '#0d1626', primary: '#5b9be8', accent: '#2fc7cd', ink: '#e6ecf5' }
   },
-  onyx: {
-    name: 'Onyx',
-    darkName: 'Obsidian',
-    light: { canvas: '#f4f4f6', primary: '#2f333a', accent: '#b87333', ink: '#1b1d22' },
-    dark: { canvas: '#0b0c0f', primary: '#ccd2da', accent: '#d8965d', ink: '#eef0f3' }
+  cafe: {
+    light: { canvas: '#faf5ee', primary: '#7a4a24', accent: '#976614', ink: '#2a1d12' },
+    dark: { canvas: '#17110c', primary: '#c98a4f', accent: '#e6c07e', ink: '#f2e9dd' }
   },
-  coffee: {
-    name: 'Mocha',
-    darkName: 'Dark Roast',
-    light: { canvas: '#f7f1e8', primary: '#6f4e37', accent: '#0d9488', ink: '#2e2018' },
-    dark: { canvas: '#18120d', primary: '#c79a6a', accent: '#2dd4bf', ink: '#f1e6d8' }
+  automne: {
+    light: { canvas: '#fbf2ea', primary: '#c0531f', accent: '#a5342b', ink: '#34160c' },
+    dark: { canvas: '#1b1109', primary: '#e2703a', accent: '#d85e50', ink: '#f6e7da' }
   },
-  forest: {
-    name: 'Forest',
-    darkName: 'Pinewood',
-    light: { canvas: '#f4f7ec', primary: '#4d7c2f', accent: '#ca8a04', ink: '#26301a' },
-    dark: { canvas: '#131a0d', primary: '#8bc34a', accent: '#eab308', ink: '#eef2e4' }
-  },
-  autumn: {
-    name: 'Autumn',
-    darkName: 'Harvest',
-    light: { canvas: '#fdf4ec', primary: '#c2410c', accent: '#b91c1c', ink: '#3a2412' },
-    dark: { canvas: '#1a130b', primary: '#e2722e', accent: '#f05252', ink: '#f3e9d9' }
-  },
-  berry: {
-    name: 'Berry & Mint',
-    darkName: 'Mulberry',
-    light: { canvas: '#fdf2f7', primary: '#be185d', accent: '#0d9488', ink: '#2f1c28' },
-    dark: { canvas: '#1b1218', primary: '#ec4899', accent: '#2dd4bf', ink: '#f6e8ef' }
-  },
-  frost: {
-    name: 'Frost',
-    darkName: 'Glacier',
-    light: { canvas: '#f4f7fb', primary: '#335c81', accent: '#64748b', ink: '#1c2733' },
-    dark: { canvas: '#0b1226', primary: '#6d8bce', accent: '#8a9bc4', ink: '#e6eaf4' }
+  foret: {
+    light: { canvas: '#f0f6f1', primary: '#1f7a50', accent: '#9c4368', ink: '#12241a' },
+    dark: { canvas: '#0e1a12', primary: '#3da76c', accent: '#cd7396', ink: '#e4efe7' }
   }
 }
 
@@ -112,7 +86,7 @@ export function useTheme() {
   const colorMode = useColorMode()
   const { user } = useUserSession()
 
-  // Prefer the authenticated session value so the server-resolved atmosphere is
+  // Prefer the authenticated session value so the server-resolved theme is
   // present on first paint, otherwise fall back to the coded default. A signed-out
   // visitor has no theme picker, so the default is all they ever need. SSR writes
   // these ids onto the html element for the pre-paint guard to read, no cookie.
