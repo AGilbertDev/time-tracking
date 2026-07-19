@@ -26,7 +26,13 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
     .get()
 
   if (!record) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid or expired link.' })
+    // An expired, used, or unknown token is a dead end. Rather than strand the user on a bare
+    // error, send them to the sign-up page with a flag so it can invite them to request a fresh
+    // link. This is the recovery path for an abandoned onboarding or a natural token expiry. The
+    // redirect grants no session and reveals nothing about whether the account exists, and the
+    // locale follows the persisted i18n cookie.
+    const locale = getCookie(event, 'i18n_redirected')
+    return sendRedirect(event, `${locale === 'en' ? '/signup' : '/inscription'}?expired=1`, 302)
   }
 
   // Mark the token as used immediately to prevent replay attacks.

@@ -5,6 +5,11 @@ definePageMeta({
 
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
+const route = useRoute()
+
+// A magic link that has expired, been used, or is unknown redirects here with ?expired, so the
+// page can invite the user to request a fresh one instead of leaving them on a dead error page.
+const linkExpired = computed(() => 'expired' in route.query)
 
 const email = ref('')
 const sent = ref(false)
@@ -43,6 +48,14 @@ async function submit() {
 
         <p class="mb-8 text-center text-sm leading-relaxed text-balance text-muted sm:mb-10">
           {{ t('signup.invitation') }}
+        </p>
+
+        <p
+          v-if="linkExpired && !sent"
+          class="mb-6 text-center text-sm text-balance text-warning"
+          role="status"
+        >
+          {{ t('signup.expired') }}
         </p>
 
         <form class="w-full" @submit.prevent="submit">

@@ -15,6 +15,7 @@
     "email": "Adresse courriel autorisée",
     "submit": "Créer un compte",
     "sent": "Si votre adresse courriel est autorisée par l'administrateur, vous recevrez un lien à usage unique dans votre boîte de réception pour activer votre nouveau compte.",
+    "expired": "Ce lien n'est plus valide. Demandez-en un nouveau ci-dessous.",
     "error": "Une erreur est survenue. Veuillez réessayer.",
     "hasAccount": "Déjà un compte ? Connectez-vous"
   },

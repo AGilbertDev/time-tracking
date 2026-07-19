@@ -15,6 +15,7 @@
     "email": "Authorized email address",
     "submit": "Create account",
     "sent": "If your email is authorized by the admin, you should receive a one-time link in your inbox to activate your new account.",
+    "expired": "This link is no longer valid. Request a new one below.",
     "error": "Something went wrong. Please try again.",
     "hasAccount": "Already have an account? Sign in"
   },
