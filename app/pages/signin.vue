@@ -5,7 +5,6 @@ definePageMeta({
 
 const { t } = useI18n()
 const localePath = useLocalePath()
-const { fetch: refreshSession } = useUserSession()
 
 const email = ref('')
 const password = ref('')
@@ -22,9 +21,10 @@ async function submit() {
       body: { email: email.value, password: password.value }
     })
 
-    // Refresh the client session so the middleware sees the authenticated user before we navigate.
-    await refreshSession()
-    await navigateTo(localePath('index'))
+    // Hard-reload into the app rather than an SPA navigation so the server rebuilds the theme,
+    // locale, and colour mode from the freshly signed-in user's settings. A client navigation would
+    // keep the previous visitor's cached theme state until a manual refresh.
+    window.location.href = localePath('index')
   } catch (e) {
     // The server returns stable codes the client maps to localized messages.
     const code = (e as { data?: { statusMessage?: string } })?.data?.statusMessage

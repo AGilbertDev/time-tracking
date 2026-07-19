@@ -45,7 +45,10 @@ const greeting = computed(() => {
 
 async function logout() {
   await clear()
-  await navigateTo(localePath('signin'))
+  // Hard-reload to sign-in rather than an SPA navigation. clear() drops the session and, through the
+  // server clear hook, the cached preference cookies. A full document load then rebuilds client state
+  // from scratch so the next user never inherits this user's theme or locale.
+  window.location.href = localePath('signin')
 }
 
 // The navigation items link ahead to pages that do not exist yet. With customRoutes
