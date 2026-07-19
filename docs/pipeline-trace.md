@@ -21,10 +21,11 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 
 ## Ledger
 
-| #   | Date       | Feature             | Agent-driven | Fully sandboxed | Spec                                  | PR   |
-| --- | ---------- | ------------------- | ------------ | --------------- | ------------------------------------- | ---- |
-| 1   | 2026-07-15 | Visual theme rework | yes          | no              | [spec](specs/appearance/theme-system.md)  | none |
-| 2   | 2026-07-15 | Persist user preferences | yes      | no              | [spec](specs/settings/preference-persistence.md) | [#1](https://github.com/AGilbertDev/time-tracking/pull/1) |
-| 3   | 2026-07-18 | Profile menu header popover | yes   | yes             | [spec](specs/settings/profile-menu-popover.md) | [#2](https://github.com/AGilbertDev/time-tracking/pull/2) |
-| 4   | 2026-07-19 | Theme system redesign | yes          | yes             | [spec](specs/appearance/theme-system.md) | [#3](https://github.com/AGilbertDev/time-tracking/pull/3) |
-| 5   | 2026-07-19 | Manage users admin page | yes        | yes             | [spec](specs/admin/manage-users.md) | [#7](https://github.com/AGilbertDev/time-tracking/pull/7) |
+| #   | Date       | Feature                     | Agent-driven | Fully sandboxed | Spec                                             | PR                                                        |
+| --- | ---------- | --------------------------- | ------------ | --------------- | ------------------------------------------------ | --------------------------------------------------------- |
+| 1   | 2026-07-15 | Visual theme rework         | yes          | no              | [spec](specs/appearance/theme-system.md)         | none                                                      |
+| 2   | 2026-07-15 | Persist user preferences    | yes          | no              | [spec](specs/settings/preference-persistence.md) | [#1](https://github.com/AGilbertDev/time-tracking/pull/1) |
+| 3   | 2026-07-18 | Profile menu header popover | yes          | yes             | [spec](specs/settings/profile-menu-popover.md)   | [#2](https://github.com/AGilbertDev/time-tracking/pull/2) |
+| 4   | 2026-07-19 | Theme system redesign       | yes          | yes             | [spec](specs/appearance/theme-system.md)         | [#3](https://github.com/AGilbertDev/time-tracking/pull/3) |
+| 5   | 2026-07-19 | Manage users admin page     | yes          | yes             | [spec](specs/admin/manage-users.md)              | [#7](https://github.com/AGilbertDev/time-tracking/pull/7) |
+| 6   | 2026-07-19 | Users table sort and search | yes          | no              | [spec](specs/admin/users-table-sort-search.md)   | [#8](https://github.com/AGilbertDev/time-tracking/pull/8) |
