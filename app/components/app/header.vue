@@ -98,9 +98,10 @@ const items = computed<MenuItem[][]>(() => {
         children: themeRows
       },
       {
-        // The language row toggles to the other locale and persists it. Its label
-        // shows the target code so it reads as an action, not the current state.
-        label: t('header.language', { code: otherLocale.value.toUpperCase() }),
+        // The language row sits in the preferences popover, so its label shows the
+        // active locale as the current setting rather than the target. Selecting it
+        // still toggles to the other locale and persists the choice.
+        label: t('header.language', { code: locale.value.toUpperCase() }),
         icon: 'i-ph-translate',
         onSelect: () => switchLocale()
       }
