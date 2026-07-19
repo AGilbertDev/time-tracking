@@ -53,14 +53,11 @@
     "default": "(défaut)",
     "active": "actif",
     "names": {
-      "pastel": { "light": "Écume", "dark": "Océan" },
-      "ember": { "light": "Flamme", "dark": "Braise" },
-      "onyx": { "light": "Marbre", "dark": "Onyx" },
-      "coffee": { "light": "Latte", "dark": "Moka" },
-      "forest": { "light": "Fougère", "dark": "Pin" },
-      "autumn": { "light": "Érable", "dark": "Acajou" },
-      "berry": { "light": "Framboise", "dark": "Mûre" },
-      "frost": { "light": "Givre", "dark": "Glacier" }
+      "pastel": "Pastel",
+      "encre": "Encre",
+      "cafe": "Café",
+      "automne": "Automne",
+      "foret": "Forêt"
     }
   },
   "a11y": { "switchLocale": "Changer de langue" },
