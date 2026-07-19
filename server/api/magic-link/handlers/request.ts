@@ -1,7 +1,6 @@
 import type { z } from 'zod'
 
 import { eq } from 'drizzle-orm'
-import { Resend } from 'resend'
 
 import type { RequestSchema } from '../../../models/magic-link'
 
@@ -9,6 +8,7 @@ import { useDb } from '../../../db/index'
 import { allowedEmails, magicLinkTokens, users } from '../../../db/schema'
 import { MINUTE_IN_MILLISECONDS } from '../../../utils/constants/time'
 import { emailTemplates } from '../../../utils/email-templates'
+import { sendEmail } from '../../../utils/sendEmail'
 
 export async function requestMagicLink(body: z.infer<typeof RequestSchema>) {
   const config = useRuntimeConfig()
@@ -34,24 +34,16 @@ export async function requestMagicLink(body: z.infer<typeof RequestSchema>) {
   await db.insert(magicLinkTokens).values({ token, email, expiresAt })
 
   const verificationUrl = `${config.siteUrl}/api/magic-link/verify?token=${token}`
-  const resend = new Resend(config.resendApiKey as string)
   const template = locale === 'en' ? emailTemplates.en.magicLink : emailTemplates.fr.magicLink
 
-  // Show a human sender name in the inbox rather than the bare noreply local part. If the
-  // configured value already carries a display name in angle-bracket form it is used as is.
-  const fromEmail = config.resendFromEmail as string
-  const from = fromEmail.includes('<') ? fromEmail : `Alexandre Gilbert <${fromEmail}>`
-
-  const { error } = await resend.emails.send({
-    from,
+  // Delegates the Resend client, the from-address formatting, and the 503-on-failure to the
+  // shared sender. Behaviour is unchanged: the same subject and body go out, and a Resend error
+  // still aborts with a 503.
+  await sendEmail({
     to: email,
     subject: template.subject,
     html: template.body(verificationUrl)
   })
-
-  if (error) {
-    throw createError({ statusCode: 503, statusMessage: 'Failed to send email. Please try again.' })
-  }
 
   return { success: true }
 }

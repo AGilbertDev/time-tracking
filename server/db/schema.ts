@@ -1,6 +1,15 @@
 import { foreignKey, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-export const allowedEmails = sqliteTable('allowed_emails', { email: text('email').primaryKey() })
+export const allowedEmails = sqliteTable('allowed_emails', {
+  email: text('email').primaryKey(),
+  // When the email was added to the allowlist. Stored as Unix seconds (mode 'timestamp'),
+  // matching users.createdAt, so the admin users list can show a real date for invited-only
+  // rows. The application default is set here for new inserts; the 0003 migration backfills
+  // pre-existing rows with a SQL-side unixepoch() default.
+  invitedAt: integer('invited_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date())
+})
 
 export const users = sqliteTable('users', {
   id: text('id')

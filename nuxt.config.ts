@@ -44,10 +44,9 @@ export default defineNuxtConfig({
         fr: '/accueil',
         en: '/onboarding'
       },
-      // These destination pages do not exist yet, so these entries stay inert until
-      // the page files land. The header popover links ahead to them today. Because
-      // customRoutes only localizes a key once a matching page file exists, the
-      // component computes these localized paths directly for now.
+      // profile and settings pages do not exist yet, so these entries stay inert until the page
+      // files land. The header popover links ahead to them today, computing the localized paths
+      // directly since customRoutes only localizes a key once a matching page file exists.
       profile: {
         fr: '/profil',
         en: '/profile'
@@ -56,7 +55,10 @@ export default defineNuxtConfig({
         fr: '/parametres',
         en: '/settings'
       },
-      'admin-users': {
+      // The admin users page exists at app/pages/admin/users.vue. i18n keys pages by file path,
+      // so this must be 'admin/users', not the 'admin-users' route name. The route-name form left
+      // the localized paths ungenerated, so /utilisateurs resolved to a 404.
+      'admin/users': {
         fr: '/utilisateurs',
         en: '/users'
       }
@@ -76,6 +78,15 @@ export default defineNuxtConfig({
     resendApiKey: '',
     resendFromEmail: '',
     ownerEmail: '',
+    // Contact address shown in the account-deactivation email so a deactivated user knows
+    // who to reach. Distinct from ownerEmail on purpose: it is the public support address,
+    // not the account's own login email. Override with NUXT_ADMIN_CONTACT_EMAIL in the
+    // environment. Defaults to the owner-specified support address.
+    adminContactEmail: 'alexandre.gilbert.dev@gmail.com',
+    // Shared secret guarding the retention cron endpoint. Vercel Cron sends it as a bearer
+    // token so the purge cannot be triggered by anyone else. Set via NUXT_CRON_SECRET in the
+    // environment. Empty by default, which the endpoint treats as "reject everything".
+    cronSecret: '',
     siteUrl: ''
   }
 })

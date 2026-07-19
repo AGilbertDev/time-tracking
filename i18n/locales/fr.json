@@ -10,7 +10,7 @@
   },
   "signup": {
     "subtitle": "Créer un compte",
-    "invitation": "Vous devez avoir reçu un courriel d'invitation pour que votre adresse de courriel vous permette de créer un nouveau compte.",
+    "invitation": "Vous ne pouvez créer un compte qu'avec une adresse courriel autorisée.",
     "description": "Entrez votre adresse courriel pour recevoir un lien de connexion.",
     "email": "Adresse courriel autorisée",
     "submit": "Créer un compte",
@@ -84,6 +84,80 @@
         "5": "V",
         "6": "S"
       }
+    }
+  },
+  "adminUsers": {
+    "title": "Gestion des utilisateurs",
+    "intro": "Invitez de nouvelles personnes, puis gérez les accès existants.",
+    "invite": {
+      "heading": "Inviter une personne",
+      "emailLabel": "Adresse courriel",
+      "emailPlaceholder": "nom{'@'}exemple.com",
+      "submit": "Inviter",
+      "validation": {
+        "required": "Entrez une adresse courriel.",
+        "invalid": "Cette adresse courriel est invalide."
+      }
+    },
+    "table": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Courriel",
+      "role": "Rôle",
+      "status": "Statut",
+      "date": "Date de création",
+      "actions": "Actions"
+    },
+    "status": {
+      "invited": "Invité",
+      "active": "Actif",
+      "deactivated": "Désactivé"
+    },
+    "role": {
+      "user": "Utilisateur",
+      "admin": "Administrateur"
+    },
+    "actions": {
+      "deactivate": "Désactiver",
+      "reactivate": "Réactiver",
+      "deactivateNamed": "Désactiver {email}",
+      "reactivateNamed": "Réactiver {email}",
+      "you": "Vous"
+    },
+    "confirm": {
+      "cancel": "Annuler",
+      "deactivateActive": {
+        "title": "Désactiver ce compte ?",
+        "body": "Cette personne perdra l'accès à l'application et recevra un courriel l'informant de la désactivation. Vous pourrez réactiver le compte plus tard.",
+        "confirm": "Désactiver"
+      },
+      "revokeInvite": {
+        "title": "Révoquer cette invitation ?",
+        "body": "L'invitation sera retirée et le lien d'inscription cessera de fonctionner. Aucun courriel ne sera envoyé.",
+        "confirm": "Révoquer"
+      },
+      "reactivate": {
+        "title": "Réactiver ce compte ?",
+        "body": "L'accès sera rétabli et la personne pourra se reconnecter. Aucun courriel ne sera envoyé.",
+        "confirm": "Réactiver"
+      }
+    },
+    "pagination": {
+      "count": "aucun utilisateur | {count} utilisateur | {count} utilisateurs"
+    },
+    "empty": {
+      "title": "Aucun utilisateur pour le moment",
+      "hint": "Invitez une première personne à l'aide du champ ci-dessus."
+    },
+    "toast": {
+      "invited": "Invitation envoyée.",
+      "alreadyUser": "Cette personne possède déjà un compte.",
+      "useReactivate": "Ce compte est désactivé. Utilisez Réactiver pour lui redonner accès.",
+      "deactivated": "Compte désactivé.",
+      "reactivated": "Compte réactivé.",
+      "deliveryWarning": "L'action a été enregistrée, mais le courriel n'a pas pu être envoyé.",
+      "cannotDeactivateSelf": "Vous ne pouvez pas désactiver votre propre compte.",
+      "error": "Une erreur est survenue. Veuillez réessayer."
     }
   },
   "app": {

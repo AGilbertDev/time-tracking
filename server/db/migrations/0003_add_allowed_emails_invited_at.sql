@@ -1,0 +1,31 @@
+-- Add the invited_at column to allowed_emails.
+--
+-- The manage-users admin feature shows one list that unions allowed_emails and
+-- users. Invited-only rows (an allowlist entry with no users row yet) need a real
+-- date for the list's date column, so this adds invited_at to allowed_emails.
+-- Stored as an integer of Unix seconds, matching users.created_at and the Drizzle
+-- mode 'timestamp' on this column.
+--
+-- SQLite rejects a non-constant DEFAULT on ALTER TABLE ADD COLUMN, so the column is
+-- added NOT NULL with a constant DEFAULT 0, then a guarded backfill sets every existing
+-- row to the migration moment with unixepoch() (seconds, matching the timestamp mode).
+-- New inserts from the app set invited_at via the Drizzle $defaultFn, so the constant 0
+-- is only a NOT NULL placeholder that is never read in practice.
+--
+-- This add matches how 0000, 0001, and 0002 are authored in this project, as plain
+-- statement-broken SQL applied by hand rather than by a snapshot-diffing runner,
+-- because the project keeps no drizzle-kit meta snapshot directory.
+--
+-- Idempotency note. SQLite does not support IF NOT EXISTS on ALTER TABLE ADD
+-- COLUMN, so this statement is applied through a runner that tolerates the benign
+-- duplicate column name error and continues, which makes a re-run safe.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso
+-- database, matching 0000, 0001, and 0002. It must not be pointed at a live
+-- database by CI, a deploy hook, or a dev-boot migration runner. There are no
+-- database credentials in this environment.
+
+ALTER TABLE `allowed_emails` ADD `invited_at` integer NOT NULL DEFAULT 0;
+--> statement-breakpoint
+UPDATE `allowed_emails` SET `invited_at` = (unixepoch()) WHERE `invited_at` = 0;
