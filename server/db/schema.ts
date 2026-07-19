@@ -39,7 +39,11 @@ export const settings = sqliteTable(
     // than on users so a single settings row holds every user preference.
     lightTheme: text('light_theme').notNull().default('pastel'),
     darkTheme: text('dark_theme').notNull().default('pastel'),
-    locale: text('locale').notNull().default('fr')
+    locale: text('locale').notNull().default('fr'),
+    // Owner's IANA timezone. The onboarding wizard captures it so the dashboard can render
+    // day boundaries and quota windows in the user's local time. Defaults to America/Toronto,
+    // the primary user's zone.
+    timezone: text('timezone').notNull().default('America/Toronto')
   },
   (table) => [foreignKey({ columns: [table.userId], foreignColumns: [users.id] })]
 )

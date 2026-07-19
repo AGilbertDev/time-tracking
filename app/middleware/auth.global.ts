@@ -14,4 +14,10 @@ export default defineNuxtRouteMiddleware((to) => {
   // The path check exempts the onboarding page itself so the redirect cannot loop.
   if (loggedIn.value && !user.value?.onboarded && to.path !== onboardingPath)
     return navigateTo(onboardingPath)
+
+  // An already-onboarded user has no reason to reopen the onboarding wizard, so a direct visit
+  // to its URL is sent to the dashboard. This stops the completed form from being reopened and
+  // re-submitted by typing the path.
+  if (loggedIn.value && user.value?.onboarded && to.path === onboardingPath)
+    return navigateTo(localePath('index'))
 })

@@ -41,7 +41,7 @@ async function submit() {
           {{ t('signup.subtitle') }}
         </h1>
 
-        <p class="mb-10 text-sm leading-relaxed text-muted sm:mb-14">
+        <p class="mb-8 text-center text-sm leading-relaxed text-balance text-muted sm:mb-10">
           {{ t('signup.invitation') }}
         </p>
 
@@ -60,13 +60,13 @@ async function submit() {
 
           <p v-if="error" class="mt-2 text-left text-sm text-error">{{ error }}</p>
 
-          <p v-if="sent" class="mt-4 text-center text-sm text-success">
+          <p v-if="sent" class="mt-8 text-center text-sm text-balance text-success sm:mt-10">
             {{ t('signup.sent') }}
           </p>
           <UButton
             v-else
             block
-            class="btn-glow mt-4"
+            class="btn-glow mt-8 sm:mt-10"
             :loading="loading"
             size="lg"
             trailing-icon="i-ph-arrow-right-bold"

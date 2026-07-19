@@ -135,78 +135,28 @@ input:-webkit-autofill:active {
   transition: background-color 9999s ease-in-out 0s;
 }
 
-/* Signature glow. A slow conic-gradient ring masked to a thin border on ::before, */
-/* plus a soft box-shadow, revealed on hover. All colors derived from the active */
-/* theme's --ui-primary via oklch relative color, so every theme gets its own */
-/* on-brand sweep. The hue is nudged by --glint-hue (default 25, a unitless number */
-/* to match the oklch h channel) and lightened for the glint. Every theme uses the */
-/* default +25deg, so no theme overrides --glint-hue. */
-@property --btn-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-
+/* Simple hover border. On hover a crisp ring in the theme primary appears, with no glow, */
+/* gradient, blur, or motion. The .glow-on class keeps it lit for a persistent state. */
 .btn-glow {
-  position: relative;
-  isolation: isolate;
-  /* Soft glow lives on the element itself, not on ::before: a mask clips box-shadow, */
-  /* so a shadow on the masked ring would never paint. Hidden until hover. */
-  transition: box-shadow 0.3s ease;
-}
-
-.btn-glow::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1; /* above the button content so the ring shows over edge-to-edge media */
-  border-radius: inherit;
-  padding: 2px; /* ring thickness */
-  background: conic-gradient(
-    from var(--btn-angle),
-    var(--ui-primary),
-    oklch(from var(--ui-primary) l c calc(h + var(--glint-hue, 25))),
-    oklch(from var(--ui-primary) calc(l * 1.1) c calc(h + var(--glint-hue, 25))),
-    oklch(from var(--ui-primary) l c calc(h + var(--glint-hue, 25))),
-    var(--ui-primary)
-  );
-  /* Mask the fill down to just the padding ring. */
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-  animation: btn-glow-spin 7s linear infinite;
+  transition: box-shadow 0.2s ease;
 }
 
 .btn-glow:hover,
 .btn-glow.glow-on {
-  box-shadow: 0 0 1.5rem
-    oklch(from var(--ui-primary) calc(l * 1.1) c calc(h + var(--glint-hue, 25)) / 0.45);
+  box-shadow: 0 0 0 2px var(--ui-primary);
 }
 
-.btn-glow:hover::before,
-.btn-glow.glow-on::before {
-  opacity: 1;
-}
-
-@keyframes btn-glow-spin {
-  to {
-    --btn-angle: 360deg;
-  }
-}
-
-/* Spin is decorative. Keep the static ring and glow, drop the motion. */
-@media (prefers-reduced-motion: reduce) {
-  .btn-glow::before {
-    animation: none;
-  }
+/* Keep browser autofill from painting its own background over themed inputs. The very long */
+/* background-color transition defers the autofill fill indefinitely so the input keeps its */
+/* themed surface, and the text fill color is forced to the themed text so a prefilled value */
+/* stays legible. The input border is a ring (box-shadow), so it is left untouched. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--ui-text-highlighted);
+  caret-color: var(--ui-text-highlighted);
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 /* Faint page-level radial of the primary (hue-shifted), anchored top-right. */

@@ -6,15 +6,15 @@
     "submit": "Se connecter",
     "error": "Identifiants invalides.",
     "deactivated": "Votre compte a été désactivé. Contactez l'administrateur.",
-    "noAccount": "Première fois ? Activez votre compte"
+    "noAccount": "Première fois ? Créez votre compte"
   },
   "signup": {
-    "subtitle": "Activer le compte",
-    "invitation": "Accès sur invitation seulement. Vous devez avoir reçu un courriel d'invitation pour activer votre compte.",
+    "subtitle": "Créer un compte",
+    "invitation": "Vous devez avoir reçu un courriel d'invitation pour que votre adresse de courriel vous permette de créer un nouveau compte.",
     "description": "Entrez votre adresse courriel pour recevoir un lien de connexion.",
-    "email": "Adresse courriel",
-    "submit": "Recevoir le lien",
-    "sent": "Un lien vers le site vous sera envoyé par courriel.",
+    "email": "Adresse courriel autorisée",
+    "submit": "Créer un compte",
+    "sent": "Si votre adresse courriel est autorisée par l'administrateur, vous recevrez un lien à usage unique dans votre boîte de réception pour activer votre nouveau compte.",
     "error": "Une erreur est survenue. Veuillez réessayer.",
     "hasAccount": "Déjà un compte ? Connectez-vous"
   },
@@ -29,7 +29,61 @@
     "passwordMismatch": "Les mots de passe ne correspondent pas.",
     "passwordBreached": "Ce mot de passe figure dans une fuite de données connue. Veuillez en choisir un autre.",
     "submit": "Terminer",
-    "error": "Une erreur est survenue. Veuillez réessayer."
+    "error": "Une erreur est survenue. Veuillez réessayer.",
+    "stepProgress": "Étape {current} sur {total}",
+    "steps": {
+      "identity": {
+        "title": "Identité",
+        "subtitle": "Votre nom et votre mot de passe."
+      },
+      "appearance": {
+        "title": "Apparence",
+        "subtitle": "Le thème et la langue de l'interface."
+      },
+      "work": {
+        "title": "Travail",
+        "subtitle": "Vos heures, vos journées et votre quota."
+      }
+    },
+    "nav": {
+      "back": "Précédent",
+      "next": "Suivant"
+    },
+    "appearance": {
+      "lightTheme": "Thème clair",
+      "darkTheme": "Thème sombre",
+      "language": "Langue",
+      "languageFr": "Français",
+      "languageEn": "Anglais"
+    },
+    "work": {
+      "dailyHours": "Heures de travail par jour",
+      "unitHours": "h",
+      "unitMinutes": "min",
+      "workDays": "Jours travaillés",
+      "quota": "Quota de base",
+      "unitWph": "mots/heure",
+      "timezone": "Fuseau horaire",
+      "timezoneSearch": "Rechercher un fuseau…",
+      "dayNames": {
+        "0": "dimanche",
+        "1": "lundi",
+        "2": "mardi",
+        "3": "mercredi",
+        "4": "jeudi",
+        "5": "vendredi",
+        "6": "samedi"
+      },
+      "dayShort": {
+        "0": "D",
+        "1": "L",
+        "2": "M",
+        "3": "M",
+        "4": "J",
+        "5": "V",
+        "6": "S"
+      }
+    }
   },
   "app": {
     "name": "Planning de traduction"

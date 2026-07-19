@@ -37,8 +37,13 @@ export async function requestMagicLink(body: z.infer<typeof RequestSchema>) {
   const resend = new Resend(config.resendApiKey as string)
   const template = locale === 'en' ? emailTemplates.en.magicLink : emailTemplates.fr.magicLink
 
+  // Show a human sender name in the inbox rather than the bare noreply local part. If the
+  // configured value already carries a display name in angle-bracket form it is used as is.
+  const fromEmail = config.resendFromEmail as string
+  const from = fromEmail.includes('<') ? fromEmail : `Alexandre Gilbert <${fromEmail}>`
+
   const { error } = await resend.emails.send({
-    from: config.resendFromEmail as string,
+    from,
     to: email,
     subject: template.subject,
     html: template.body(verificationUrl)
