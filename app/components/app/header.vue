@@ -10,7 +10,7 @@ interface MenuItem extends DropdownMenuItem {
 const { t, locale, setLocale } = useI18n()
 const { clear, user } = useUserSession()
 const localePath = useLocalePath()
-const { isDark, lightTheme, darkTheme, themes, activeOnPrimary } = useTheme()
+const { isDark, lightTheme, darkTheme, themes } = useTheme()
 const { savePreferences } = usePreferences()
 
 // The language control lives inside the account popover, not the nav bar. It targets
@@ -142,11 +142,10 @@ const items = computed<MenuItem[][]>(() => {
                the quiet end of the range. The focus ring stays for keyboard users. -->
           <button
             :aria-label="triggerLabel(username, user?.email, t('header.accountMenu'))"
-            class="grid size-9 cursor-pointer place-items-center rounded-full bg-primary text-sm font-semibold transition duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:hover:scale-105"
-            :style="{ color: activeOnPrimary }"
+            class="size-9 cursor-pointer rounded-full text-sm transition duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:hover:scale-105"
             type="button"
           >
-            {{ initials }}
+            <AppAccountAvatar class="size-full" :initials="initials" />
           </button>
 
           <!-- The identity block is a full-width header at the top of the popover.
@@ -156,12 +155,7 @@ const items = computed<MenuItem[][]>(() => {
                size. -->
           <template #account>
             <div class="flex w-full flex-col items-center gap-2 px-2 py-3 text-center">
-              <span
-                class="grid size-14 place-items-center rounded-full bg-primary text-lg font-semibold"
-                :style="{ color: activeOnPrimary }"
-              >
-                {{ initials }}
-              </span>
+              <AppAccountAvatar class="size-14 text-lg" :initials="initials" />
               <div class="flex w-full min-w-0 flex-col items-center">
                 <span v-if="username" class="w-full truncate text-sm font-medium text-highlighted">
                   {{ username }}
