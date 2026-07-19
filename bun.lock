@@ -24,6 +24,7 @@
       },
       "devDependencies": {
         "@iconify-json/ph": "^1.2.2",
+        "@tanstack/vue-table": "8.21.3",
         "drizzle-kit": "^0.31.10",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-perfectionist": "^5.9.0",

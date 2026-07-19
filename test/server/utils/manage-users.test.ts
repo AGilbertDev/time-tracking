@@ -1,13 +1,16 @@
 import { emailTemplates } from '~~/server/utils/email-templates'
 import {
   deriveUserStatus,
+  filterUserRows,
   getPageBounds,
   getRetentionCutoff,
   getTotalPages,
   isPurgeable,
   type JoinedUserRecord,
   selectDeactivationTemplate,
-  shapeUserListRow
+  shapeUserListRow,
+  sortUserRows,
+  type UserListRow
 } from '~~/server/utils/manage-users'
 import { describe, expect, it } from 'vitest'
 
@@ -268,5 +271,357 @@ describe('selectDeactivationTemplate', () => {
     expect(selectDeactivationTemplate(undefined as unknown as Locale)).toBe(
       emailTemplates.fr.accountDeactivated
     )
+  })
+})
+
+// Base shaped row for the filter/sort helpers; tests clone and override so one field drives the case.
+function row(overrides: Partial<UserListRow> = {}): UserListRow {
+  return {
+    firstName: 'Alexandre',
+    lastName: 'Gilbert',
+    email: 'person@example.com',
+    role: 'user',
+    status: 'active',
+    date: new Date('2026-01-15T00:00:00Z'),
+    ...overrides
+  }
+}
+
+describe('filterUserRows', () => {
+  // Spec "Search behaviour" + acceptance criteria: case-insensitive AND diacritic-insensitive
+  // substring match over email, firstName, and lastName. Trimmed; empty/whitespace/absent means no
+  // filter and every row passes. Null name fields never match on name but still match on email.
+
+  const rows = [
+    row({ email: 'genevieve@example.com', firstName: 'Geneviève', lastName: 'Tremblay' }),
+    row({ email: 'francois@example.com', firstName: 'François', lastName: 'Bouchard' }),
+    row({ email: 'invited@example.com', firstName: null, lastName: null, status: 'invited' })
+  ]
+
+  // Empty term is not a filter: all rows pass, unchanged.
+  it('returns all rows for an empty search string', () => {
+    expect(filterUserRows(rows, '')).toEqual(rows)
+  })
+
+  // Whitespace-only trims to empty, so it is also treated as no filter.
+  it('returns all rows for a whitespace-only search string', () => {
+    expect(filterUserRows(rows, '   ')).toEqual(rows)
+  })
+
+  // Absent term (undefined) is no filter.
+  it('returns all rows when search is undefined', () => {
+    expect(filterUserRows(rows, undefined)).toEqual(rows)
+  })
+
+  // Case-insensitive match on email.
+  it('matches email case-insensitively', () => {
+    const result = filterUserRows(rows, 'FRANCOIS@EXAMPLE')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.email).toBe('francois@example.com')
+  })
+
+  // Case-insensitive match on firstName.
+  it('matches firstName case-insensitively', () => {
+    const result = filterUserRows(rows, 'genevieve')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.firstName).toBe('Geneviève')
+  })
+
+  // Case-insensitive match on lastName.
+  it('matches lastName case-insensitively', () => {
+    const result = filterUserRows(rows, 'BOUCHARD')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.lastName).toBe('Bouchard')
+  })
+
+  // Diacritic-insensitive, unaccented term against an accented field.
+  it('matches an unaccented term against an accented field (genevieve -> Geneviève)', () => {
+    const result = filterUserRows(rows, 'genevieve')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.firstName).toBe('Geneviève')
+  })
+
+  // Diacritic-insensitive the other direction: an accented term against an unaccented field. Both
+  // sides are folded, so the comparison is symmetric.
+  it('matches an accented term against an unaccented field (Geneviève -> Genevieve)', () => {
+    const unaccented = [row({ email: 'g@example.com', firstName: 'Genevieve', lastName: 'Roy' })]
+    const result = filterUserRows(unaccented, 'Geneviève')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.firstName).toBe('Genevieve')
+  })
+
+  // Substring, not just a prefix: an interior fragment still matches.
+  it('matches a substring that is not a prefix', () => {
+    const result = filterUserRows(rows, 'remblay')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.lastName).toBe('Tremblay')
+  })
+
+  // The term is trimmed before matching, so surrounding whitespace does not defeat a real match.
+  it('trims the term before matching', () => {
+    const result = filterUserRows(rows, '  Bouchard  ')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.lastName).toBe('Bouchard')
+  })
+
+  // Invited-only rows have null firstName/lastName. A term that only exists in a name never matches
+  // them, and null fields must not throw.
+  it('does not match an invited-only row on its null name fields', () => {
+    const result = filterUserRows(rows, 'Tremblay')
+    expect(result.every((r) => r.email !== 'invited@example.com')).toBe(true)
+  })
+
+  // But an invited-only row still matches on its email.
+  it('matches an invited-only row on its email even with null name fields', () => {
+    const result = filterUserRows(rows, 'invited@example')
+    expect(result).toHaveLength(1)
+    expect(result[0]?.email).toBe('invited@example.com')
+  })
+
+  // A term that matches nothing returns an empty array.
+  it('returns an empty array when nothing matches', () => {
+    expect(filterUserRows(rows, 'zzz-no-such-user')).toEqual([])
+  })
+})
+
+describe('sortUserRows', () => {
+  // Spec "Sortable column whitelist" + acceptance criteria: sort the full set by the chosen column
+  // and direction; nulls last for firstName/lastName/role in both directions; status sorts by the
+  // canonical rank (invited < active < deactivated), not the localized label; every sort is
+  // tie-broken by email ascending; the default sortUserRows(rows, 'date', 'desc') is newest-first.
+
+  // A copy is returned and the input is never mutated.
+  it('returns a new array and does not mutate the input', () => {
+    const input = [
+      row({ email: 'b@example.com', firstName: 'Bruno' }),
+      row({ email: 'a@example.com', firstName: 'Anna' })
+    ]
+    const snapshot = [...input]
+    const result = sortUserRows(input, 'firstName', 'asc')
+
+    expect(result).not.toBe(input)
+    expect(input).toEqual(snapshot)
+  })
+
+  // firstName ascending / descending, case-insensitive.
+  it('sorts by firstName ascending', () => {
+    const rows = [
+      row({ email: 'c@example.com', firstName: 'Charlie' }),
+      row({ email: 'a@example.com', firstName: 'anna' }),
+      row({ email: 'b@example.com', firstName: 'Bruno' })
+    ]
+    expect(sortUserRows(rows, 'firstName', 'asc').map((r) => r.firstName)).toEqual([
+      'anna',
+      'Bruno',
+      'Charlie'
+    ])
+  })
+
+  it('sorts by firstName descending', () => {
+    const rows = [
+      row({ email: 'a@example.com', firstName: 'anna' }),
+      row({ email: 'c@example.com', firstName: 'Charlie' }),
+      row({ email: 'b@example.com', firstName: 'Bruno' })
+    ]
+    expect(sortUserRows(rows, 'firstName', 'desc').map((r) => r.firstName)).toEqual([
+      'Charlie',
+      'Bruno',
+      'anna'
+    ])
+  })
+
+  // lastName ascending.
+  it('sorts by lastName ascending', () => {
+    const rows = [
+      row({ email: 'a@example.com', lastName: 'Tremblay' }),
+      row({ email: 'b@example.com', lastName: 'Bouchard' }),
+      row({ email: 'c@example.com', lastName: 'Gagnon' })
+    ]
+    expect(sortUserRows(rows, 'lastName', 'asc').map((r) => r.lastName)).toEqual([
+      'Bouchard',
+      'Gagnon',
+      'Tremblay'
+    ])
+  })
+
+  // email ascending / descending.
+  it('sorts by email ascending', () => {
+    const rows = [
+      row({ email: 'c@example.com' }),
+      row({ email: 'a@example.com' }),
+      row({ email: 'b@example.com' })
+    ]
+    expect(sortUserRows(rows, 'email', 'asc').map((r) => r.email)).toEqual([
+      'a@example.com',
+      'b@example.com',
+      'c@example.com'
+    ])
+  })
+
+  it('sorts by email descending', () => {
+    const rows = [
+      row({ email: 'a@example.com' }),
+      row({ email: 'c@example.com' }),
+      row({ email: 'b@example.com' })
+    ]
+    expect(sortUserRows(rows, 'email', 'desc').map((r) => r.email)).toEqual([
+      'c@example.com',
+      'b@example.com',
+      'a@example.com'
+    ])
+  })
+
+  // role ascending.
+  it('sorts by role ascending', () => {
+    const rows = [
+      row({ email: 'a@example.com', role: 'user' }),
+      row({ email: 'b@example.com', role: 'admin' })
+    ]
+    expect(sortUserRows(rows, 'role', 'asc').map((r) => r.role)).toEqual(['admin', 'user'])
+  })
+
+  // status sorts by the canonical rank invited < active < deactivated, NOT by the alphabetical label
+  // (which would give active, deactivated, invited).
+  it('sorts by status ascending using the canonical rank (invited < active < deactivated)', () => {
+    const rows = [
+      row({ email: 'd@example.com', status: 'deactivated' }),
+      row({ email: 'a@example.com', status: 'active' }),
+      row({ email: 'i@example.com', status: 'invited' })
+    ]
+    expect(sortUserRows(rows, 'status', 'asc').map((r) => r.status)).toEqual([
+      'invited',
+      'active',
+      'deactivated'
+    ])
+  })
+
+  it('sorts by status descending using the canonical rank (deactivated first)', () => {
+    const rows = [
+      row({ email: 'a@example.com', status: 'active' }),
+      row({ email: 'i@example.com', status: 'invited' }),
+      row({ email: 'd@example.com', status: 'deactivated' })
+    ]
+    expect(sortUserRows(rows, 'status', 'desc').map((r) => r.status)).toEqual([
+      'deactivated',
+      'active',
+      'invited'
+    ])
+  })
+
+  // date is a timestamp compare.
+  it('sorts by date ascending (oldest first)', () => {
+    const rows = [
+      row({ email: 'c@example.com', date: new Date('2026-03-01T00:00:00Z') }),
+      row({ email: 'a@example.com', date: new Date('2026-01-01T00:00:00Z') }),
+      row({ email: 'b@example.com', date: new Date('2026-02-01T00:00:00Z') })
+    ]
+    expect(sortUserRows(rows, 'date', 'asc').map((r) => r.email)).toEqual([
+      'a@example.com',
+      'b@example.com',
+      'c@example.com'
+    ])
+  })
+
+  // Null firstName sorts last in both directions.
+  it('sorts null firstName last in ascending order', () => {
+    const rows = [
+      row({ email: 'n@example.com', firstName: null }),
+      row({ email: 'b@example.com', firstName: 'Bruno' }),
+      row({ email: 'a@example.com', firstName: 'Anna' })
+    ]
+    expect(sortUserRows(rows, 'firstName', 'asc').map((r) => r.firstName)).toEqual([
+      'Anna',
+      'Bruno',
+      null
+    ])
+  })
+
+  it('sorts null firstName last in descending order (nulls stay at the end)', () => {
+    const rows = [
+      row({ email: 'n@example.com', firstName: null }),
+      row({ email: 'a@example.com', firstName: 'Anna' }),
+      row({ email: 'b@example.com', firstName: 'Bruno' })
+    ]
+    expect(sortUserRows(rows, 'firstName', 'desc').map((r) => r.firstName)).toEqual([
+      'Bruno',
+      'Anna',
+      null
+    ])
+  })
+
+  // Null lastName sorts last regardless of direction.
+  it('sorts null lastName last in ascending order', () => {
+    const rows = [
+      row({ email: 'n@example.com', lastName: null }),
+      row({ email: 'a@example.com', lastName: 'Aubin' })
+    ]
+    expect(sortUserRows(rows, 'lastName', 'asc').map((r) => r.lastName)).toEqual(['Aubin', null])
+  })
+
+  // Null role sorts last regardless of direction (invited-only rows have no role).
+  it('sorts null role last in descending order', () => {
+    const rows = [
+      row({ email: 'n@example.com', role: null }),
+      row({ email: 'a@example.com', role: 'admin' }),
+      row({ email: 'u@example.com', role: 'user' })
+    ]
+    expect(sortUserRows(rows, 'role', 'desc').map((r) => r.role)).toEqual(['user', 'admin', null])
+  })
+
+  // Every sort is tie-broken by email ascending. Equal primary key, different emails.
+  it('breaks ties by email ascending when the sort column is equal (firstName)', () => {
+    const rows = [
+      row({ email: 'c@example.com', firstName: 'Same' }),
+      row({ email: 'a@example.com', firstName: 'Same' }),
+      row({ email: 'b@example.com', firstName: 'Same' })
+    ]
+    expect(sortUserRows(rows, 'firstName', 'asc').map((r) => r.email)).toEqual([
+      'a@example.com',
+      'b@example.com',
+      'c@example.com'
+    ])
+  })
+
+  // The email tie-break stays ascending even when the primary sort is descending.
+  it('breaks ties by email ascending even under a descending status sort', () => {
+    const rows = [
+      row({ email: 'c@example.com', status: 'active' }),
+      row({ email: 'a@example.com', status: 'active' }),
+      row({ email: 'b@example.com', status: 'active' })
+    ]
+    expect(sortUserRows(rows, 'status', 'desc').map((r) => r.email)).toEqual([
+      'a@example.com',
+      'b@example.com',
+      'c@example.com'
+    ])
+  })
+
+  // Two invited-only rows (null name) tie on the null field and sort among themselves by email asc.
+  it('tie-breaks null-name rows by email ascending', () => {
+    const rows = [
+      row({ email: 'z@example.com', firstName: null }),
+      row({ email: 'm@example.com', firstName: null })
+    ]
+    expect(sortUserRows(rows, 'firstName', 'asc').map((r) => r.email)).toEqual([
+      'm@example.com',
+      'z@example.com'
+    ])
+  })
+
+  // The historical default: sortUserRows(rows, 'date', 'desc') is newest-first, ties by email asc.
+  it('reproduces the historical default order with date desc and an email-ascending tie-break', () => {
+    const older = new Date('2026-01-01T00:00:00Z')
+    const newer = new Date('2026-05-01T00:00:00Z')
+    const rows = [
+      row({ email: 'old@example.com', date: older }),
+      row({ email: 'z-new@example.com', date: newer }),
+      row({ email: 'a-new@example.com', date: newer })
+    ]
+    // Newer date first; the two newer rows are ordered by email ascending.
+    expect(sortUserRows(rows, 'date', 'desc').map((r) => r.email)).toEqual([
+      'a-new@example.com',
+      'z-new@example.com',
+      'old@example.com'
+    ])
   })
 })

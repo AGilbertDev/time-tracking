@@ -106,6 +106,8 @@ Invite acceptance criteria:
 
 ## Users list
 
+> Superseded in part by `docs/specs/admin/users-table-sort-search.md`. The list endpoint now paginates, sorts, and searches on the server. The page size is 12 (not 20), the query accepts `sort`, `order`, and `search` on top of `page` and `pageSize`, and ordering is a whitelisted server sort that defaults to date descending with the email tie-break described below. Where this section and that spec describe pagination or ordering, that spec wins. Everything else in this section (the data source, columns, and status derivation) still holds.
+
 Endpoint: `GET /api/admin/users?page=<n>`, thin `server/api/admin/users/index.get.ts` delegating to `server/api/admin/users/handlers/list.ts`, defined through `defineAdminEventHandler`. Query validated by `ListQuerySchema` (`{ page: z.coerce.number().int().min(1).default(1) }`).
 
 Data source: the union of `allowed_emails` and `users`, keyed by email (email is unique on `users` and the primary key of `allowed_emails`). One row per distinct email across both tables. Implement as a full outer join on email or as merged queries; the backend stage chooses, but the result contract is fixed below.
@@ -208,15 +210,15 @@ The primary user is a professional translator, so every string below is a **prop
 
 Proposed key strings (FR first, owner verifies before ship):
 
-| Key | FR (proposed) | EN (proposed) | Confidence |
-| --- | --- | --- | --- |
-| `adminUsers.title` | Gestion des utilisateurs | User management | Medium. Owner may prefer "Gérer les utilisateurs" to match the header item wording. Align with whatever `header.manageUsers` ships. |
-| `adminUsers.status.invited` | Invité | Invited | High. |
-| `adminUsers.status.active` | Actif | Active | High. |
-| `adminUsers.status.deactivated` | Désactivé | Deactivated | High. |
-| `adminUsers.invite.submit` | Inviter | Invite | High. |
-| `adminUsers.actions.deactivate` | Désactiver | Deactivate | High. |
-| `adminUsers.actions.reactivate` | Réactiver | Reactivate | High. |
+| Key                             | FR (proposed)            | EN (proposed)   | Confidence                                                                                                                          |
+| ------------------------------- | ------------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `adminUsers.title`              | Gestion des utilisateurs | User management | Medium. Owner may prefer "Gérer les utilisateurs" to match the header item wording. Align with whatever `header.manageUsers` ships. |
+| `adminUsers.status.invited`     | Invité                   | Invited         | High.                                                                                                                               |
+| `adminUsers.status.active`      | Actif                    | Active          | High.                                                                                                                               |
+| `adminUsers.status.deactivated` | Désactivé                | Deactivated     | High.                                                                                                                               |
+| `adminUsers.invite.submit`      | Inviter                  | Invite          | High.                                                                                                                               |
+| `adminUsers.actions.deactivate` | Désactiver               | Deactivate      | High.                                                                                                                               |
+| `adminUsers.actions.reactivate` | Réactiver                | Reactivate      | High.                                                                                                                               |
 
 The remaining strings (headings, placeholders, toasts, dialogs, email subjects and bodies) follow the same "proposed, owner-verified" rule and are drafted by the frontend and backend stages for owner review. None of the high-confidence strings above carry `? ! : ;`; any string the owner rewrites to include one takes the French space before it.
 
@@ -304,15 +306,15 @@ The page renders in the existing `default` layout (`AppHeader` + `UMain` + `AppF
 
 Column order left to right, defined as `TableColumn[]` with `accessorKey` + `header` reading the `adminUsers.table.*` keys. Custom rendering is done with `#<key>-cell` template slots (row data via `row.original`), never inline markup here.
 
-| Key | Header key | Cell |
-| --- | --- | --- |
-| `firstName` | `adminUsers.table.firstName` | plain text; `—` in `text-dimmed` when null (invited-only rows) |
-| `lastName` | `adminUsers.table.lastName` | plain text; `—` in `text-dimmed` when null |
-| `email` | `adminUsers.table.email` | `text-default`, `break-all` so long addresses wrap rather than force width |
-| `role` | `adminUsers.table.role` | `#role-cell` badge (see below); `—` `text-dimmed` when empty |
-| `status` | `adminUsers.table.status` | `#status-cell` badge (see below) |
-| `date` | `adminUsers.table.date` | `#date-cell`, `Intl.DateTimeFormat(locale)` medium date, `text-muted tabular-nums` |
-| `actions` | `id: 'actions'`, no header | `#actions-cell` (see below), cell `text-right` |
+| Key         | Header key                   | Cell                                                                               |
+| ----------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `firstName` | `adminUsers.table.firstName` | plain text; `—` in `text-dimmed` when null (invited-only rows)                     |
+| `lastName`  | `adminUsers.table.lastName`  | plain text; `—` in `text-dimmed` when null                                         |
+| `email`     | `adminUsers.table.email`     | `text-default`, `break-all` so long addresses wrap rather than force width         |
+| `role`      | `adminUsers.table.role`      | `#role-cell` badge (see below); `—` `text-dimmed` when empty                       |
+| `status`    | `adminUsers.table.status`    | `#status-cell` badge (see below)                                                   |
+| `date`      | `adminUsers.table.date`      | `#date-cell`, `Intl.DateTimeFormat(locale)` medium date, `text-muted tabular-nums` |
+| `actions`   | `id: 'actions'`, no header   | `#actions-cell` (see below), cell `text-right`                                     |
 
 **Status badge** (`#status-cell`), fixed status colours so the meaning never rethemes, `variant="subtle" size="sm"`, label from `adminUsers.status.*`:
 

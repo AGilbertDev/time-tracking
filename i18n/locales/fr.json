@@ -99,6 +99,16 @@
         "invalid": "Cette adresse courriel est invalide."
       }
     },
+    "search": {
+      "placeholder": "Rechercher par nom ou courriel…",
+      "label": "Rechercher un utilisateur",
+      "clear": "Effacer la recherche"
+    },
+    "sort": {
+      "ascending": "{column}, trié en ordre croissant",
+      "descending": "{column}, trié en ordre décroissant",
+      "none": "{column}, non trié, activer pour trier"
+    },
     "table": {
       "firstName": "Prénom",
       "lastName": "Nom",
@@ -147,7 +157,9 @@
     },
     "empty": {
       "title": "Aucun utilisateur pour le moment",
-      "hint": "Invitez une première personne à l'aide du champ ci-dessus."
+      "hint": "Invitez une première personne à l'aide du champ ci-dessus.",
+      "noResultsTitle": "Aucun résultat",
+      "noResultsHint": "Aucun utilisateur ne correspond à votre recherche."
     },
     "toast": {
       "invited": "Invitation envoyée.",
