@@ -37,6 +37,7 @@ export async function loginWithPassword(event: H3Event, body: z.infer<typeof Log
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      avatarUrl: user.avatarUrl,
       onboarded: true,
       role: user.role,
       lightTheme: preferences.lightTheme,

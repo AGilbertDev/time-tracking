@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto'
 
 import { useDb } from '../../db/index'
 import { allowedEmails, magicLinkTokens, settings, users } from '../../db/schema'
+import { avatarStorage } from '../../utils/avatarStorage'
 import { isPurgeable } from '../../utils/manage-users'
 
 // Constant-time bearer comparison. timingSafeEqual throws on unequal-length buffers, so the byte
@@ -48,6 +49,24 @@ export default defineEventHandler(async (event) => {
 
   const ids = purgeable.map((row) => row.id)
   const emails = purgeable.map((row) => row.email)
+
+  // Erase any stored avatar object for each purged user so the right-to-erasure purge leaves no
+  // orphan. avatarStorage keys off the user id and handles driver selection and the blob-driver
+  // token internally, so there is no direct store access here. A missing object or a delete failure
+  // (including an unconfigured blob driver) is swallowed: the primary purge is the row deletion
+  // below, and the deterministic key means a leftover object is never reachable once the row is gone.
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        await avatarStorage.del(id)
+      } catch (error) {
+        console.error('avatar storage delete failed during purge; leftover object is unreachable', {
+          userId: id,
+          error
+        })
+      }
+    })
+  )
 
   // Delete dependent rows before the users rows so the foreign key on settings.user_id is never
   // violated. A deactivated account is normally already off the allowlist, but any lingering row

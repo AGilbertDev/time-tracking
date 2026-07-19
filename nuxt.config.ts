@@ -14,15 +14,9 @@ export default defineNuxtConfig({
   // eliminating the flash-of-wrong-theme. We keep our own data-theme attribute for
   // the atmosphere id, so color-mode only manages the .dark class here.
   colorMode: {
-    preference: 'system',
     fallback: 'light',
     storage: 'cookie',
-    storageKey: 'nuxt-color-mode',
-    cookieAttrs: {
-      'max-age': '31536000',
-      path: '/',
-      SameSite: 'Lax'
-    }
+    storageKey: 'nuxt-color-mode'
   },
   i18n: {
     defaultLocale: 'fr',
@@ -66,7 +60,7 @@ export default defineNuxtConfig({
   },
   vite: {
     optimizeDeps: {
-      include: ['@tanstack/vue-query', '@vue/devtools-core', '@vue/devtools-kit']
+      include: ['@tanstack/vue-query', '@vue/devtools-core', '@vue/devtools-kit', 'zod']
     }
   },
   auth: {
@@ -87,6 +81,34 @@ export default defineNuxtConfig({
     // token so the purge cannot be triggered by anyone else. Set via NUXT_CRON_SECRET in the
     // environment. Empty by default, which the endpoint treats as "reject everything".
     cronSecret: '',
+    // Vercel Blob read/write token for avatar storage. Server-only (not under `public`), so it
+    // never reaches the client. Empty by default, which makes the avatar endpoints fail closed
+    // with a 500 and store nothing. Override with NUXT_BLOB_READ_WRITE_TOKEN in the environment;
+    // the owner pulls the real value locally with `vercel env pull`.
+    blobReadWriteToken: '',
+    // Avatar storage driver selection, single-sourced in server/utils/avatarStorage.ts. Empty means
+    // "decide by environment": the filesystem driver under `nuxt dev`, the private Vercel Blob driver
+    // everywhere else, so production never silently falls back to the filesystem. Override with
+    // NUXT_AVATAR_STORAGE_DRIVER=fs|blob to force one (for example to exercise the blob driver locally
+    // against a scratch store, or to force fs in a non-prod deploy).
+    avatarStorageDriver: '',
     siteUrl: ''
+  },
+  // sharp ships a platform-specific native binary. Keep it external to the Nitro server bundle so
+  // Rollup does not try to bundle the native module; nitro's node-file-trace then copies the real
+  // installed binary for the Vercel Node serverless build target instead of shipping a wrong or
+  // broken one. This is the documented mitigation for the sharp-on-Vercel caveat noted in the
+  // avatar-upload spec. Verify the deployed upload works on Vercel, not only in the devcontainer.
+  nitro: {
+    externals: {
+      external: ['sharp']
+    },
+    // Filesystem mount for the development avatar storage driver (server/utils/avatarStorage.ts).
+    // The base is the gitignored ./.data folder and the item key is avatarBlobPath(userId) =
+    // avatars/{id}.webp, so files land in .data/avatars/{id}.webp. No token is needed locally, and
+    // in production the private Vercel Blob driver is selected instead so this mount is never touched.
+    storage: {
+      avatarStore: { driver: 'fs', base: './.data' }
+    }
   }
 })

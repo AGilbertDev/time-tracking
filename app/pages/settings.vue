@@ -177,7 +177,7 @@ async function onSavePassword(event: FormSubmitEvent<PasswordState>) {
 
 <template>
   <div
-    class="mx-auto w-full max-w-2xl px-6 py-[clamp(2rem,6vh,4rem)] sm:px-6 lg:px-8 space-y-[clamp(2rem,5vh,3rem)]"
+    class="mx-auto w-full max-w-xl px-6 py-[clamp(2rem,6vh,4rem)] sm:px-6 lg:px-8 space-y-[clamp(2rem,5vh,3rem)]"
   >
     <!-- Page header, directly on the canvas. -->
     <div>
@@ -267,7 +267,7 @@ async function onSavePassword(event: FormSubmitEvent<PasswordState>) {
       <UCard class="rounded-2xl bg-default ring ring-default">
         <UForm
           ref="pwForm"
-          class="max-w-md space-y-4"
+          class="space-y-4"
           :state="pwState"
           :validate="validatePassword"
           @submit="onSavePassword"
