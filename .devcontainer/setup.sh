@@ -4,14 +4,14 @@
 # GitHub CLI. The script is idempotent and safe to re-run.
 #
 # Login is not baked into the image. You authenticate once with "gh auth login"
-# (and "turso auth login" if the project has a backend). The gh config lives on
-# a named volume mounted at ~/.config/gh (see devcontainer.json), so that one
-# login persists across rebuilds and across every recipe project on this
-# machine. You log in once, not once per container.
+# (and "turso auth login" if the project has a backend). The gh and turso configs
+# each live on a named volume mounted at ~/.config/gh and ~/.config/turso (see
+# devcontainer.json), so those logins persist across rebuilds and across every
+# recipe project on this machine. You log in once, not once per container.
 
 set -uo pipefail
 
-mkdir -p "$HOME/.claude" "$HOME/.local/bin" "$HOME/.config/gh"
+mkdir -p "$HOME/.claude" "$HOME/.local/bin" "$HOME/.config/gh" "$HOME/.config/turso"
 
 # Put the user-local bin on PATH for future interactive shells.
 if ! grep -qs 'HOME/.local/bin' "$HOME/.bashrc" 2>/dev/null; then
@@ -46,16 +46,24 @@ install_gh() {
   rm -rf "$tmp"
 }
 
-# Turso CLI. The official installer drops the binary in ~/.turso and adds it to
-# PATH through .bashrc.
+# Turso CLI. The official installer drops the binary in ~/.turso. We also symlink
+# it into ~/.local/bin, which is already on PATH (see above), so every shell finds
+# turso without relying on the installer's own .bashrc edit taking effect. The
+# login token persists on a named volume at ~/.config/turso (see devcontainer.json),
+# so a single "turso auth login" survives rebuilds, the same as gh.
 install_turso() {
-  if command -v turso >/dev/null 2>&1 || [ -x "$HOME/.turso/turso" ]; then
-    echo "turso already installed, skipping."
-    return 0
+  if [ ! -x "$HOME/.turso/turso" ] && ! command -v turso >/dev/null 2>&1; then
+    echo "Installing turso."
+    if ! curl -sSfL https://get.tur.so/install.sh | bash; then
+      echo "turso install failed, skipping turso." >&2
+      return 0
+    fi
+  else
+    echo "turso already installed, skipping install."
   fi
-  echo "Installing turso."
-  if ! curl -sSfL https://get.tur.so/install.sh | bash; then
-    echo "turso install failed, skipping turso." >&2
+  if [ -x "$HOME/.turso/turso" ] && [ ! -e "$HOME/.local/bin/turso" ]; then
+    ln -sf "$HOME/.turso/turso" "$HOME/.local/bin/turso"
+    echo "Linked turso into ~/.local/bin."
   fi
 }
 
