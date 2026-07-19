@@ -133,21 +133,24 @@ const items = computed<MenuItem[][]>(() => {
             {{ initials }}
           </button>
 
-          <!-- The identity block shows the avatar, the name, and the email. It is a
-               label row, so it takes no focus and performs no action. -->
+          <!-- The identity block is a full-width header at the top of the popover.
+               The avatar sits on top as a prominent block, then the name, then the
+               email beneath it. It is a label row, so it takes no focus and performs
+               no action. The initials circle mirrors the trigger idiom at a larger
+               size. -->
           <template #account>
-            <div class="flex items-center gap-3 px-1.5 py-1.5">
+            <div class="flex w-full flex-col items-center gap-2 px-2 py-3 text-center">
               <span
-                class="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold"
+                class="grid size-14 place-items-center rounded-full bg-primary text-lg font-semibold"
                 :style="{ color: activeOnPrimary }"
               >
                 {{ initials }}
               </span>
-              <div class="flex min-w-0 flex-col">
-                <span v-if="username" class="truncate text-sm font-medium text-highlighted">
+              <div class="flex w-full min-w-0 flex-col items-center">
+                <span v-if="username" class="w-full truncate text-sm font-medium text-highlighted">
                   {{ username }}
                 </span>
-                <span class="truncate text-xs text-muted">{{ user?.email }}</span>
+                <span class="w-full truncate text-xs text-muted">{{ user?.email }}</span>
               </div>
             </div>
           </template>
