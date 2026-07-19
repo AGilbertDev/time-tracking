@@ -59,6 +59,8 @@
     },
     "work": {
       "dailyHours": "Work hours per day",
+      "hoursLabel": "Hours",
+      "minutesLabel": "Minutes",
       "unitHours": "h",
       "unitMinutes": "min",
       "workDays": "Work days",
@@ -204,5 +206,61 @@
   "a11y": { "switchLocale": "Switch language" },
   "preferences": {
     "saveError": "Your preference could not be saved. It will apply for this session only."
+  },
+  "profile": {
+    "title": "Profile",
+    "intro": "Manage your name and view your email address.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email address",
+    "emailHint": "Your email address is how you sign in and cannot be changed here.",
+    "submit": "Save",
+    "success": "Your profile has been saved.",
+    "error": "Something went wrong. Please try again.",
+    "validation": {
+      "firstNameRequired": "Enter your first name.",
+      "firstNameTooLong": "The first name must be at most 100 characters.",
+      "lastNameRequired": "Enter your last name.",
+      "lastNameTooLong": "The last name must be at most 100 characters.",
+      "invalid": "This value is invalid."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "intro": "Adjust your work settings and change your password.",
+    "work": {
+      "heading": "Work",
+      "subtitle": "The numbers the dashboard shows at review time.",
+      "submit": "Save",
+      "success": "Your work settings have been saved.",
+      "loadError": "Your work settings could not be loaded.",
+      "retry": "Try again",
+      "errors": {
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "security": {
+      "heading": "Security",
+      "subtitle": "Change your account password.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "newPasswordHint": "At least 8 characters.",
+      "submit": "Change password",
+      "success": "Your password has been changed.",
+      "validation": {
+        "currentRequired": "Enter your current password.",
+        "newRequired": "Enter a new password.",
+        "newTooShort": "The new password must be at least 8 characters.",
+        "confirmRequired": "Confirm the new password.",
+        "mismatch": "The passwords do not match."
+      },
+      "errors": {
+        "currentIncorrect": "The current password is incorrect.",
+        "unchanged": "The new password must be different from the current one.",
+        "breached": "This password appears in a known data breach. Please choose another one.",
+        "generic": "Something went wrong. Please try again."
+      }
+    }
   }
 }

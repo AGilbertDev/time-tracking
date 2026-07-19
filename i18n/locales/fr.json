@@ -59,6 +59,8 @@
     },
     "work": {
       "dailyHours": "Heures de travail par jour",
+      "hoursLabel": "Heures",
+      "minutesLabel": "Minutes",
       "unitHours": "h",
       "unitMinutes": "min",
       "workDays": "Jours travaillés",
@@ -204,5 +206,61 @@
   "a11y": { "switchLocale": "Changer de langue" },
   "preferences": {
     "saveError": "Votre préférence n'a pas pu être enregistrée. Elle s'appliquera pour cette session seulement."
+  },
+  "profile": {
+    "title": "Profil",
+    "intro": "Gérez votre nom et consultez votre adresse courriel.",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Adresse courriel",
+    "emailHint": "Votre adresse courriel sert à vous connecter et ne peut pas être modifiée ici.",
+    "submit": "Enregistrer",
+    "success": "Votre profil a été enregistré.",
+    "error": "Une erreur est survenue. Veuillez réessayer.",
+    "validation": {
+      "firstNameRequired": "Entrez votre prénom.",
+      "firstNameTooLong": "Le prénom doit contenir au plus 100 caractères.",
+      "lastNameRequired": "Entrez votre nom.",
+      "lastNameTooLong": "Le nom doit contenir au plus 100 caractères.",
+      "invalid": "Cette valeur est invalide."
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "intro": "Ajustez vos paramètres de travail et changez votre mot de passe.",
+    "work": {
+      "heading": "Travail",
+      "subtitle": "Les chiffres que le tableau de bord présente au moment de votre évaluation.",
+      "submit": "Enregistrer",
+      "success": "Vos paramètres de travail ont été enregistrés.",
+      "loadError": "Vos paramètres de travail n'ont pas pu être chargés.",
+      "retry": "Réessayer",
+      "errors": {
+        "generic": "Une erreur est survenue. Veuillez réessayer."
+      }
+    },
+    "security": {
+      "heading": "Sécurité",
+      "subtitle": "Changez le mot de passe de votre compte.",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "newPasswordHint": "Au moins 8 caractères.",
+      "submit": "Changer le mot de passe",
+      "success": "Votre mot de passe a été changé.",
+      "validation": {
+        "currentRequired": "Entrez votre mot de passe actuel.",
+        "newRequired": "Entrez un nouveau mot de passe.",
+        "newTooShort": "Le nouveau mot de passe doit contenir au moins 8 caractères.",
+        "confirmRequired": "Confirmez le nouveau mot de passe.",
+        "mismatch": "Les mots de passe ne correspondent pas."
+      },
+      "errors": {
+        "currentIncorrect": "Le mot de passe actuel est incorrect.",
+        "unchanged": "Le nouveau mot de passe doit être différent de l'actuel.",
+        "breached": "Ce mot de passe figure dans une fuite de données connue. Veuillez en choisir un autre.",
+        "generic": "Une erreur est survenue. Veuillez réessayer."
+      }
+    }
   }
 }
