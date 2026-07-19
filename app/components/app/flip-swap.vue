@@ -14,7 +14,10 @@ defineProps<{
 <template>
   <span class="block perspective-[600px]">
     <Transition mode="out-in" name="flip">
-      <span :key="swapKey" class="block"><slot /></span>
+      <!-- Flex-center the glyph so an inline icon aligns to the box center instead of
+           the text baseline, which otherwise pushes it up by the font's descender gap.
+           A single line of text stays centered too. -->
+      <span :key="swapKey" class="flex items-center justify-center"><slot /></span>
     </Transition>
   </span>
 </template>

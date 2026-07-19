@@ -20,6 +20,7 @@ const isDark = computed({
       :aria-label="t('theme.mode')"
       class="transition-colors duration-200 hover:text-primary focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:scale-110"
       color="neutral"
+      size="lg"
       square
       variant="ghost"
       @click="isDark = !isDark"
@@ -29,7 +30,7 @@ const isDark = computed({
       </AppFlipSwap>
     </UButton>
     <template #fallback>
-      <div class="size-8" />
+      <div class="size-9" />
     </template>
   </ClientOnly>
 </template>
