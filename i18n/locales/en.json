@@ -10,7 +10,7 @@
   },
   "signup": {
     "subtitle": "Create account",
-    "invitation": "You must have received an invitation email for your email address to be able to create a new account.",
+    "invitation": "You can only create an account with an authorized email address.",
     "description": "Enter your email to receive a sign-in link.",
     "email": "Authorized email address",
     "submit": "Create account",
@@ -84,6 +84,80 @@
         "5": "F",
         "6": "S"
       }
+    }
+  },
+  "adminUsers": {
+    "title": "User management",
+    "intro": "Invite new people, then manage existing access.",
+    "invite": {
+      "heading": "Invite someone",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name{'@'}example.com",
+      "submit": "Invite",
+      "validation": {
+        "required": "Enter an email address.",
+        "invalid": "This email address is invalid."
+      }
+    },
+    "table": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "date": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "invited": "Invited",
+      "active": "Active",
+      "deactivated": "Deactivated"
+    },
+    "role": {
+      "user": "User",
+      "admin": "Administrator"
+    },
+    "actions": {
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "deactivateNamed": "Deactivate {email}",
+      "reactivateNamed": "Reactivate {email}",
+      "you": "You"
+    },
+    "confirm": {
+      "cancel": "Cancel",
+      "deactivateActive": {
+        "title": "Deactivate this account?",
+        "body": "This person will lose access to the app and will receive an email about the deactivation. You can reactivate the account later.",
+        "confirm": "Deactivate"
+      },
+      "revokeInvite": {
+        "title": "Revoke this invitation?",
+        "body": "The invitation will be removed and the sign-up link will stop working. No email will be sent.",
+        "confirm": "Revoke"
+      },
+      "reactivate": {
+        "title": "Reactivate this account?",
+        "body": "Access will be restored and the person can sign in again. No email will be sent.",
+        "confirm": "Reactivate"
+      }
+    },
+    "pagination": {
+      "count": "no users | {count} user | {count} users"
+    },
+    "empty": {
+      "title": "No users yet",
+      "hint": "Invite your first person using the field above."
+    },
+    "toast": {
+      "invited": "Invitation sent.",
+      "alreadyUser": "This person already has an account.",
+      "useReactivate": "This account is deactivated. Use Reactivate to restore access.",
+      "deactivated": "Account deactivated.",
+      "reactivated": "Account reactivated.",
+      "deliveryWarning": "The action was saved, but the email could not be sent.",
+      "cannotDeactivateSelf": "You cannot deactivate your own account.",
+      "error": "Something went wrong. Please try again."
     }
   },
   "app": {
