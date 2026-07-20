@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import type { WorkScheduleRecord } from '#shared/planning'
+
 import {
   addDays,
   chipVariant,
+  computeCapacity,
+  DEFAULT_SCHEDULE,
   effectiveDuration,
   formatCount,
   formatDayLabel,
@@ -11,7 +15,9 @@ import {
   getWeekDays,
   getWeekRange,
   isWorkDay,
+  resolveSchedule,
   statusKey,
+  sumEffectiveDuration,
   todayInZone
 } from '#shared/planning'
 
@@ -39,36 +45,22 @@ const FR_MONTHS_FULL = [
   'décembre'
 ] as const
 
-// The French month abbreviations for formatDayLabel, taken verbatim from the spec's helpers section.
-const FR_MONTHS_SHORT = [
-  'janv.',
-  'févr.',
-  'mars',
-  'avr.',
-  'mai',
-  'juin',
-  'juill.',
-  'août',
-  'sept.',
-  'oct.',
-  'nov.',
-  'déc.'
-] as const
-
-// English abbreviations for the English-locale branch of formatDayLabel.
-const EN_MONTHS_SHORT = [
-  'Jan.',
-  'Feb.',
-  'Mar.',
-  'Apr.',
+// The full English month names for the English-locale branch of formatDayLabel. Per the spec's
+// "Day-label month, folded in" section the day header now uses the full month name in both locales,
+// consistent with the week label, so the English case supplies full names too (index 0 is January).
+const EN_MONTHS_FULL = [
+  'January',
+  'February',
+  'March',
+  'April',
   'May',
-  'Jun.',
-  'Jul.',
-  'Aug.',
-  'Sep.',
-  'Oct.',
-  'Nov.',
-  'Dec.'
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
 ] as const
 
 // The French connectives the spec locks: prefix `Semaine du`, separator `au`.
@@ -317,34 +309,36 @@ describe('formatCount', () => {
 })
 
 describe('formatDayLabel', () => {
-  // Spec example: 2026-07-20 in French is `lundi 20 juill.`.
-  it('formats the spec example in French', () => {
-    expect(formatDayLabel('2026-07-20', 'fr', FR_MONTHS_SHORT)).toBe('lundi 20 juill.')
+  // Spec "Day-label month, folded in": the day header now uses the FULL month name, so 2026-07-20 in
+  // French is `lundi 20 juillet` (not the abbreviated `juill.`), consistent with the week label.
+  it('formats the spec example in French with the full month name', () => {
+    expect(formatDayLabel('2026-07-20', 'fr', FR_MONTHS_FULL)).toBe('lundi 20 juillet')
   })
 
   // Sunday, the first day of the week stack.
   it('formats a Sunday in French', () => {
-    expect(formatDayLabel('2026-07-19', 'fr', FR_MONTHS_SHORT)).toBe('dimanche 19 juill.')
+    expect(formatDayLabel('2026-07-19', 'fr', FR_MONTHS_FULL)).toBe('dimanche 19 juillet')
   })
 
   // Saturday, the last day of the week stack.
   it('formats a Saturday in French', () => {
-    expect(formatDayLabel('2026-07-25', 'fr', FR_MONTHS_SHORT)).toBe('samedi 25 juill.')
+    expect(formatDayLabel('2026-07-25', 'fr', FR_MONTHS_FULL)).toBe('samedi 25 juillet')
   })
 
-  // A January date exercises the first month abbreviation and no leading zero on the day number.
+  // A January date exercises the first full month name and no leading zero on the day number.
   it('formats a January date without a leading zero on the day', () => {
-    expect(formatDayLabel('2026-01-01', 'fr', FR_MONTHS_SHORT)).toBe('jeudi 1 janv.')
+    expect(formatDayLabel('2026-01-01', 'fr', FR_MONTHS_FULL)).toBe('jeudi 1 janvier')
   })
 
-  // A December date exercises the last month abbreviation.
+  // A December date exercises the last full month name.
   it('formats a December date in French', () => {
-    expect(formatDayLabel('2026-12-25', 'fr', FR_MONTHS_SHORT)).toBe('vendredi 25 déc.')
+    expect(formatDayLabel('2026-12-25', 'fr', FR_MONTHS_FULL)).toBe('vendredi 25 décembre')
   })
 
-  // Spec: English uses its own abbreviations; the weekday is lowercased, the month is as supplied.
-  it('formats a date in English with the supplied abbreviations', () => {
-    expect(formatDayLabel('2026-07-20', 'en', EN_MONTHS_SHORT)).toBe('monday 20 Jul.')
+  // Spec: English uses the full English month name; the weekday is lowercased, the month is as
+  // supplied, so 2026-07-20 in English is `monday 20 July`.
+  it('formats a date in English with the full month name', () => {
+    expect(formatDayLabel('2026-07-20', 'en', EN_MONTHS_FULL)).toBe('monday 20 July')
   })
 })
 
@@ -432,5 +426,197 @@ describe('chipVariant', () => {
 
   it('returns neutral for the empty string', () => {
     expect(chipVariant('')).toBe('neutral')
+  })
+})
+
+// The read-only week capacity spec (docs/specs/planning/read-only-week-capacity-and-nav.md) locks
+// the three capacity helpers in its "Pure helpers to unit-test" section, with the concrete numbers
+// carried by AC2, AC3, AC4, AC7-AC12. Every expected value below is derived from that spec, never
+// from the implementation. PLAN-03's documented defaults are 450 work minutes, work days
+// [1,2,3,4,5], and a 60-minute buffer.
+
+describe('resolveSchedule', () => {
+  // AC3 fixture, verbatim from the spec: a record effective 2026-01-01 (450 work minutes) and a
+  // later one effective 2026-07-01 (480). Distinct workDays and bufferMinutes on the second record
+  // let a resolution be told apart from the default by more than its work minutes alone.
+  const history: WorkScheduleRecord[] = [
+    { workMinutes: 450, workDays: [1, 2, 3, 4, 5], bufferMinutes: 60, effectiveFrom: '2026-01-01' },
+    { workMinutes: 480, workDays: [1, 2, 3, 4], bufferMinutes: 90, effectiveFrom: '2026-07-01' }
+  ]
+
+  // AC2: an empty history resolves to the documented defaults (450 / [1,2,3,4,5] / 60).
+  it('returns DEFAULT_SCHEDULE for an empty history', () => {
+    expect(resolveSchedule([], '2026-07-20')).toEqual({
+      workMinutes: 450,
+      workDays: [1, 2, 3, 4, 5],
+      bufferMinutes: 60
+    })
+  })
+
+  // AC2: the returned workDays is a fresh copy, so mutating it never changes the exported constant.
+  it('does not mutate the DEFAULT_SCHEDULE constant when the returned workDays is mutated', () => {
+    const resolved = resolveSchedule([], '2026-07-20')
+    resolved.workDays.push(6)
+    expect(DEFAULT_SCHEDULE.workDays).toEqual([1, 2, 3, 4, 5])
+  })
+
+  // The returned workDays must also not alias the winning record's own array, so a caller mutating
+  // the result cannot corrupt the source record.
+  it('returns a workDays copy that does not alias the winning record array', () => {
+    const record: WorkScheduleRecord = {
+      workMinutes: 480,
+      workDays: [2, 3, 4],
+      bufferMinutes: 30,
+      effectiveFrom: '2026-01-01'
+    }
+    const resolved = resolveSchedule([record], '2026-05-01')
+    resolved.workDays.push(6)
+    expect(record.workDays).toEqual([2, 3, 4])
+  })
+
+  // AC3: a date before the change resolves the old record.
+  it('resolves the old record for a date before the change (2026-06-30)', () => {
+    expect(resolveSchedule(history, '2026-06-30').workMinutes).toBe(450)
+  })
+
+  // AC3: the exact effective-date boundary resolves the NEW record (inclusive lower bound).
+  it('resolves the new record on its exact effective date (2026-07-01)', () => {
+    expect(resolveSchedule(history, '2026-07-01')).toEqual({
+      workMinutes: 480,
+      workDays: [1, 2, 3, 4],
+      bufferMinutes: 90
+    })
+  })
+
+  // AC3: a date well after the change resolves the new record.
+  it('resolves the new record for a date after the change (2026-08-15)', () => {
+    expect(resolveSchedule(history, '2026-08-15').workMinutes).toBe(480)
+  })
+
+  // AC3: a date before the first record's effectiveFrom falls back to DEFAULT_SCHEDULE.
+  it('returns DEFAULT_SCHEDULE for a date before the first record (2025-12-31)', () => {
+    expect(resolveSchedule(history, '2025-12-31')).toEqual({
+      workMinutes: 450,
+      workDays: [1, 2, 3, 4, 5],
+      bufferMinutes: 60
+    })
+  })
+
+  // AC4: the resolver is order-independent. The same records in reverse order resolve identically.
+  it('is order-independent of the input array', () => {
+    const reversed = [...history].reverse()
+    expect(resolveSchedule(reversed, '2026-06-30').workMinutes).toBe(450)
+    expect(resolveSchedule(reversed, '2026-07-01').workMinutes).toBe(480)
+    expect(resolveSchedule(reversed, '2026-08-15').workMinutes).toBe(480)
+    expect(resolveSchedule(reversed, '2025-12-31')).toEqual(resolveSchedule(history, '2025-12-31'))
+  })
+})
+
+describe('sumEffectiveDuration', () => {
+  // AC7 / spec: an empty list sums to 0.
+  it('returns 0 for an empty list', () => {
+    expect(sumEffectiveDuration([])).toBe(0)
+  })
+
+  // Spec: sums effectiveDuration across a mix. Actual wins over estimate on the first task (120),
+  // the second contributes its estimate (45), and the third has neither and contributes 0. The
+  // helper reads only actual/estimated, so trackable and non-trackable tasks are summed alike: the
+  // fourth task stands in for a non-trackable meeting whose actual minutes still eat the day (30).
+  it('sums actual-over-estimate, estimate-only, neither, and a non-trackable duration', () => {
+    const tasks = [
+      { actualMinutes: 120, estimatedMinutes: 90 },
+      { actualMinutes: null, estimatedMinutes: 45 },
+      { actualMinutes: null, estimatedMinutes: null },
+      { actualMinutes: 30, estimatedMinutes: null }
+    ]
+    expect(sumEffectiveDuration(tasks)).toBe(195)
+  })
+
+  // A single task with neither actual nor estimated minutes contributes 0, so the sum never breaks
+  // on a null duration.
+  it('contributes 0 for a task with neither actual nor estimated minutes', () => {
+    expect(sumEffectiveDuration([{ actualMinutes: null, estimatedMinutes: null }])).toBe(0)
+  })
+})
+
+describe('computeCapacity', () => {
+  // Every case below is against the spec's worked example schedule: 450 work minutes, 60 buffer.
+  const WORK = 450
+  const BUFFER = 60
+
+  // AC9: the four state bands, including both boundary cases resolving to warn.
+  it.each([
+    ['good', 300, 'remaining 150 > buffer 60'],
+    ['warn', 390, 'remaining 60 == buffer (into the buffer)'],
+    ['warn', 450, 'remaining 0 (not overbooked)'],
+    ['bad', 500, 'remaining -50 < 0 (overbooked)']
+  ])('is %s when booked is %i minutes (%s)', (expectedState, booked) => {
+    expect(computeCapacity(booked, WORK, BUFFER).state).toBe(expectedState)
+  })
+
+  // AC9 neighbours: one minute either side of the good/warn boundary confirms the strict `>`.
+  it('is good one minute above the buffer boundary and warn one minute below', () => {
+    expect(computeCapacity(389, WORK, BUFFER).state).toBe('good') // remaining 61 > 60
+    expect(computeCapacity(391, WORK, BUFFER).state).toBe('warn') // remaining 59 <= 60
+  })
+
+  // AC8: remaining = workMinutes - booked, and excess = max(0, booked - workMinutes). Not overbooked.
+  it('computes remaining and a zero excess when not overbooked', () => {
+    const capacity = computeCapacity(300, WORK, BUFFER)
+    expect(capacity.remaining).toBe(150)
+    expect(capacity.excess).toBe(0)
+  })
+
+  // AC8: an overbooked day yields a negative remaining and a positive excess.
+  it('computes a negative remaining and a positive excess when overbooked', () => {
+    const capacity = computeCapacity(500, WORK, BUFFER)
+    expect(capacity.remaining).toBe(-50)
+    expect(capacity.excess).toBe(50)
+  })
+
+  // AC11: fillPct is the correct percentage below full.
+  it('computes fillPct as the booked percentage below full', () => {
+    expect(computeCapacity(225, WORK, BUFFER).fillPct).toBe(50)
+  })
+
+  // AC11: fillPct clamps at 100 when booked meets or exceeds workMinutes.
+  it('clamps fillPct at 100 when booked equals workMinutes', () => {
+    expect(computeCapacity(450, WORK, BUFFER).fillPct).toBe(100)
+  })
+
+  it('clamps fillPct at 100 when booked exceeds workMinutes', () => {
+    expect(computeCapacity(500, WORK, BUFFER).fillPct).toBe(100)
+  })
+
+  // AC11: bufferPct is (bufferMinutes / workMinutes) * 100, 13.3 % for the spec's 60 / 450.
+  it('computes bufferPct as the buffer percentage of the work day', () => {
+    expect(computeCapacity(300, WORK, BUFFER).bufferPct).toBeCloseTo(13.333, 3)
+  })
+
+  // Divide-by-zero guard (AC/edge): a degenerate workMinutes of 0 with work booked is bad, with
+  // fillPct forced to 100 and bufferPct to 0.
+  it('guards a zero workMinutes with booked work: bad, fillPct 100, bufferPct 0', () => {
+    const capacity = computeCapacity(100, 0, BUFFER)
+    expect(capacity.state).toBe('bad')
+    expect(capacity.fillPct).toBe(100)
+    expect(capacity.bufferPct).toBe(0)
+  })
+
+  // Divide-by-zero guard: a zero workMinutes with nothing booked is warn (remaining 0), fillPct 0.
+  it('guards a zero workMinutes with nothing booked: warn, fillPct 0, bufferPct 0', () => {
+    const capacity = computeCapacity(0, 0, BUFFER)
+    expect(capacity.state).toBe('warn')
+    expect(capacity.fillPct).toBe(0)
+    expect(capacity.bufferPct).toBe(0)
+  })
+
+  // AC12: a work day with zero tasks gives booked 0, remaining == workMinutes, and the good state.
+  it('reports a full remaining and the good state for a work day with zero tasks', () => {
+    const capacity = computeCapacity(0, WORK, BUFFER)
+    expect(capacity.booked).toBe(0)
+    expect(capacity.remaining).toBe(WORK)
+    expect(capacity.excess).toBe(0)
+    expect(capacity.state).toBe('good')
+    expect(capacity.fillPct).toBe(0)
   })
 })

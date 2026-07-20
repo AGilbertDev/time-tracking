@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client'
 import { and, eq, gte, lte } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
 
-import { settings, tasks, users } from '../server/db/schema'
+import { settings, tasks, users, workSchedule } from '../server/db/schema'
 
 // Dev-only seed for the read-only planning week (PLAN-04, Bout 1). It fills the owner's current
 // week with a handful of representative tasks so `bun dev` shows a populated week rather than seven
@@ -237,9 +237,30 @@ const rows = [
 
 await db.insert(tasks).values(rows)
 
+// One work_schedule record (PLAN-03) so the capacity meter shows real numbers under `bun dev`.
+// effective_from is the first of the seeded week's month, comfortably on or before every day in the
+// week, so resolveSchedule picks it for the whole visible week. The values match the resolver
+// defaults (450 / [1,2,3,4,5] / 60), so with the record present or absent the meter reads the same
+// figures; the record simply exercises the read path end to end. Whole-month first-day derived from
+// the week's Sunday by replacing the day component with 01.
+const effectiveFrom = `${sunday.slice(0, 7)}-01`
+
+// Re-run safety, matching the task delete above. The unique index on (user_id, effective_from)
+// would reject a duplicate insert, so delete the owner's existing schedule rows first, scoped to the
+// owner, before inserting the single record. A second run replaces rather than accumulates.
+await db.delete(workSchedule).where(eq(workSchedule.userId, owner.id))
+
+await db.insert(workSchedule).values({
+  userId: owner.id,
+  workMinutes: 450,
+  workDays: '[1,2,3,4,5]',
+  bufferMinutes: 60,
+  effectiveFrom
+})
+
 console.log(
   `Seeded ${rows.length} tasks for ${ownerEmail} across the week ${from} to ${to} ` +
-    `(timezone ${timezone}).`
+    `(timezone ${timezone}), plus one work_schedule record effective ${effectiveFrom}.`
 )
 
 client.close()

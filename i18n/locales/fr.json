@@ -200,8 +200,18 @@
     "splitMeta": "{count} mots ce jour · reste du projet porté d'hier",
     "loadError": "La semaine n'a pas pu être chargée.",
     "retry": "Réessayer",
+    "capacity": {
+      "planned": "{value} planifié",
+      "remaining": "{value} restant",
+      "excess": "{value} en trop"
+    },
+    "nav": {
+      "currentWeek": "Cette semaine",
+      "previousWeek": "Précédente",
+      "nextWeek": "Suivante"
+    },
     "offDay": {
-      "base": "Jour non travaillé",
+      "base": "Congé",
       "sundaySuffix": "· début de la semaine",
       "saturdaySuffix": "· le travail reste possible et bonifie le quota de la semaine"
     },
@@ -224,20 +234,6 @@
       "octobre",
       "novembre",
       "décembre"
-    ],
-    "monthsShort": [
-      "janv.",
-      "févr.",
-      "mars",
-      "avr.",
-      "mai",
-      "juin",
-      "juill.",
-      "août",
-      "sept.",
-      "oct.",
-      "nov.",
-      "déc."
     ]
   },
   "header": {
