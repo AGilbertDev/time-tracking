@@ -11,7 +11,11 @@ import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 // invalidates queryKeys.me() in onSuccess. The page holds no bare $fetch.
 const { t } = useI18n()
 const toast = useToast()
-const { user } = useUserSession()
+// Stored user display data (name, email, avatarUrl) reads from the me-query, not the session. Its
+// initialData is seeded from the session so the fields pre-fill on first paint with no fetch and no
+// flash, and each mutation below invalidates queryKeys.me() so the query refetches the fresh
+// database row. This is the read path that fixes the stale avatar after an upload or removal.
+const { data: me } = useMeQuery()
 
 const updateProfile = useUpdateProfileMutation()
 const uploadAvatar = useUploadAvatarMutation()
@@ -24,16 +28,17 @@ useSeoMeta({
   robots: 'noindex, nofollow'
 })
 
-// The name and email are already on the session, which is this page's read path, exactly as the
-// header popover reads them. There is no GET; the fields pre-fill from the session with no fetch.
+// The name inputs bind to this local reactive, seeded from the me-query data (which the header reads
+// too). The stored value comes from the query, not the session, so an invalidation after a save
+// refreshes what the fields are compared against.
 interface NameState {
   firstName: string
   lastName: string
 }
 
 const state = reactive<NameState>({
-  firstName: user.value?.firstName ?? '',
-  lastName: user.value?.lastName ?? ''
+  firstName: me.value?.firstName ?? '',
+  lastName: me.value?.lastName ?? ''
 })
 
 // The avatar initials track what is currently typed, so the change is visible before it is saved.
@@ -56,9 +61,9 @@ const statusKey = ref<string | null>(null)
 const displaySrc = computed(() => {
   if (previewUrl.value) return previewUrl.value
   if (pendingRemoval.value) return null
-  return user.value?.avatarUrl ?? null
+  return me.value?.avatarUrl ?? null
 })
-const hasStoredAvatar = computed(() => Boolean(user.value?.avatarUrl))
+const hasStoredAvatar = computed(() => Boolean(me.value?.avatarUrl))
 const hasStagedAvatarChange = computed(() => Boolean(selectedFile.value) || pendingRemoval.value)
 const previewHasImage = computed(() => Boolean(displaySrc.value))
 // Remove is offered only for a stored avatar and only while nothing is staged, so the action set is
@@ -67,11 +72,12 @@ const showRemove = computed(() => hasStoredAvatar.value && !hasStagedAvatarChang
 const avatarErrorMessage = computed(() => (avatarErrorKey.value ? t(avatarErrorKey.value) : ''))
 const statusMessage = computed(() => (statusKey.value ? t(statusKey.value) : ''))
 
-// A name change is any difference from the session values, compared trimmed to mirror the server.
+// A name change is any difference from the stored (query) values, compared trimmed to mirror the
+// server. After a save the query refetches, so state matching the fresh values clears the flag.
 const hasNameChange = computed(() => {
   const first = state.firstName.trim()
   const last = state.lastName.trim()
-  return first !== (user.value?.firstName ?? '') || last !== (user.value?.lastName ?? '')
+  return first !== (me.value?.firstName ?? '') || last !== (me.value?.lastName ?? '')
 })
 
 // In-flight state for the single Save: any of the three mutations running. A staged file that failed
@@ -407,7 +413,7 @@ async function onSubmit(event: FormSubmitEvent<NameState>) {
             :aria-label="t('profile.email')"
             class="w-full"
             icon="i-ph-envelope-simple"
-            :model-value="user?.email ?? ''"
+            :model-value="me?.email ?? ''"
             readonly
             type="email"
           />

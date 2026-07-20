@@ -8,8 +8,13 @@ interface MenuItem extends DropdownMenuItem {
 }
 
 const { t, locale, setLocale } = useI18n()
-const { clear, user } = useUserSession()
+const { clear } = useUserSession()
 const localePath = useLocalePath()
+// User display data (avatar, name, email, role) reads from the me-query, not the session. The
+// session cookie serves a stale avatarUrl after an avatar mutation; the query refetches the fresh
+// database row when a mutation invalidates queryKeys.me(). initialData seeds it from the session so
+// the first paint has the value with no flash. clear() above stays on the session for logout.
+const { data: me } = useMeQuery()
 const { isDark, lightTheme, darkTheme, themes } = useTheme()
 const { savePreferences } = usePreferences()
 
@@ -22,11 +27,11 @@ function switchLocale() {
   savePreferences({ locale: otherLocale.value })
 }
 
-const firstName = computed(() => user.value?.firstName ?? '')
-const username = computed(() => accountName(user.value?.firstName, user.value?.lastName))
+const firstName = computed(() => me.value?.firstName ?? '')
+const username = computed(() => accountName(me.value?.firstName, me.value?.lastName))
 
 // Build initials from the first and last name for the avatar fallback.
-const initials = computed(() => accountInitials(user.value?.firstName, user.value?.lastName))
+const initials = computed(() => accountInitials(me.value?.firstName, me.value?.lastName))
 
 // The greeting depends on the visitor's local hour, which the server cannot know,
 // so deriving it during SSR mismatches on hydration. It is gated on mount and stays
@@ -80,7 +85,7 @@ const items = computed<MenuItem[][]>(() => {
     { label: t('header.profile'), icon: 'i-ph-user', to: navPath('profile', locale.value) },
     { label: t('header.settings'), icon: 'i-ph-gear-six', to: navPath('settings', locale.value) }
   ]
-  if (isAdmin(user.value?.role)) {
+  if (isAdmin(me.value?.role)) {
     navigation.push({
       label: t('header.manageUsers'),
       icon: 'i-ph-users',
@@ -141,11 +146,11 @@ const items = computed<MenuItem[][]>(() => {
                fill, so it gains a soft primary ring plus a motion-safe scale instead, at
                the quiet end of the range. The focus ring stays for keyboard users. -->
           <button
-            :aria-label="triggerLabel(username, user?.email, t('header.accountMenu'))"
+            :aria-label="triggerLabel(username, me?.email, t('header.accountMenu'))"
             class="size-9 cursor-pointer rounded-full text-sm transition duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:hover:scale-105"
             type="button"
           >
-            <AppAccountAvatar class="size-full" :initials="initials" :src="user?.avatarUrl" />
+            <AppAccountAvatar class="size-full" :initials="initials" :src="me?.avatarUrl" />
           </button>
 
           <!-- The identity block is a full-width header at the top of the popover.
@@ -155,16 +160,12 @@ const items = computed<MenuItem[][]>(() => {
                size. -->
           <template #account>
             <div class="flex w-full flex-col items-center gap-2 px-2 py-3 text-center">
-              <AppAccountAvatar
-                class="size-14 text-lg"
-                :initials="initials"
-                :src="user?.avatarUrl"
-              />
+              <AppAccountAvatar class="size-14 text-lg" :initials="initials" :src="me?.avatarUrl" />
               <div class="flex w-full min-w-0 flex-col items-center">
                 <span v-if="username" class="w-full truncate text-sm font-medium text-highlighted">
                   {{ username }}
                 </span>
-                <span class="w-full truncate text-xs text-muted">{{ user?.email }}</span>
+                <span class="w-full truncate text-xs text-muted">{{ me?.email }}</span>
               </div>
             </div>
           </template>
