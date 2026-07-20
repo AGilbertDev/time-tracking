@@ -200,8 +200,23 @@
     "splitMeta": "{count} mots ce jour · reste du projet porté d'hier",
     "loadError": "La semaine n'a pas pu être chargée.",
     "retry": "Réessayer",
+    "capacity": {
+      "planned": "{value} planifié",
+      "remaining": "{value} restant",
+      "excess": "{value} en trop",
+      "state": {
+        "good": "à l'aise",
+        "warn": "dans la marge",
+        "bad": "surchargé"
+      }
+    },
+    "nav": {
+      "currentWeek": "Cette semaine",
+      "previousWeek": "Précédente",
+      "nextWeek": "Suivante"
+    },
     "offDay": {
-      "base": "Jour non travaillé",
+      "base": "Congé",
       "sundaySuffix": "· début de la semaine",
       "saturdaySuffix": "· le travail reste possible et bonifie le quota de la semaine"
     },

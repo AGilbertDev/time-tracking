@@ -208,3 +208,118 @@ export function chipVariant(categoryId: string): ChipVariant {
   if (categoryId === 'revision') return 'rev'
   return 'neutral'
 }
+
+// --- work-schedule resolver (PLAN-03) ------------------------------------------------------------
+
+// One effective-dated work-schedule record as the resolver consumes it. It mirrors the coerced
+// shape the read path returns (server/utils/loadWorkSchedule.ts), so the client and the server
+// resolve the schedule against this one implementation. effectiveFrom is a 'YYYY-MM-DD'.
+export type WorkScheduleRecord = {
+  workMinutes: number
+  workDays: number[]
+  bufferMinutes: number
+  effectiveFrom: string // 'YYYY-MM-DD'
+}
+
+// The resolved schedule for a single date: the values in effect on that day, with no effective
+// date of their own because a resolved schedule is already tied to the date it was resolved for.
+export type ResolvedSchedule = {
+  workMinutes: number
+  workDays: number[]
+  bufferMinutes: number
+}
+
+// The documented defaults, derived from the settings column defaults and the overview's buffer
+// default, so an empty history resolves to the same figures the mockup's day length uses and there
+// is no discontinuity before the first record. 450 minutes is 7 h 30; work days are Monday through
+// Friday; the buffer is 60 minutes.
+export const DEFAULT_SCHEDULE: ResolvedSchedule = {
+  workMinutes: 450,
+  workDays: [1, 2, 3, 4, 5],
+  bufferMinutes: 60
+}
+
+// The work schedule in effect on `date`, resolved from the user's history. A record applies from
+// its effectiveFrom up to but not including the next record's, so the value for a date is the
+// record with the greatest effectiveFrom that is on or before that date (an inclusive lower bound,
+// so a record takes effect on its own effective date). Since 'YYYY-MM-DD' sorts chronologically as
+// a plain string, the comparison is a string comparison. The function is pure, DB-free, and
+// order-independent of the input array. It returns a fresh copy of DEFAULT_SCHEDULE (so a caller
+// cannot mutate the constant's workDays) when the history is empty or `date` precedes every
+// record. If two records somehow shared the greatest qualifying effectiveFrom (which the DB unique
+// index prevents), a stable ascending sort makes the last one win deterministically, so the
+// function never throws and never returns undefined.
+export function resolveSchedule(
+  records: readonly WorkScheduleRecord[],
+  date: string
+): ResolvedSchedule {
+  const qualifying = records
+    .filter((record) => record.effectiveFrom <= date)
+    .sort((a, b) =>
+      a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0
+    )
+
+  const winner = qualifying.at(-1)
+  if (!winner) {
+    return { ...DEFAULT_SCHEDULE, workDays: [...DEFAULT_SCHEDULE.workDays] }
+  }
+
+  return {
+    workMinutes: winner.workMinutes,
+    workDays: [...winner.workDays],
+    bufferMinutes: winner.bufferMinutes
+  }
+}
+
+// --- day capacity (PLAN-05) ----------------------------------------------------------------------
+
+// The total booked minutes on a day: the sum of every task's effective duration, both trackable and
+// non-trackable, because a meeting or a break still eats the day. Reduces over the existing
+// effectiveDuration helper, so a task with neither an actual nor an estimate contributes 0 and an
+// empty list is 0.
+export function sumEffectiveDuration(
+  tasks: readonly Pick<PlanningTask, 'actualMinutes' | 'estimatedMinutes'>[]
+): number {
+  return tasks.reduce((total, task) => total + effectiveDuration(task), 0)
+}
+
+// The colour band a day's capacity falls into: comfortable, into the buffer, or overbooked.
+export type CapacityState = 'good' | 'warn' | 'bad'
+
+// Everything the capacity header needs to render, computed once here so the component holds no
+// capacity logic of its own. booked / remaining / excess are whole minutes (remaining may be
+// negative); fillPct / bufferPct are percentages already clamped to 100.
+export type DayCapacity = {
+  booked: number
+  remaining: number
+  excess: number
+  state: CapacityState
+  fillPct: number
+  bufferPct: number
+}
+
+// The capacity of a single day from its booked minutes and the schedule resolved for its date. The
+// state bands are evaluated in order: overbooked first (remaining < 0), then comfortable
+// (remaining strictly greater than the buffer), otherwise into the buffer. So remaining exactly
+// equal to bufferMinutes and remaining exactly 0 are both 'warn', and overbooked begins only when
+// booked strictly exceeds workMinutes. The meter geometry clamps the fill at 100 % and guards a
+// degenerate workMinutes of 0 against a divide-by-zero. Pure and DB-free.
+export function computeCapacity(
+  booked: number,
+  workMinutes: number,
+  bufferMinutes: number
+): DayCapacity {
+  const remaining = workMinutes - booked
+  const excess = booked > workMinutes ? booked - workMinutes : 0
+
+  let state: CapacityState
+  if (remaining < 0) state = 'bad'
+  else if (remaining > bufferMinutes) state = 'good'
+  else state = 'warn'
+
+  const fillPct =
+    workMinutes > 0 ? Math.min(100, (booked / workMinutes) * 100) : booked > 0 ? 100 : 0
+  const bufferPct = workMinutes > 0 ? Math.min(100, (bufferMinutes / workMinutes) * 100) : 0
+
+  return { booked, remaining, excess, state, fillPct, bufferPct }
+}

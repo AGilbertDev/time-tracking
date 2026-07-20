@@ -185,6 +185,21 @@ input:-webkit-autofill:active {
   );
 }
 
+/* The hatched buffer band on the right of the day capacity meter (PLAN-05). It marks the reserved */
+/* buffer minutes as a static overlay; its width is set inline from bufferPct. The hatch ink is */
+/* derived from the theme text token at low opacity rather than a hardcoded rgba, so it tracks the */
+/* active theme and reads in both light and dark. The dashed edge uses the accented border token. */
+.planning-buffer {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    color-mix(in oklab, var(--ui-text) 8%, transparent) 3px,
+    color-mix(in oklab, var(--ui-text) 8%, transparent) 6px
+  );
+  border-left: 1px dashed var(--ui-border-accented);
+}
+
 /* Five deliberate, subject-grounded themes. Each block overrides the primary and */
 /* neutral PALETTE scales; Nuxt UI derives every surface, border (muted < default */
 /* < accented), text and hover shade from these, for both light and dark under one */

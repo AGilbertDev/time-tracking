@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { PlanningTask } from '#shared/planning'
+import type { DayCapacity, PlanningTask } from '#shared/planning'
 
 // The seven-day week stack (PLAN-07), Sunday through Saturday. It is a thin renderer: the page owns
 // the data and computes each day view, and this component stacks the day cards. The continuation set
-// is threaded down so a split slice carried from an earlier day shows its tag.
+// is threaded down so a split slice carried from an earlier day shows its tag. Each work day carries
+// its precomputed capacity (PLAN-05); an off day carries null and renders no meter.
 export type PlanningDayView = {
   date: string
   dayLabel: string
@@ -11,6 +12,7 @@ export type PlanningDayView = {
   isWorkDay: boolean
   offLabel: string | null
   tasks: PlanningTask[]
+  capacity: DayCapacity | null
 }
 
 defineProps<{
@@ -24,6 +26,7 @@ defineProps<{
     <PlanningDayCard
       v-for="day in days"
       :key="day.date"
+      :capacity="day.capacity"
       :continuation-ids="continuationIds"
       :date="day.date"
       :day-label="day.dayLabel"

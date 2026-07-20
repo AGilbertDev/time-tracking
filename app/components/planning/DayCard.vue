@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { PlanningTask } from '#shared/planning'
+import type { DayCapacity, PlanningTask } from '#shared/planning'
 
 // One day card in the week stack (PLAN-07). A working day is a solid card with a ring; today adds a
 // primary ring and the `aujourd'hui` pill; a non-work day is a dashed transparent hint with an italic
-// label, and today on a non-work day composes both. The header reserves a `capacity` slot where
-// Bout 2 (PLAN-03 + PLAN-05) mounts the meter, reading, and state pill; it renders nothing here and
-// leaves no dead gap. A no-task working day body stays visually empty by design.
+// label, and today on a non-work day composes both. On a work day the header fills its reserved
+// capacity slot with the PLAN-05 meter, reading, and state pill from the precomputed `capacity`; an
+// off day passes null and renders no meter, so a non-work day is never shown as overbooked. A
+// no-task working day body stays visually empty by design.
 const props = defineProps<{
   date: string
   dayLabel: string
@@ -14,10 +15,10 @@ const props = defineProps<{
   offLabel: string | null
   tasks: PlanningTask[]
   continuationIds: Set<string>
+  capacity: DayCapacity | null
 }>()
 
 const { t } = useI18n()
-const slots = useSlots()
 
 const cardClass = computed(() => {
   const classes = ['overflow-hidden rounded-2xl']
@@ -59,11 +60,13 @@ const cardClass = computed(() => {
 
       <span v-if="offLabel" class="text-sm italic text-muted">{{ offLabel }}</span>
 
-      <!-- Reserved capacity slot for Bout 2. Rendered only when a later bout fills it, so Bout 1
-           leaves no empty gap in the header. -->
-      <div v-if="slots.capacity" class="ml-auto flex min-w-60 flex-1 items-center">
-        <slot name="capacity" />
-      </div>
+      <!-- The capacity header (PLAN-05) fills the reserved slot on work-day cards only. An off day
+           passes no capacity, so the header keeps its dashed off-day look with no meter. -->
+      <PlanningCapacityHeader
+        v-if="isWorkDay && capacity"
+        :capacity="capacity"
+        class="ml-auto min-w-60 flex-1"
+      />
     </div>
 
     <ul v-if="tasks.length" class="divide-y divide-default" role="list">

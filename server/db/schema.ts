@@ -1,4 +1,4 @@
-import { foreignKey, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { foreignKey, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const allowedEmails = sqliteTable('allowed_emails', {
   email: text('email').primaryKey(),
@@ -113,5 +113,49 @@ export const tasks = sqliteTable(
     // userId first for the equality match, date second for the range, so every
     // period stat is a single indexed range scan over (userId, date).
     index('tasks_user_id_date_idx').on(table.userId, table.date)
+  ]
+)
+
+// The effective-dated work-schedule history (PLAN-03). The settings row holds
+// the user's *current* daily work minutes, work days, and buffer, but that row
+// is mutable and cannot answer "what was the work-day length on a past date".
+// A period's quota denominator reads the work-hours setting in effect on that
+// day, so the setting is versioned by date here in its own history table (the
+// SCD Type 2 pattern), leaving the settings row for the live value. This bout
+// only reads the history; the settings page writes it.
+export const workSchedule = sqliteTable(
+  'work_schedule',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id').notNull(),
+    // The daily work-target in whole minutes for a work day under this record.
+    workMinutes: integer('work_minutes').notNull(),
+    // JSON array of weekday numbers 0-6 (0 = Sunday), the same representation as
+    // settings.work_days. Coerced defensively on read before the resolver sees it.
+    workDays: text('work_days').notNull().default('[1,2,3,4,5]'),
+    // The buffer the user keeps for urgent work, in whole minutes.
+    bufferMinutes: integer('buffer_minutes').notNull().default(60),
+    // 'YYYY-MM-DD', the calendar day this record takes effect. Text so
+    // lexicographic order equals chronological order, matching tasks.date.
+    effectiveFrom: text('effective_from').notNull(),
+    // True lifecycle instants, Unix-seconds mode 'timestamp', matching users
+    // and tasks exactly (no .notNull(), defaulted through $defaultFn).
+    createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date())
+  },
+  (table) => [
+    // Deleting a user deletes their schedule history. It is the user's own
+    // personal preference data with no reason to outlive the account, so cascade
+    // leaves no orphans and gives the future erasure path a clean sweep. Fires
+    // only with PRAGMA foreign_keys = ON, which the libSQL/Turso client enables.
+    foreignKey({ columns: [table.userId], foreignColumns: [users.id] }).onDelete('cascade'),
+    // A unique index on (user_id, effective_from) forbids two records for the
+    // same user on the same effective date (which would make resolution
+    // ambiguous) and serves the resolution query
+    // WHERE user_id = ? AND effective_from <= ? ORDER BY effective_from DESC.
+    // user_id first for the equality match, effective_from second for the range.
+    uniqueIndex('work_schedule_user_id_effective_from_idx').on(table.userId, table.effectiveFrom)
   ]
 )

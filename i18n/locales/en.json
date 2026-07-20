@@ -200,6 +200,21 @@
     "splitMeta": "{count} words this day · rest of the project carried from yesterday",
     "loadError": "The week could not be loaded.",
     "retry": "Try again",
+    "capacity": {
+      "planned": "{value} planned",
+      "remaining": "{value} remaining",
+      "excess": "{value} over",
+      "state": {
+        "good": "comfortable",
+        "warn": "in the buffer",
+        "bad": "overbooked"
+      }
+    },
+    "nav": {
+      "currentWeek": "This week",
+      "previousWeek": "Previous",
+      "nextWeek": "Next"
+    },
     "offDay": {
       "base": "Day off",
       "sundaySuffix": "· start of the week",

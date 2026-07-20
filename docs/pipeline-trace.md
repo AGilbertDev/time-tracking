@@ -33,3 +33,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | 8   | 2026-07-20 | Tasks schema and migration | yes | yes             | [spec](specs/planning/tasks-schema.md) | [#13](https://github.com/AGilbertDev/time-tracking/pull/13) |
 | 9   | 2026-07-20 | Task categories contract | yes | yes             | [spec](specs/planning/task-categories.md) | [#14](https://github.com/AGilbertDev/time-tracking/pull/14) |
 | 10  | 2026-07-20 | Week with task rows | yes | yes             | [spec](specs/planning/week-with-task-rows.md) | [#16](https://github.com/AGilbertDev/time-tracking/pull/16) |
+| 11  | 2026-07-20 | Finish the read-only week | yes | yes             | [spec](specs/planning/read-only-week-capacity-and-nav.md) | [#17](https://github.com/AGilbertDev/time-tracking/pull/17) |
