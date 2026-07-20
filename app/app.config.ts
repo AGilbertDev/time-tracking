@@ -16,6 +16,13 @@ export default defineAppConfig({
       base: 'mx-auto w-full max-w-(--ui-container) px-6 sm:px-6 lg:px-8'
     },
     button: {
+      // The glow hover (a crisp primary ring, defined as `.btn-glow` in app/assets/css/main.css)
+      // is the default for every button rather than an opt-in class, so the whole app shares one
+      // hover idiom. Appended to the base slot so it reaches every <UButton> with no per-call-site
+      // class. The `.glow-on` modifier still lets a button stay lit for a persistent state.
+      slots: {
+        base: 'btn-glow'
+      },
       variants: {
         size: {
           md: { base: 'text-md' },

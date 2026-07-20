@@ -225,7 +225,6 @@
       "invalid": "This value is invalid."
     },
     "avatar": {
-      "label": "Profile photo",
       "choose": "Choose a photo",
       "replace": "Replace",
       "remove": "Remove photo",

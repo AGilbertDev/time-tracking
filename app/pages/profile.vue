@@ -28,10 +28,8 @@ const state = reactive<NameState>({
   lastName: user.value?.lastName ?? ''
 })
 
-// The avatar and the live name preview track what is currently typed, so the header idiom is
-// mirrored and the change is visible before it is even saved.
+// The avatar initials track what is currently typed, so the change is visible before it is saved.
 const initials = computed(() => accountInitials(state.firstName, state.lastName))
-const previewName = computed(() => accountName(state.firstName, state.lastName))
 
 // Avatar upload. The picker feeds a single File; a local object URL previews it in the avatar circle
 // before anything is sent, and the stored URL (already cache-busted server-side) renders once the
@@ -246,29 +244,21 @@ async function onSubmit(event: FormSubmitEvent<NameState>) {
     </div>
 
     <UCard class="rounded-2xl bg-default ring ring-default">
-      <!-- Identity summary: the avatar with its upload controls, the live name preview, and the
-           read-only email. The avatar circle doubles as the live preview surface, so the file
-           picker's own file list is suppressed and the chosen image shows here instead. -->
+      <!-- Identity summary: the avatar with its upload controls. The avatar circle doubles as the
+           live preview surface, so the file picker's own file list is suppressed and the chosen
+           image shows here instead. -->
       <div class="flex flex-col items-center gap-2 text-center">
         <AppAccountAvatar
           class="size-[clamp(4.5rem,12vw,6rem)] text-[clamp(1.5rem,4vw,2rem)]"
           :initials="initials"
           :src="displaySrc"
         />
-        <div class="flex w-full min-w-0 flex-col items-center">
-          <span v-if="previewName" class="w-full truncate text-base font-medium text-highlighted">
-            {{ previewName }}
-          </span>
-          <span class="w-full truncate text-sm text-muted">{{ user?.email }}</span>
-        </div>
 
         <!-- Avatar controls. The picker uses the button variant with a custom trigger so the only
              visible file affordance is one labelled button; the preview happens in the circle above.
              The action row shows either Save and Cancel for a staged file, or Remove for the current
              avatar, never both. -->
         <div class="mt-2 flex w-full flex-col items-center gap-3">
-          <p class="text-sm font-medium text-highlighted">{{ t('profile.avatar.label') }}</p>
-
           <UFileUpload
             v-model="selectedFile"
             accept="image/png,image/jpeg,image/webp"
