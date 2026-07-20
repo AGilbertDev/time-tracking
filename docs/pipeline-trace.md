@@ -32,4 +32,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | 7   | 2026-07-19 | Avatar upload and private storage | yes | no              | [spec](specs/settings/avatar-upload.md) | [#10](https://github.com/AGilbertDev/time-tracking/pull/10) |
 | 8   | 2026-07-20 | Tasks schema and migration | yes | yes             | [spec](specs/planning/tasks-schema.md) | [#13](https://github.com/AGilbertDev/time-tracking/pull/13) |
 | 9   | 2026-07-20 | Task categories contract | yes | yes             | [spec](specs/planning/task-categories.md) | [#14](https://github.com/AGilbertDev/time-tracking/pull/14) |
-| 10  | 2026-07-20 | Week with task rows | yes | yes             | [spec](specs/planning/week-with-task-rows.md) | PR_URL_PLACEHOLDER |
+| 10  | 2026-07-20 | Week with task rows | yes | yes             | [spec](specs/planning/week-with-task-rows.md) | [#16](https://github.com/AGilbertDev/time-tracking/pull/16) |
