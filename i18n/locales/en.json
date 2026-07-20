@@ -223,6 +223,25 @@
       "lastNameRequired": "Enter your last name.",
       "lastNameTooLong": "The last name must be at most 100 characters.",
       "invalid": "This value is invalid."
+    },
+    "avatar": {
+      "label": "Profile photo",
+      "choose": "Choose a photo",
+      "replace": "Replace",
+      "remove": "Remove photo",
+      "save": "Save",
+      "cancel": "Cancel",
+      "hint": "JPEG, PNG, or WebP, 5 MB maximum.",
+      "uploading": "Uploading…",
+      "removing": "Removing…",
+      "uploadSuccess": "Your profile photo has been saved.",
+      "removeSuccess": "Your profile photo has been removed.",
+      "error": {
+        "tooLarge": "The image exceeds the 5 MB maximum.",
+        "type": "Unsupported image format. Use a JPEG, PNG, or WebP file.",
+        "corrupt": "This image is unreadable or damaged.",
+        "generic": "Something went wrong. Please try again."
+      }
     }
   },
   "settings": {

@@ -145,7 +145,7 @@ const items = computed<MenuItem[][]>(() => {
             class="size-9 cursor-pointer rounded-full text-sm transition duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:hover:scale-105"
             type="button"
           >
-            <AppAccountAvatar class="size-full" :initials="initials" />
+            <AppAccountAvatar class="size-full" :initials="initials" :src="user?.avatarUrl" />
           </button>
 
           <!-- The identity block is a full-width header at the top of the popover.
@@ -155,7 +155,11 @@ const items = computed<MenuItem[][]>(() => {
                size. -->
           <template #account>
             <div class="flex w-full flex-col items-center gap-2 px-2 py-3 text-center">
-              <AppAccountAvatar class="size-14 text-lg" :initials="initials" />
+              <AppAccountAvatar
+                class="size-14 text-lg"
+                :initials="initials"
+                :src="user?.avatarUrl"
+              />
               <div class="flex w-full min-w-0 flex-col items-center">
                 <span v-if="username" class="w-full truncate text-sm font-medium text-highlighted">
                   {{ username }}

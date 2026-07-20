@@ -85,6 +85,9 @@ export async function completeOnboarding(
       email: user.email,
       firstName: body.firstName,
       lastName: body.lastName,
+      // Onboarding never changes the avatar, so carry forward whatever the session minted at
+      // magic-link verify holds (null for a brand-new user).
+      avatarUrl: user.avatarUrl,
       onboarded: true,
       // Carry the real role forward from the session minted at magic-link verify. Onboarding
       // never changes the role, so the session value is the user's true role.

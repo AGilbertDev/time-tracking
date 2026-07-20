@@ -2,6 +2,7 @@ import type { Locale } from '#shared/theme'
 
 declare module '#auth-utils' {
   interface User {
+    avatarUrl: string | null
     darkTheme: string
     email: string
     firstName: string | null
