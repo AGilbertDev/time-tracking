@@ -82,10 +82,11 @@ export default defineNuxtConfig({
     // environment. Empty by default, which the endpoint treats as "reject everything".
     cronSecret: '',
     // Vercel Blob read/write token for avatar storage. Server-only (not under `public`), so it
-    // never reaches the client. Empty by default, which makes the avatar endpoints fail closed
-    // with a 500 and store nothing. Override with NUXT_BLOB_READ_WRITE_TOKEN in the environment;
-    // the owner pulls the real value locally with `vercel env pull`.
-    blobReadWriteToken: '',
+    // never reaches the client. Defaults to the token Vercel injects when a Blob store is linked
+    // (`BLOB_READ_WRITE_TOKEN`), read at build time, so no renamed copy is needed. Falls back to
+    // empty, which makes the avatar endpoints fail closed with a 500 and store nothing. A
+    // NUXT_BLOB_READ_WRITE_TOKEN in the environment still overrides at runtime if ever set.
+    blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN || '',
     // Avatar storage driver selection, single-sourced in server/utils/avatarStorage.ts. Empty means
     // "decide by environment": the filesystem driver under `nuxt dev`, the private Vercel Blob driver
     // everywhere else, so production never silently falls back to the filesystem. Override with
