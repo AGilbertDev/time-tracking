@@ -146,6 +146,13 @@ input:-webkit-autofill:active {
   box-shadow: 0 0 0 2px var(--ui-primary);
 }
 
+/* Opt out of the shared glow for buttons meant to read as a bare icon, not a */
+/* visible button. Higher specificity than the hover rule, so it wins with no !important. */
+.btn-glow.glow-off:hover,
+.btn-glow.glow-off {
+  box-shadow: none;
+}
+
 /* Keep browser autofill from painting its own background over themed inputs. The very long */
 /* background-color transition defers the autofill fill indefinitely so the input keeps its */
 /* themed surface, and the text fill color is forced to the themed text so a prefilled value */
