@@ -5,6 +5,15 @@
 		"dockerfile": "Dockerfile"
 	},
 
+	// Install the GitHub CLI into the image through the official devcontainer
+	// feature, so gh is baked in at a system path that every shell finds,
+	// including non-interactive ones, and it is always present after a rebuild
+	// rather than downloaded at create time. The gh login still persists on the
+	// named volume mounted below.
+	"features": {
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+
 	"remoteUser": "node",
 
 	"remoteEnv": {

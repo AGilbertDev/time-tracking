@@ -3,6 +3,11 @@
 # devcontainer has them without a manual step, and wires git to push through the
 # GitHub CLI. The script is idempotent and safe to re-run.
 #
+# gh itself is not installed here. It is baked into the image by the official
+# github-cli devcontainer feature (see devcontainer.json), so it is always
+# present on a system path that every shell finds. This script only installs
+# turso and wires git to authenticate through gh.
+#
 # Login is not baked into the image. You authenticate once with "gh auth login"
 # (and "turso auth login" if the project has a backend). The gh and turso configs
 # each live on a named volume mounted at ~/.config/gh and ~/.config/turso (see
@@ -18,33 +23,6 @@ if ! grep -qs 'HOME/.local/bin' "$HOME/.bashrc" 2>/dev/null; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.bashrc"
 fi
 export PATH="$HOME/.local/bin:$PATH"
-
-# GitHub CLI. Installed as a user-local binary so no sudo or apt repository is
-# needed. A download failure warns and continues rather than failing the whole
-# container build.
-install_gh() {
-  if command -v gh >/dev/null 2>&1; then
-    echo "gh already installed, skipping."
-    return 0
-  fi
-  echo "Installing gh."
-  local arch ver tmp
-  arch="$(dpkg --print-architecture)"
-  ver="$(curl -sSL https://api.github.com/repos/cli/cli/releases/latest | grep -oP '"tag_name":\s*"v\K[^"]+' | head -1)"
-  if [ -z "$ver" ]; then
-    echo "Could not resolve the latest gh version, skipping gh." >&2
-    return 0
-  fi
-  tmp="$(mktemp -d)"
-  if curl -sSL -o "$tmp/gh.tar.gz" "https://github.com/cli/cli/releases/download/v${ver}/gh_${ver}_linux_${arch}.tar.gz" &&
-    tar -xzf "$tmp/gh.tar.gz" -C "$tmp"; then
-    cp "$tmp/gh_${ver}_linux_${arch}/bin/gh" "$HOME/.local/bin/gh"
-    echo "Installed $(gh --version | head -1)."
-  else
-    echo "gh download failed, skipping gh." >&2
-  fi
-  rm -rf "$tmp"
-}
 
 # Turso CLI. The official installer drops the binary in ~/.turso. We also symlink
 # it into ~/.local/bin, which is already on PATH (see above), so every shell finds
@@ -83,7 +61,6 @@ wire_git_to_gh() {
   echo "git will authenticate github.com through gh."
 }
 
-install_gh
 install_turso
 wire_git_to_gh
 
