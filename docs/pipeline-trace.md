@@ -30,3 +30,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | 5   | 2026-07-19 | Manage users admin page | yes        | yes             | [spec](specs/admin/manage-users.md) | [#7](https://github.com/AGilbertDev/time-tracking/pull/7) |
 | 6   | 2026-07-19 | Profile and settings pages | yes       | no              | [profile](specs/settings/profile-page.md), [settings](specs/settings/settings-page.md) | [#9](https://github.com/AGilbertDev/time-tracking/pull/9) |
 | 7   | 2026-07-19 | Avatar upload and private storage | yes | no              | [spec](specs/settings/avatar-upload.md) | [#10](https://github.com/AGilbertDev/time-tracking/pull/10) |
+| 8   | 2026-07-20 | Tasks schema and migration | yes | yes             | [spec](specs/planning/tasks-schema.md) | [#13](https://github.com/AGilbertDev/time-tracking/pull/13) |
