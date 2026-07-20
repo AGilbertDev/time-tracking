@@ -30,14 +30,12 @@ useSeoMeta({
   robots: 'noindex, nofollow'
 })
 
-// The full and abbreviated month names are locale data held in the i18n `planning` namespace, so the
-// formatters stay pure and the month copy lives in one place. tm returns the raw array and rt
-// resolves each entry for the active locale.
+// The full month names are locale data held in the i18n `planning` namespace, so the formatters stay
+// pure and the month copy lives in one place. The same array feeds both the week label and the
+// day-card label, which use the full month name. tm returns the raw array and rt resolves each entry
+// for the active locale.
 const monthsLong = computed<string[]>(() =>
   (tm('planning.monthsLong') as string[]).map((m) => rt(m))
-)
-const monthsShort = computed<string[]>(() =>
-  (tm('planning.monthsShort') as string[]).map((m) => rt(m))
 )
 
 // Forward the session cookie on SSR. A browser request attaches it automatically, but Nuxt's
@@ -184,7 +182,7 @@ const days = computed<PlanningDayView[]>(() => {
 
     return {
       date,
-      dayLabel: formatDayLabel(date, locale.value, monthsShort.value),
+      dayLabel: formatDayLabel(date, locale.value, monthsLong.value),
       isToday: date === today.value,
       isWorkDay: dayWork,
       offLabel,

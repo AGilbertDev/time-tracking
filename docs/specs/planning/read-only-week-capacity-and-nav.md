@@ -124,13 +124,12 @@ Frontend. See `overview.md` `PLAN-05` and the "Day capacity has a buffer" locked
 
 ### Where it renders
 
-The capacity header renders inside the day header of a **work-day** card, in the reserved `.cap` slot, matching the mockup's structure: a meter bar with a hatched buffer band, the reading text, and the state pill, in that order.
+The capacity header renders inside the day header of a **work-day** card, in the reserved `.cap` slot: a meter bar with a hatched buffer band, then the reading text. Per the user's feedback the mockup's separate `.state` text pill is dropped; the meter fill colour still carries the `good` / `warn` / `bad` state, and the numeric reading carries the actual figures.
 
 ```
 <div class="cap">
   <div class="meter"><div class="fill {state}"></div><div class="buffer"></div></div>
   <div class="cap-read">{reading}</div>
-  <span class="state {state}">{state label}</span>
 </div>
 ```
 
@@ -196,13 +195,9 @@ The separator is a middle dot with a space on each side (` · `). `formatDuratio
 
 Durations use the existing `formatDuration(minutes)` helper from Bout 1, which renders whole minutes as `H h MM` with a space on each side of `h` and the minutes zero-padded to two digits, so `315` is `5 h 15`, `135` is `2 h 15`, and `65` is `1 h 05`. This matches the mockup's Québécois `h`-style exactly, so no new format helper is needed here.
 
-### The state pill
+### The state (no pill)
 
-The state pill shows one of three labels, coloured per its role and matching the mockup's `.state.good` / `.state.warn` / `.state.bad`:
-
-- `good` -> `à l'aise`
-- `warn` -> `dans la marge`
-- `bad` -> `surchargé`
+The user removed the mockup's separate text state pill. The `good` / `warn` / `bad` state from `computeCapacity` still colours the meter fill, and the numeric reading carries the actual booked, remaining, or excess figures, so the header conveys capacity through the meter colour plus the reading text without a redundant text badge. No `capacity.state.*` labels are shipped.
 
 ### Non-work-day behaviour
 
@@ -243,8 +238,8 @@ export function computeCapacity(
 - **AC8.** `remaining = workMinutes - booked` and `excess = max(0, booked - workMinutes)`, computed against the resolved `workMinutes` for that day's date.
 - **AC9.** The state is `good` when `remaining > bufferMinutes`, `warn` when `0 <= remaining <= bufferMinutes`, and `bad` when `remaining < 0`, with the boundary cases (`remaining == bufferMinutes` and `remaining == 0`) both resolving to `warn`.
 - **AC10.** The reading reads `{booked} planifié · {remaining} restant` when not overbooked and `{booked} planifié · {excess} en trop` when overbooked, with the `en trop` portion in the `bad` colour role, and durations formatted `H h MM`.
-- **AC11.** The state pill shows `à l'aise`, `dans la marge`, or `surchargé` for `good` / `warn` / `bad`, and the meter fill and buffer band render at `fillPct` and `bufferPct`.
-- **AC12.** A non-work day renders no capacity meter and never blocks input, keeping the Bout 1 off-day hint. A work day with zero tasks renders `0 h 00 planifié · {workMinutes} restant` in the `good` state.
+- **AC11.** The meter fill renders at `fillPct` in the `good` / `warn` / `bad` colour role for the day's state, and the buffer band renders at `bufferPct`. There is no text state pill; the state is conveyed by the fill colour and the reading.
+- **AC12.** A non-work day renders no capacity meter and never blocks input, keeping the Bout 1 off-day hint. A work day with zero tasks renders `0 h 00 planifié · {workMinutes} restant` in the `good` state (the meter fill in the `good` role).
 - **AC13.** Every visible string is i18n, the French copy matches the mockup verbatim, and the header respects the active theme and dark mode through the project's semantic tokens.
 
 ---
@@ -320,20 +315,23 @@ New keys, grouped under `planning`:
 | `capacity.planned` | `{value} planifié` | `{value} planned` |
 | `capacity.remaining` | `{value} restant` | `{value} remaining` |
 | `capacity.excess` | `{value} en trop` | `{value} over` |
-| `capacity.state.good` | `à l'aise` | `comfortable` |
-| `capacity.state.warn` | `dans la marge` | `in the buffer` |
-| `capacity.state.bad` | `surchargé` | `overbooked` |
 | `nav.previousWeek` | `Précédente` | `Previous` |
 | `nav.currentWeek` | `Cette semaine` | `This week` |
 | `nav.nextWeek` | `Suivante` | `Next` |
 
 The switcher uses visible text labels (per user feedback reversing the earlier chevron-only decision), so each button's accessible name is its own visible text. The chevron glyphs `‹` and `›` are rendered beside the text and are `aria-hidden`, decorative only. The middle-dot separator (` · `) between the booked figure and the remaining or excess figure is punctuation and is rendered by the component, not stored as translatable copy. The existing `planning.today` (lowercase `aujourd'hui`) stays the today-pill string and is not reused for the switcher button.
 
+There are no `capacity.state.*` label keys: the state pill was removed at the user's request, so the state is conveyed by the meter fill colour and the numeric reading, not by a text badge.
+
 The Bout 1 off-day label is also corrected here as a copy change, since this slice already edits the `planning` namespace: the base label reads `Congé` (EN `Day off`) rather than `Jour non travaillé`, keeping the verbatim contextual suffixes (`Congé · début de la semaine` on Sunday, `Congé · le travail reste possible et bonifie le quota de la semaine` on Saturday, and plain `Congé` otherwise).
+
+### Day-label month, folded in
+
+The Bout 1 `formatDayLabel` helper originally rendered the day header with an abbreviated month (`lundi 20 juill.`). At the user's request the day header now uses the **full** month name (`lundi 20 juillet`), consistent with the week label, which already uses the full month via `formatWeekLabel`. The day-header call site passes the same full month-name array the week label uses, and the helper's parameter and doc example are updated to reflect the full month. FR uses the full Québécois month names (`janvier` … `décembre`), EN the full English month names. This supersedes the abbreviated-month example in the Bout 1 spec ([`week-with-task-rows.md`](week-with-task-rows.md)).
 
 ## Styling
 
-Map the mockup onto the repo's five-theme semantic tokens and Hanken Grotesk per `my-styling-conventions`, never the mockup's raw `:root` palette. The semantic colour **roles** map as: `good` to the success role, `warn` to the warning role, `bad` to the danger role, plus the neutral `track` for the meter background. The hatched buffer band is a repeating diagonal gradient overlay as in the mockup's `.buffer`, using a token-derived low-opacity ink rather than a hardcoded `rgba`. Dark mode is respected in both directions. The meter, the reading, and the pill sit in the reserved `.cap` slot without reflowing the Bout 1 day header, and the switcher matches the `.navgroup` and the existing `.iconbtn` / `.ghostbtn` affordances already themed in the repo.
+Map the mockup onto the repo's five-theme semantic tokens and Hanken Grotesk per `my-styling-conventions`, never the mockup's raw `:root` palette. The semantic colour **roles** map as: `good` to the success role, `warn` to the warning role, `bad` to the danger role, plus the neutral `track` for the meter background. The hatched buffer band is a repeating diagonal gradient overlay as in the mockup's `.buffer`, using a token-derived low-opacity ink rather than a hardcoded `rgba`. Dark mode is respected in both directions. The meter and the reading sit in the reserved `.cap` slot without reflowing the Bout 1 day header (there is no state pill), and the switcher matches the `.navgroup` and the existing button affordances already themed in the repo.
 
 ## Pure helpers to unit-test
 
@@ -367,7 +365,7 @@ Specs and code review are never skipped. This bout runs specs, design, backend, 
 - **Design** runs. It maps the capacity header and the switcher onto the semantic tokens and confirms the Québécois copy against the mockup.
 - **Backend** runs. The `work_schedule` table and migration, the `loadWorkSchedule` read path, and the `GET /api/me/work-schedule` route and handler, plus the seed extension.
 - **Frontend** runs. The capacity header in the reserved slot and the week switcher, wired to the resolver and the existing task refetch.
-- **Accessibility** runs. The meter and the switcher are new interactive and informational UI, so they get the a11y pass: the reading text must convey capacity without relying on colour or the bar alone, the state pill must not be colour-only, and the switcher's chevron buttons must carry their accessible names.
+- **Accessibility** runs. The meter and the switcher are new interactive and informational UI, so they get the a11y pass: the numeric reading text must convey capacity without relying on the meter fill colour alone (it is the accessible carrier now that there is no text state pill), and the switcher's text buttons must carry accessible names equal to their visible text with the chevron glyphs `aria-hidden`.
 - **Unit-test** runs. It covers `resolveSchedule`, `sumEffectiveDuration`, and `computeCapacity`.
 - **SEO** is skipped. This is an authenticated dashboard behind sign-in, not indexable.
 - **Compliance** is skipped. The bout reads the owner's own schedule and tasks behind the existing authentication, adds a schedule table holding the owner's own work-hours preferences (not a new class of third-party personal data), writes no task, and sends no email. The `tasks` compliance posture already covers the read path.

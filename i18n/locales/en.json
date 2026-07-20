@@ -203,12 +203,7 @@
     "capacity": {
       "planned": "{value} planned",
       "remaining": "{value} remaining",
-      "excess": "{value} over",
-      "state": {
-        "good": "comfortable",
-        "warn": "in the buffer",
-        "bad": "overbooked"
-      }
+      "excess": "{value} over"
     },
     "nav": {
       "currentWeek": "This week",
@@ -239,20 +234,6 @@
       "October",
       "November",
       "December"
-    ],
-    "monthsShort": [
-      "Jan.",
-      "Feb.",
-      "Mar.",
-      "Apr.",
-      "May",
-      "Jun.",
-      "Jul.",
-      "Aug.",
-      "Sep.",
-      "Oct.",
-      "Nov.",
-      "Dec."
     ]
   },
   "header": {

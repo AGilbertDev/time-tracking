@@ -45,36 +45,22 @@ const FR_MONTHS_FULL = [
   'décembre'
 ] as const
 
-// The French month abbreviations for formatDayLabel, taken verbatim from the spec's helpers section.
-const FR_MONTHS_SHORT = [
-  'janv.',
-  'févr.',
-  'mars',
-  'avr.',
-  'mai',
-  'juin',
-  'juill.',
-  'août',
-  'sept.',
-  'oct.',
-  'nov.',
-  'déc.'
-] as const
-
-// English abbreviations for the English-locale branch of formatDayLabel.
-const EN_MONTHS_SHORT = [
-  'Jan.',
-  'Feb.',
-  'Mar.',
-  'Apr.',
+// The full English month names for the English-locale branch of formatDayLabel. Per the spec's
+// "Day-label month, folded in" section the day header now uses the full month name in both locales,
+// consistent with the week label, so the English case supplies full names too (index 0 is January).
+const EN_MONTHS_FULL = [
+  'January',
+  'February',
+  'March',
+  'April',
   'May',
-  'Jun.',
-  'Jul.',
-  'Aug.',
-  'Sep.',
-  'Oct.',
-  'Nov.',
-  'Dec.'
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
 ] as const
 
 // The French connectives the spec locks: prefix `Semaine du`, separator `au`.
@@ -323,34 +309,36 @@ describe('formatCount', () => {
 })
 
 describe('formatDayLabel', () => {
-  // Spec example: 2026-07-20 in French is `lundi 20 juill.`.
-  it('formats the spec example in French', () => {
-    expect(formatDayLabel('2026-07-20', 'fr', FR_MONTHS_SHORT)).toBe('lundi 20 juill.')
+  // Spec "Day-label month, folded in": the day header now uses the FULL month name, so 2026-07-20 in
+  // French is `lundi 20 juillet` (not the abbreviated `juill.`), consistent with the week label.
+  it('formats the spec example in French with the full month name', () => {
+    expect(formatDayLabel('2026-07-20', 'fr', FR_MONTHS_FULL)).toBe('lundi 20 juillet')
   })
 
   // Sunday, the first day of the week stack.
   it('formats a Sunday in French', () => {
-    expect(formatDayLabel('2026-07-19', 'fr', FR_MONTHS_SHORT)).toBe('dimanche 19 juill.')
+    expect(formatDayLabel('2026-07-19', 'fr', FR_MONTHS_FULL)).toBe('dimanche 19 juillet')
   })
 
   // Saturday, the last day of the week stack.
   it('formats a Saturday in French', () => {
-    expect(formatDayLabel('2026-07-25', 'fr', FR_MONTHS_SHORT)).toBe('samedi 25 juill.')
+    expect(formatDayLabel('2026-07-25', 'fr', FR_MONTHS_FULL)).toBe('samedi 25 juillet')
   })
 
-  // A January date exercises the first month abbreviation and no leading zero on the day number.
+  // A January date exercises the first full month name and no leading zero on the day number.
   it('formats a January date without a leading zero on the day', () => {
-    expect(formatDayLabel('2026-01-01', 'fr', FR_MONTHS_SHORT)).toBe('jeudi 1 janv.')
+    expect(formatDayLabel('2026-01-01', 'fr', FR_MONTHS_FULL)).toBe('jeudi 1 janvier')
   })
 
-  // A December date exercises the last month abbreviation.
+  // A December date exercises the last full month name.
   it('formats a December date in French', () => {
-    expect(formatDayLabel('2026-12-25', 'fr', FR_MONTHS_SHORT)).toBe('vendredi 25 déc.')
+    expect(formatDayLabel('2026-12-25', 'fr', FR_MONTHS_FULL)).toBe('vendredi 25 décembre')
   })
 
-  // Spec: English uses its own abbreviations; the weekday is lowercased, the month is as supplied.
-  it('formats a date in English with the supplied abbreviations', () => {
-    expect(formatDayLabel('2026-07-20', 'en', EN_MONTHS_SHORT)).toBe('monday 20 Jul.')
+  // Spec: English uses the full English month name; the weekday is lowercased, the month is as
+  // supplied, so 2026-07-20 in English is `monday 20 July`.
+  it('formats a date in English with the full month name', () => {
+    expect(formatDayLabel('2026-07-20', 'en', EN_MONTHS_FULL)).toBe('monday 20 July')
   })
 })
 

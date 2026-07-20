@@ -2,14 +2,15 @@
 import { type CapacityState, type DayCapacity, formatDuration } from '#shared/planning'
 
 // The day capacity header (PLAN-05) mounted in the reserved `.cap` slot of a work-day card: a meter
-// with the fill in the state colour and a hatched buffer band, the booked/remaining reading, and the
-// state pill. It holds no capacity logic; everything comes precomputed in the DayCapacity from the
-// shared computeCapacity, so this component only maps state to colour roles and formats durations.
-// Off-day cards never render it (the page passes capacity only for work days), honouring the
-// do-not-police rule. The role map follows the spec: good -> success, warn -> warning, bad -> error.
+// with the fill in the state colour and a hatched buffer band, and the booked/remaining reading. It
+// holds no capacity logic; everything comes precomputed in the DayCapacity from the shared
+// computeCapacity, so this component only maps state to a fill colour and formats durations. Off-day
+// cards never render it (the page passes capacity only for work days), honouring the do-not-police
+// rule. The role map follows the spec: good -> success, warn -> warning, bad -> error. The numeric
+// reading is the sole textual carrier of capacity, which reads fine non-visually.
 const { capacity } = defineProps<{ capacity: DayCapacity }>()
 
-const { t, locale } = useI18n()
+const { locale } = useI18n()
 
 // Overbooked is exactly the 'bad' band (booked strictly exceeds workMinutes, so remaining < 0). Only
 // then is the excess shown in the danger role and the remaining figure suppressed.
@@ -23,23 +24,9 @@ const fillClass: Record<CapacityState, string> = {
   bad: 'bg-[var(--ui-error)]'
 }
 
-// The state pill reuses the StatusBadge idiom: a subtle UBadge in the role colour with the label
-// darkened to the 700 shade in light (the subtle wash fails AA at 500) and left at 400 in dark.
-const pillColor: Record<CapacityState, 'success' | 'warning' | 'error'> = {
-  good: 'success',
-  warn: 'warning',
-  bad: 'error'
-}
-const pillTextClass: Record<CapacityState, string> = {
-  good: 'text-success-700 dark:text-success-400',
-  warn: 'text-warning-700 dark:text-warning-400',
-  bad: 'text-error-700 dark:text-error-400'
-}
-
 const bookedLabel = computed(() => formatDuration(capacity.booked, locale.value))
 const remainingLabel = computed(() => formatDuration(capacity.remaining, locale.value))
 const excessLabel = computed(() => formatDuration(capacity.excess, locale.value))
-const stateLabel = computed(() => t(`planning.capacity.state.${capacity.state}`))
 </script>
 
 <template>
@@ -80,13 +67,5 @@ const stateLabel = computed(() => t(`planning.capacity.state.${capacity.state}`)
         <template #value>{{ excessLabel }}</template>
       </i18n-t>
     </div>
-
-    <UBadge
-      :class="['shrink-0 rounded-full', pillTextClass[capacity.state]]"
-      :color="pillColor[capacity.state]"
-      :label="stateLabel"
-      size="sm"
-      variant="subtle"
-    />
   </div>
 </template>

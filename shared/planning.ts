@@ -143,14 +143,11 @@ export function formatCount(n: number, locale: string): string {
   return new Intl.NumberFormat(localeTag(locale)).format(n)
 }
 
-// The lowercase weekday, the day number, and the abbreviated month with its period, so 2026-07-20 in
-// French is `lundi 20 juill.`. The weekday is derived from the date; the abbreviated month name comes
-// from the caller's localized array (index 0 is January), keeping the month copy in the i18n layer.
-export function formatDayLabel(
-  date: string,
-  locale: string,
-  monthsShort: readonly string[]
-): string {
+// The lowercase weekday, the day number, and the full month name, so 2026-07-20 in French is
+// `lundi 20 juillet`, consistent with the week label. The weekday is derived from the date; the
+// month name comes from the caller's localized array (index 0 is January), keeping the month copy in
+// the i18n layer. The same full-month array feeds formatWeekLabel.
+export function formatDayLabel(date: string, locale: string, months: readonly string[]): string {
   const parsed = toUtcDate(date)
   const weekday = new Intl.DateTimeFormat(localeTag(locale), {
     weekday: 'long',
@@ -158,7 +155,7 @@ export function formatDayLabel(
   })
     .format(parsed)
     .toLowerCase()
-  const month = monthsShort[parsed.getUTCMonth()] ?? ''
+  const month = months[parsed.getUTCMonth()] ?? ''
   return `${weekday} ${parsed.getUTCDate()} ${month}`
 }
 
