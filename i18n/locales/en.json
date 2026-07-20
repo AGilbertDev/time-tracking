@@ -177,6 +177,14 @@
   "app": {
     "name": "Translation Planner"
   },
+  "categories": {
+    "translation": "Translation",
+    "revision": "Revision",
+    "terminology": "Terminology",
+    "meetings": "Meetings",
+    "breaks": "Breaks",
+    "admin": "Admin"
+  },
   "header": {
     "greetingMorning": "Good morning, {name}",
     "greetingAfternoon": "Good afternoon, {name}",
