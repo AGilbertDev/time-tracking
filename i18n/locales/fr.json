@@ -185,6 +185,61 @@
     "breaks": "Pauses",
     "admin": "Administration"
   },
+  "planning": {
+    "title": "Planning de traduction",
+    "weekPrefix": "Semaine du",
+    "weekSeparator": "au",
+    "today": "aujourd'hui",
+    "words": "Mots",
+    "duration": "Durée",
+    "emDash": "—",
+    "deliveryMeta": "Livraison {time}",
+    "nonTrackableMeta": "retirée des heures effectives",
+    "splitTag": "⇄ suite",
+    "splitTagLabel": "Suite d'une tâche répartie sur plusieurs jours",
+    "splitMeta": "{count} mots ce jour · reste du projet porté d'hier",
+    "loadError": "La semaine n'a pas pu être chargée.",
+    "retry": "Réessayer",
+    "offDay": {
+      "base": "Jour non travaillé",
+      "sundaySuffix": "· début de la semaine",
+      "saturdaySuffix": "· le travail reste possible et bonifie le quota de la semaine"
+    },
+    "status": {
+      "accepte": "Accepté",
+      "encours": "En cours",
+      "termine": "Terminé",
+      "na": "N/A"
+    },
+    "monthsLong": [
+      "janvier",
+      "février",
+      "mars",
+      "avril",
+      "mai",
+      "juin",
+      "juillet",
+      "août",
+      "septembre",
+      "octobre",
+      "novembre",
+      "décembre"
+    ],
+    "monthsShort": [
+      "janv.",
+      "févr.",
+      "mars",
+      "avr.",
+      "mai",
+      "juin",
+      "juill.",
+      "août",
+      "sept.",
+      "oct.",
+      "nov.",
+      "déc."
+    ]
+  },
   "header": {
     "greetingMorning": "Bon matin, {name}",
     "greetingAfternoon": "Bonjour, {name}",

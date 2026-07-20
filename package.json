@@ -15,6 +15,7 @@
     "prepare": "husky",
     "recipes:update": "git submodule update --remote --recursive && git add .recipes",
     "seed": "bun run --env-file=.env scripts/seed.ts",
+    "seed:week": "bun run --env-file=.env scripts/seed-week.ts",
     "test": "vitest run",
     "setup": "bash .devcontainer/setup.sh"
   },

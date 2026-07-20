@@ -185,6 +185,61 @@
     "breaks": "Breaks",
     "admin": "Admin"
   },
+  "planning": {
+    "title": "Translation planning",
+    "weekPrefix": "Week of",
+    "weekSeparator": "to",
+    "today": "today",
+    "words": "Words",
+    "duration": "Time",
+    "emDash": "—",
+    "deliveryMeta": "Delivery {time}",
+    "nonTrackableMeta": "removed from effective hours",
+    "splitTag": "⇄ continued",
+    "splitTagLabel": "Continuation of a task split across several days",
+    "splitMeta": "{count} words this day · rest of the project carried from yesterday",
+    "loadError": "The week could not be loaded.",
+    "retry": "Try again",
+    "offDay": {
+      "base": "Day off",
+      "sundaySuffix": "· start of the week",
+      "saturdaySuffix": "· work is still possible and boosts the week's quota"
+    },
+    "status": {
+      "accepte": "Accepted",
+      "encours": "In progress",
+      "termine": "Done",
+      "na": "N/A"
+    },
+    "monthsLong": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "monthsShort": [
+      "Jan.",
+      "Feb.",
+      "Mar.",
+      "Apr.",
+      "May",
+      "Jun.",
+      "Jul.",
+      "Aug.",
+      "Sep.",
+      "Oct.",
+      "Nov.",
+      "Dec."
+    ]
+  },
   "header": {
     "greetingMorning": "Good morning, {name}",
     "greetingAfternoon": "Good afternoon, {name}",
