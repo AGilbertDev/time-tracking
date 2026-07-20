@@ -1,0 +1,821 @@
+<!doctype html><html><head><!-- frame-runtime --><script>window.__FRAME_PREAMBLE={"capabilities":{"downloads":"downloads.BABDwU1K.js","mcp":"mcp.hoz5jxDa.js","permissions":"permissions.ByA9Fd8x.js","self":"self.D3u1zjZe.js","user":"user.Cp1-RnjB.js"},"transforms":"_transforms.DYk1Ltlh.js","comments":"_comments.Dp6RDy7J.js","translate":"_translate.C9eLA9Mu.js"}</script><script>(function(){"use strict";const Ee="modulepreload",we=function(e){return"/"+e},Se={},ee=function(t,n,c){let i=Promise.resolve();function s(u){const a=new Event("vite:preloadError",{cancelable:!0});if(a.payload=u,window.dispatchEvent(a),!a.defaultPrevented)throw u}return i.then(u=>{for(const a of u||[])a.status==="rejected"&&s(a.reason);return t().catch(s)})},te=["light","dark","system"];function ne(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_init;return t!==null&&typeof t=="object"}function H(e){return e!==null&&typeof e=="object"&&e.__frame_size_poke===!0}function re(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_theme;if(t===null||typeof t!="object")return!1;const n=t.theme;return typeof n=="string"&&te.includes(n)}function se(e){try{typeof reportError=="function"?reportError(e):setTimeout(()=>{throw e},0)}catch{}}const oe=Object.freeze(Object.assign(Object.create(null),{user:Object.freeze(Object.assign(Object.create(null),{id:null,isOwner:!1,canEdit:!1,name:null,avatarUrl:null,email:null}))}));function W(e){if(window===top||e.type==="auxclick"&&e.button!==1)return;const t=e.composedPath?e.composedPath():[e.target];let n=null;for(let u=0;u<t.length;u++){const a=t[u];if(a&&a.matches&&a.matches("a[href],area[href]")){n=a;break}}if(!n&&e.target&&e.target.closest&&(n=e.target.closest("a[href],area[href]")),!n)return;const c=n.getAttribute("href");if(!c)return;let i,s;try{i=new URL(c,document.baseURI),s=new URL(document.baseURI).origin}catch{return}(i.protocol==="http:"||i.protocol==="https:")&&i.origin!==s&&(e.preventDefault(),parent.postMessage({__frame_nav:!0,url:i.href},"*"))}const Y={};function C(e){if(window===top)return;const t=Date.now();t-(Y[e]||0)<500||(Y[e]=t,parent.postMessage({__frame_engaged:!0,kind:e},"*"))}const ie=2e3,K=["wheel","touchstart","touchmove","keydown","pointerdown"];let x=0;function ae(e){e.isTrusted&&(x=Date.now())}function ce(){addEventListener("click",W,!0),addEventListener("auxclick",W,!0)}function le(){for(let e=0;e<K.length;e++)addEventListener(K[e],ae,{capture:!0,passive:!0});addEventListener("scroll",e=>{e.isTrusted&&Date.now()-x<ie&&C("scroll")},{capture:!0,passive:!0}),addEventListener("pointermove",e=>{e.isTrusted&&C("pointer")},{capture:!0,passive:!0}),addEventListener("click",e=>{e.isTrusted&&C("click")},{capture:!0,passive:!0})}const D="__frame_scroll",ue=150,fe=310,de=160,me=3e4;function pe(){let e=0,t=!1,n=!1,c=!1,i=0;const s=d=>{try{sessionStorage.setItem(D,JSON.stringify({y:d}))}catch{}},u=()=>{if(t){t=!1;return}n=!0,clearTimeout(e),e=setTimeout(()=>s(scrollY),ue)};try{addEventListener("scroll",u,{passive:!0}),addEventListener("pagehide",()=>{clearTimeout(e),s(scrollY)})}catch{}const a=()=>{let d;try{d=sessionStorage.getItem(D)}catch{return null}if(d===null)return null;let h;try{h=JSON.parse(d)}catch{h=null}const g=h?.y;if(!(typeof g=="number"&&Number.isFinite(g)&&g>=0)){try{sessionStorage.removeItem(D)}catch{}return null}return g};let y=!1;const _=d=>{try{const h=scrollY;scrollTo({top:d,left:0,behavior:"instant"}),i=d,c=!0,s(d);const g=scrollY;g!==h&&(t=!0),g!==d&&!y&&(y=!0,addEventListener("load",()=>{try{if(scrollY===g){const b=a();_(b!==null?b:i)}}catch{}},{once:!0}))}catch{}},o=()=>{try{return!!location.hash}catch{return!0}};let l=!1;const p=()=>{try{if(l||innerWidth>fe||innerHeight>de)return;l=!0;const d=Date.now(),h=()=>{try{removeEventListener("resize",h)}catch{}if(Date.now()-d>me||n||o())return;const g=a();_(g!==null?g:i)};addEventListener("resize",h)}catch{}};let m=!1,f=!1;return{restore(){if(m||(m=!0,o()))return;const d=a();d!==null&&(_(d),p())},promoted(){if(f||(f=!0,o()))return;const d=a();d!==null?(_(d),p()):c&&_(i)}}}function he(e,t,n){const c=[...t.values()].filter(i=>i.targets.some(s=>s.startsWith(e+".")));return{wrap(i,s){const u=`${e}.${i}`,a=c.filter(y=>y.targets.includes(u));return a.length===0?(...y)=>{try{return s(...y)}catch(_){return Promise.reject(_)}}:(...y)=>{let _=y;for(const l of a){const p=l.module.parameters;if(p)try{_=p(_)}catch{return Promise.reject({code:"transform_error",id:l.id,scope:e,message:"parameters transform failed"})}}let o;try{o=s(..._)}catch(l){o=Promise.reject(l)}return o.then(l=>{for(let p=a.length-1;p>=0;p--){const m=a[p],f=m.module.returns;if(f)try{l=f(l)}catch{return n({id:m.id,scope:e,leg:"returns"}),l}}return l},l=>{for(let p=a.length-1;p>=0;p--){const m=a[p],f=m.module.throws;if(f)try{l=f(l)}catch{return n({id:m.id,scope:e,leg:"throws"}),Promise.reject(l)}}return Promise.reject(l)})}}}}function ge(e,t,n,c=()=>{}){const i=new Set(e.changes??[]),s=new Map;for(const u of i){const a=t[u];a&&s.set(u,a)}return{contract:e.contract,changes:i,flags:new Set(e.flags??[]),capabilities:e.capabilities??{},capBudgets:e.capBudgets??{},transforms:s,shellOrigin:n.shellOrigin,mount:n.mount,pipe:u=>he(u,s,c)}}(function(){const e=Object.defineProperty,t=globalThis,n=["RTCPeerConnection","webkitRTCPeerConnection","RTCDataChannel","RTCIceCandidate","RTCSessionDescription","RTCRtpSender","RTCRtpReceiver"];let c=0;for(let i=0;i<n.length;i++){const s=n[i];try{e(t,s,{value:void 0,writable:!1,configurable:!1})}catch{try{delete t[s]}catch{}try{e(t,s,{value:void 0,writable:!1,configurable:!0})}catch{}}typeof t[s]=="function"&&c++}if(c&&window!==top)try{parent.postMessage({__frame_rtc_lockdown_failed:c},"*")}catch{}})();const _e=1e4,ye=Object.freeze([...window.__FRAME_PREAMBLE?.origins??["https://claude.ai","https://preview.claude.ai"]]);function J(e){for(const t of ye)if(t.endsWith(":*"))try{const n=new URL(e);if(`${n.protocol}//${n.hostname}:*`===t)return!0}catch{}else if(e===t)return!0;return!1}const R=Object.freeze({...window.__FRAME_PREAMBLE?.capabilities}),I=window.__FRAME_PREAMBLE?.transforms,U=window.__FRAME_PREAMBLE?.comments,z=window.__FRAME_PREAMBLE?.translate,T=/^[\w.-]+\.js$/,be=/^[a-z][a-z0-9_-]{0,63}$/;let G=null,j=null;function $(e,t,n){try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!1,enumerable:!0})}catch{try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!0,enumerable:!0})}catch{}}}let q=!1;function V(e){const t=document.documentElement;e==="light"||e==="dark"?(t.dataset.theme=e,t.style.colorScheme=e,q=!0):q&&(delete t.dataset.theme,t.style.colorScheme="",q=!1)}const A=Object.assign(Object.create(null),{mcp:Object.assign(Object.create(null),{watchTool:{handlerArg:3}})}),M=new Map;function X(e,t){const n=M.get(e);if(!n)return;const c=Object.assign(Object.create(null),t);Object.assign(n.impl,c),n.impl.__settled=()=>Promise.reject({code:"capability_removed",message:`${e}: method not in this runtime`});const i=n.queue;n.queue=[];for(const s of i){const u=c[s.method];if(u)if(A[e]?.[s.method])try{s.resolve(u(...s.args))}catch{k(s,A[e][s.method].handlerArg,{code:"transform_error",message:`${e}.${s.method} rejected its arguments`})}else u(...s.args).then(s.resolve,s.reject);else{const a={code:"capability_removed",message:`${e}.${s.method} is not in this runtime`},y=A[e]?.[s.method];if(y){k(s,y.handlerArg,a);continue}s.reject(a)}}}function ve(e,t){const n=M.get(e);if(!n)return;n.impl.__settled=()=>Promise.reject(t);const c=n.queue;n.queue=[];for(const i of c){const s=A[e]?.[i.method];if(s){k(i,s.handlerArg,t);continue}i.reject(t)}}function N(e,t){const n=oe[e];if(!n){ve(e,t);return}X(e,Object.fromEntries(Object.entries(n).map(([c,i])=>[c,()=>Promise.resolve(i)])))}function k(e,t,n){if(e.syncState?.dead)return;const c=e.args[t];typeof c=="function"&&queueMicrotask(()=>{if(!e.syncState?.dead)try{c({type:"error",error:n})}catch(i){se(i)}})}const B=Object.getOwnPropertyDescriptor(window,"claude");if(window!==top&&!(B&&B.writable===!1)){ce(),le();let e=null;try{e=pe()}catch{}const t=B?.value??{};$(window,"claude",t);const n=o=>{const l={impl:Object.create(null),queue:[]};M.set(o,l);const p=new Proxy(l.impl,{get:(m,f)=>{if(typeof f!="string"||f==="then"||f==="toJSON"||f==="valueOf")return;if(f==="toString")return Object.prototype.toString;const d=A[o]?.[f];return d?(...h)=>{if(typeof h[d.handlerArg]!="function")throw new TypeError(`${o}.${f} requires a handler function`);const g=m[f];if(g)return g(...h);if(m.__settled){const w={dead:!1},S={args:[...h],syncState:w};return m.__settled().catch(P=>k(S,d.handlerArg,P)),()=>{w.dead=!0}}let b=null;const v={dead:!1};return l.queue.push({method:f,args:h,resolve:w=>{b=typeof w=="function"?w:null,v.dead&&b?.()},reject:()=>{},syncState:v}),()=>{v.dead=!0,b?.()}}:(...h)=>{const g=m[f]??m.__settled;return g?g(...h):new Promise((b,v)=>{l.queue.push({method:f,args:h,resolve:b,reject:v})})}},set:()=>!1});$(t,o,p)};for(const o of Object.keys(R)){if(t[o]!==void 0){$(t,o,t[o]);continue}n(o)}let c=null,i=null,s=0;const u=o=>{o.source!==parent||!J(o.origin)||ne(o.data)&&(c=o.data.__frame_init,j=o.origin,removeEventListener("message",u),clearTimeout(s),i?.())};addEventListener("message",u),parent.postMessage({__frame_connect:!0},"*");const a=new Promise(o=>{i=o,s=setTimeout(()=>{removeEventListener("message",u),o()},_e)}),y=document.readyState==="loading"?new Promise(o=>document.addEventListener("DOMContentLoaded",()=>o(),{once:!0})):Promise.resolve();y.then(()=>{try{e?.restore()}catch{}});const _=o=>{if(!(o.source!==parent||!J(o.origin))&&H(o.data)){removeEventListener("message",_);try{e?.promoted()}catch{}}};addEventListener("message",_),a.then(async()=>{if(!c||!j){for(const r of M.keys())N(r,{code:"not_granted",message:"frame initialization did not arrive - capability unavailable"});return}V(c.theme);const o=j;let l=!1,p=!1;addEventListener("message",r=>{if(r.source!==parent||r.origin!==o)return;re(r.data)&&V(r.data.__frame_theme.theme);const E=r.data?.__fc_mode;E&&typeof E=="object"&&!l&&U&&T.test(U)&&(l=!0,m(U).then(F=>F.install?.(o,E.on===!0)).catch(()=>{}));const O=r.data?.__ft_cmd;O&&typeof O=="object"&&!p&&z&&T.test(z)&&(p=!0,m(z).then(F=>F.install?.(o,O)).catch(()=>{}))});const m=r=>ee(()=>import("/_runtime/"+r),void 0),f=Object.keys(c.capabilities??{});for(const r of f)Object.hasOwn(R,r)||be.test(r)&&t[r]===void 0&&(n(r),N(r,{code:"capability_disabled",message:"capability not in this runtime generation"}));const d=f.filter(r=>Object.hasOwn(R,r)).map(r=>[r,R[r]]).filter(r=>typeof r[1]=="string"&&T.test(r[1])),[h,...g]=await Promise.allSettled([I&&T.test(I)?m(I):Promise.resolve({}),...d.map(([,r])=>m(r))]),b=j;G=ge(c,h.status==="fulfilled"&&h.value?.TRANSFORMS||{},{shellOrigin:b,mount:X},r=>parent.postMessage({__frame_cap_telemetry:r},b));const v=r=>parent.postMessage({__frame_cap_telemetry:{kind:"cap-load-error",cap:r}},b),w=G;g.forEach((r,E)=>{const O=d[E][0];if(r.status!=="fulfilled"){v(O);return}try{r.value?.install?.(w)}catch{v(O)}});for(const[r,E]of M)if(!(E.queue.length===0&&Object.keys(E.impl).length>0)){if(f.includes(r)){N(r,{code:"capability_disabled",message:"capability not available in this session"});continue}N(r,{code:"not_granted",message:"capability not available in this session"})}await y,parent.postMessage({__frame_ready:!0},j);let S=-1,P=0;const Q=()=>{P=0;const r=Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0);r!==S&&(S=r,parent.postMessage({__frame_size:!0,h:r},b))},L=()=>{P||(P=setTimeout(Q,200))},Z=new ResizeObserver(L);Z.observe(document.documentElement),document.body&&Z.observe(document.body),document.addEventListener("load",L,!0),document.fonts?.ready.then(L,()=>{}),addEventListener("beforeprint",()=>{S=-1,Q()}),L(),addEventListener("message",r=>{if(!(r.source!==parent||r.origin!==b)&&H(r.data)){try{e?.promoted()}catch{}S=-1,L()}})})}})();</script><!-- /frame-runtime --><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Planning de traduction — maquette</title>
+
+<style>
+  :root {
+    --canvas: #f4f8f7; --surface: #ffffff; --surface-2: #eef4f2; --border: #e1ebe8;
+    --border-strong: #cfe0db; --text: #16302c; --muted: #5e7873; --faint: #8aa19b;
+    --primary: #12988c; --primary-strong: #0e7e74; --primary-wash: #e4f2ef; --accent: #8e7cd8;
+    --accent-wash: #efeafb; --good: #2e9e6b; --good-wash: #e3f3ea; --warn: #bd8410;
+    --warn-wash: #f8efd8; --bad: #ce5b49; --bad-wash: #f8e5e1; --info: #4f7cc2; --info-wash: #e7eefa;
+    --track: #e9f0ee;
+    --shadow: 0 1px 2px rgba(20,48,44,0.04), 0 8px 24px rgba(20,48,44,0.05);
+    --radius: 16px; --radius-sm: 10px;
+    --font: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #0f1b19; --surface: #15231f; --surface-2: #1a2b27; --border: #26382f;
+      --border-strong: #33493f; --text: #e7f0ed; --muted: #94aaa4; --faint: #6f8781;
+      --primary: #35c0b1; --primary-strong: #57d3c5; --primary-wash: #123531; --accent: #b6a6f0;
+      --accent-wash: #241f3b; --good: #46b584; --good-wash: #123128; --warn: #e0a63c;
+      --warn-wash: #33280f; --bad: #e27766; --bad-wash: #37211d; --info: #7ea6e0; --info-wash: #17263c;
+      --track: #223330;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --canvas: #f4f8f7; --surface: #ffffff; --surface-2: #eef4f2; --border: #e1ebe8;
+    --border-strong: #cfe0db; --text: #16302c; --muted: #5e7873; --faint: #8aa19b;
+    --primary: #12988c; --primary-strong: #0e7e74; --primary-wash: #e4f2ef; --accent: #8e7cd8;
+    --accent-wash: #efeafb; --good: #2e9e6b; --good-wash: #e3f3ea; --warn: #bd8410;
+    --warn-wash: #f8efd8; --bad: #ce5b49; --bad-wash: #f8e5e1; --info: #4f7cc2; --info-wash: #e7eefa;
+    --track: #e9f0ee;
+    --shadow: 0 1px 2px rgba(20,48,44,0.04), 0 8px 24px rgba(20,48,44,0.05);
+  }
+  :root[data-theme="dark"] {
+    --canvas: #0f1b19; --surface: #15231f; --surface-2: #1a2b27; --border: #26382f;
+    --border-strong: #33493f; --text: #e7f0ed; --muted: #94aaa4; --faint: #6f8781;
+    --primary: #35c0b1; --primary-strong: #57d3c5; --primary-wash: #123531; --accent: #b6a6f0;
+    --accent-wash: #241f3b; --good: #46b584; --good-wash: #123128; --warn: #e0a63c;
+    --warn-wash: #33280f; --bad: #e27766; --bad-wash: #37211d; --info: #7ea6e0; --info-wash: #17263c;
+    --track: #223330;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--text); font-family: var(--font); line-height: 1.45; -webkit-font-smoothing: antialiased; }
+  .tabnum { font-variant-numeric: tabular-nums; }
+  .hidden { display: none !important; }
+
+  /* Nav */
+  .nav { position: sticky; top: 0; z-index: 40; background: color-mix(in oklab, var(--surface), transparent 8%); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+  .nav-inner { max-width: 1060px; margin: 0 auto; height: 60px; padding: 0 clamp(14px,3vw,32px); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+  .brand-mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
+  .brand-word { font-weight: 800; letter-spacing: -0.02em; font-size: 18px; }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .greeting { font-size: 14px; color: var(--muted); }
+  .cmtoggle { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 16px; transition: border-color .18s, box-shadow .18s; }
+  .cmtoggle:hover { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-wash); }
+  .cmtoggle[data-mode="light"] .moon { display: none; }
+  .cmtoggle[data-mode="dark"] .sun { display: none; }
+  .acct { position: relative; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer; background: linear-gradient(135deg, var(--primary), var(--primary-strong)); color: #fff; font-weight: 700; font-size: 13px; display: grid; place-items: center; transition: box-shadow .18s; }
+  .avatar:hover { box-shadow: 0 0 0 3px var(--primary-wash); }
+  .avatar.lg { width: 52px; height: 52px; font-size: 17px; }
+  .popover { position: absolute; right: 0; top: calc(100% + 10px); width: 244px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 6px; z-index: 50; }
+  .pop-id { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px 10px; text-align: center; }
+  .pop-name { font-size: 14px; font-weight: 600; }
+  .pop-email { font-size: 12px; color: var(--muted); }
+  .pop-sep { height: 1px; background: var(--border); margin: 5px 4px; }
+  .pop-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 9px; font-size: 14px; color: var(--text); text-decoration: none; cursor: pointer; }
+  .pop-item:hover { background: var(--surface-2); }
+  .pop-item .tag { font-size: 12px; color: var(--muted); }
+  .pop-item.danger { color: var(--bad); }
+
+  /* Stats band (attached to nav, split from planning) */
+  .statsband { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 60px; z-index: 30; }
+  .statsband-inner { max-width: 1060px; margin: 0 auto; padding: 0 clamp(14px,3vw,32px); }
+  .stats-bar { display: flex; align-items: center; gap: 16px; min-height: 54px; }
+  .stats-head { display: inline-flex; align-items: center; gap: 10px; border: 0; background: transparent; font: inherit; color: var(--text); cursor: pointer; padding: 6px 0; }
+  .stats-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .stats-head .chev { color: var(--muted); font-size: 12px; transition: transform .18s; }
+  .statsband[data-open="true"] .stats-head .chev { transform: rotate(90deg); }
+  .stats-quick { display: flex; align-items: center; gap: 18px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+  .q-today { font-size: 15px; } .q-today b { font-size: 18px; } .q-today small { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .q-rest { font-size: 13px; color: var(--muted); }
+  .q-eff { font-size: 13px; color: var(--faint); }
+  .statsband[data-open="false"] .stats-full { display: none; }
+  .statsband[data-open="true"] .stats-quick { display: none; }
+  .stats-full { padding: 2px 0 20px; }
+  .stats-cap { font-size: 12.5px; color: var(--faint); margin: 0 0 12px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 17px; }
+  .stat .k { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); display: flex; justify-content: space-between; align-items: center; }
+  .stat .live { font-size: 10px; letter-spacing: 0.04em; color: var(--primary-strong); background: var(--primary-wash); padding: 2px 7px; border-radius: 20px; text-transform: none; font-weight: 700; }
+  .stat .v { margin-top: 8px; font-size: 27px; font-weight: 700; letter-spacing: -0.02em; }
+  .stat .v small { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .stat .sub { margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+  .catbar-wrap { margin-top: 18px; }
+  .catbar { display: flex; height: 12px; border-radius: 20px; overflow: hidden; background: var(--track); }
+  .catbar span { display: block; height: 100%; }
+  .catlegend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  .catlegend span { display: inline-flex; align-items: center; gap: 6px; }
+  .catlegend i { width: 10px; height: 10px; border-radius: 3px; }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: clamp(18px,3vw,34px) clamp(14px,3vw,32px) 80px; }
+
+  .eyebrow { display: flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint); margin-bottom: 16px; }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+
+  .topbar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .title-block h1 { margin: 0; font-size: clamp(22px,3.2vw,30px); font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+  .weeklabel { margin-top: 4px; color: var(--muted); font-size: 15px; }
+  .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .segmented { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 2px; }
+  .segmented button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; padding: 7px 15px; border-radius: 9px; cursor: pointer; transition: background .18s, color .18s; }
+  .segmented button[aria-pressed="true"] { background: var(--surface); color: var(--primary-strong); box-shadow: 0 1px 2px rgba(20,48,44,0.08); }
+  .navgroup { display: inline-flex; align-items: center; gap: 6px; }
+  .iconbtn, .ghostbtn { border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; font-size: 14px; border-radius: 10px; cursor: pointer; transition: border-color .18s, background .18s, box-shadow .18s; }
+  .iconbtn { width: 38px; height: 38px; display: grid; place-items: center; font-size: 17px; }
+  .ghostbtn { padding: 8px 14px; height: 38px; }
+  .iconbtn:hover, .ghostbtn:hover { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-wash); }
+  button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  /* Day */
+  .day { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
+  .day.today { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), var(--shadow); }
+  .day.dropok { outline: 2px dashed var(--primary); outline-offset: -5px; }
+  .day-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding: 15px 18px; border-bottom: 1px solid var(--border); }
+  .day-id { display: flex; align-items: baseline; gap: 10px; min-width: 190px; }
+  .day-id .name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; text-transform: capitalize; }
+  .day-id .todaypill { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--primary-strong); background: var(--primary-wash); padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
+  .cap { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 14px; }
+  .meter { position: relative; flex: 1; height: 12px; border-radius: 20px; background: var(--track); overflow: hidden; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 20px; }
+  .meter .buffer { position: absolute; top: 0; bottom: 0; right: 0; width: 13.3%; background: repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 6px); border-left: 1px dashed var(--border-strong); }
+  .fill.good { background: linear-gradient(90deg, var(--good), color-mix(in oklab, var(--good), white 12%)); }
+  .fill.warn { background: linear-gradient(90deg, var(--warn), color-mix(in oklab, var(--warn), white 12%)); }
+  .fill.bad  { background: linear-gradient(90deg, var(--bad), color-mix(in oklab, var(--bad), white 10%)); }
+  .cap-read { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .cap-read b { color: var(--text); font-weight: 700; }
+  .state { font-size: 11px; font-weight: 700; letter-spacing: 0.03em; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .state.good { color: var(--good); background: var(--good-wash); }
+  .state.warn { color: var(--warn); background: var(--warn-wash); }
+  .state.bad  { color: var(--bad); background: var(--bad-wash); }
+
+  /* Task rows */
+  .tasks { display: flex; flex-direction: column; min-height: 6px; }
+  .row { display: grid; grid-template-columns: 20px 12px minmax(0,1.5fr) auto auto auto 104px 96px; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: var(--surface-2); }
+  .row.dragging { opacity: 0.4; }
+  .grip { color: var(--faint); cursor: grab; opacity: 0.4; display: grid; place-items: center; }
+  .row:hover .grip { opacity: 0.85; }
+  .grip svg { width: 16px; height: 16px; }
+  .sdot { width: 10px; height: 10px; border-radius: 50%; }
+  .sdot.accepte { background: var(--info); }
+  .sdot.encours { background: var(--warn); }
+  .sdot.termine { background: var(--good); }
+  .sdot.na { background: var(--faint); opacity: 0.5; }
+  .who { min-width: 0; }
+  .who .client { font-weight: 650; font-size: 15px; letter-spacing: -0.01em; }
+  .who .proj { color: var(--muted); font-weight: 500; }
+  .who .meta { font-size: 12.5px; color: var(--faint); margin-top: 1px; }
+  .cell { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+  .cell .lab { display: block; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--faint); }
+  .cell .val { color: var(--text); font-weight: 600; }
+  .chip { justify-self: start; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; }
+  .chip.trad { color: var(--primary-strong); background: var(--primary-wash); border-color: transparent; }
+  .chip.rev { color: var(--accent); background: var(--accent-wash); border-color: transparent; }
+  .status { justify-self: end; font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 9px; white-space: nowrap; min-width: 92px; text-align: center; }
+  .status.accepte { color: var(--info); background: var(--info-wash); }
+  .status.encours { color: var(--warn); background: var(--warn-wash); }
+  .status.termine { color: var(--good); background: var(--good-wash); }
+  .status.na { color: var(--faint); background: transparent; border: 1px dashed var(--border-strong); }
+  .rowact { justify-self: end; display: inline-flex; gap: 3px; opacity: 0; transition: opacity .15s; }
+  .row:hover .rowact, .row:focus-within .rowact { opacity: 1; }
+  .actbtn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+  .actbtn:hover { background: var(--surface); border-color: var(--border); color: var(--text); }
+  .actbtn.danger:hover { color: var(--bad); border-color: var(--bad); }
+  .actbtn svg { width: 17px; height: 17px; }
+  .split-tag { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-wash); padding: 1px 7px; border-radius: 20px; }
+
+  /* Editor */
+  .editor { background: var(--surface-2); border-bottom: 1px solid var(--border); padding: 20px 18px 22px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; }
+  .editor h4 { margin: 0 0 12px; font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .field input, .field textarea, .field select { width: 100%; font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 11px; }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .field-row { display: flex; gap: 10px; } .field-row .field { flex: 1; }
+  .toggle-line { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--border); }
+  .toggle-line span { font-size: 13.5px; font-weight: 600; }
+  .switch { width: 40px; height: 23px; border-radius: 20px; background: var(--border-strong); position: relative; flex: none; }
+  .switch.on { background: var(--primary); }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: #fff; transition: left .18s; }
+  .switch.on::after { left: 19px; }
+  .weekdays { display: flex; gap: 6px; flex-wrap: wrap; }
+  .weekdays .wd { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--muted); }
+  .weekdays .wd.on { background: var(--primary-wash); color: var(--primary-strong); border-color: transparent; }
+  .editor-actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+  .btn-primary { border: 0; background: var(--primary); color: #fff; font: inherit; font-weight: 700; font-size: 14px; padding: 9px 18px; border-radius: 10px; cursor: pointer; }
+  .btn-primary:hover { background: var(--primary-strong); }
+  .btn-soft { border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 650; font-size: 14px; padding: 9px 16px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-soft:hover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-wash); }
+  .btn-soft svg { width: 16px; height: 16px; }
+
+  .addtask { text-align: center; padding: 12px; color: var(--primary-strong); font-weight: 650; font-size: 14px; cursor: pointer; }
+  .addtask:hover { background: var(--surface-2); }
+
+  .day.offday { background: transparent; box-shadow: none; border-style: dashed; }
+  .day.offday .day-head { border-bottom: 0; opacity: 0.85; }
+  .offlabel { font-size: 13px; color: var(--faint); font-style: italic; }
+
+  /* Week drop targets */
+  .iconbtn.dropok, .ghostbtn.dropok { border-color: var(--primary); background: var(--primary-wash); box-shadow: 0 0 0 3px var(--primary-wash); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--canvas); padding: 10px 16px; border-radius: 10px; font-size: 13.5px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60; box-shadow: var(--shadow); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Legend */
+  .legend { margin-top: 30px; padding: 18px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .legend h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+  .legend h3:not(:first-child) { margin-top: 20px; }
+  .legend .items { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 22px; }
+  .legend .it { display: flex; gap: 10px; font-size: 13px; color: var(--muted); align-items: flex-start; }
+  .legend .it b { color: var(--text); }
+  .swatch { width: 16px; height: 16px; border-radius: 5px; flex: none; margin-top: 1px; }
+  kbd { font-family: var(--font); font-size: 11.5px; font-weight: 700; background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; color: var(--text); }
+
+  @media (max-width: 760px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .row { grid-template-columns: 12px minmax(0,1fr) auto auto; gap: 12px; }
+    .row .grip, .row .cell.dur, .row .chip, .row .rowact { display: none; }
+    .editor { grid-template-columns: 1fr; }
+    .day-id { min-width: 0; }
+  }
+  @media (max-width: 620px) { .stats-hint, .greeting, .q-rest, .q-eff { display: none; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-grip" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  <symbol id="i-split" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2 3"/><path d="M8 8l-4 4 4 4"/><path d="M16 8l4 4-4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M10 11v6M14 11v6"/></symbol>
+</defs></svg>
+
+<!-- Nav -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#" aria-label="Planning de traduction">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-word">planning</span>
+    </a>
+    <div class="nav-right">
+      <span class="greeting">Bon après-midi, Camille</span>
+      <button class="cmtoggle" id="cmtoggle" aria-label="Basculer le mode clair ou sombre">
+        <span class="sun" aria-hidden="true">☀︎</span><span class="moon" aria-hidden="true">☾</span>
+      </button>
+      <div class="acct">
+        <button class="avatar" id="avatarbtn" aria-label="Menu du compte" aria-haspopup="true" aria-expanded="false">CM</button>
+        <div class="popover" id="acctpop" role="menu" hidden>
+          <div class="pop-id">
+            <span class="avatar lg" aria-hidden="true">CM</span>
+            <span class="pop-name">Camille M.</span>
+            <span class="pop-email">camille@exemple.com</span>
+          </div>
+          <div class="pop-sep"></div>
+          <a class="pop-item" role="menuitem">Profil</a>
+          <a class="pop-item" role="menuitem">Réglages</a>
+          <div class="pop-sep"></div>
+          <a class="pop-item" role="menuitem">Thème <span class="tag">›</span></a>
+          <a class="pop-item" role="menuitem">Langue <span class="tag">FR</span></a>
+          <div class="pop-sep"></div>
+          <a class="pop-item danger" role="menuitem">Déconnexion</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Stats band, near the nav, split from the planning -->
+<section class="statsband" data-open="false">
+  <div class="statsband-inner">
+    <div class="stats-bar">
+      <button class="stats-head" id="statshead" aria-expanded="false" aria-controls="statsfull">
+        <span class="chev" aria-hidden="true">▸</span>
+        <span class="stats-title">Statistiques</span>
+      </button>
+      <div class="stats-quick" id="statsquick">
+        <span class="q-today">Aujourd'hui <b class="tabnum">436</b> <small>mots/h</small></span>
+        <span class="q-rest tabnum">Semaine 441 · Mois 448 · Année 455</span>
+        <span class="q-eff tabnum">7 h 00 effectives · 3 050 mots</span>
+      </div>
+    </div>
+    <div class="stats-full" id="statsfull">
+      <p class="stats-cap">Quota réel · mots ÷ heures effectives (heures prévues moins temps non comptabilisé).</p>
+      <div class="stats">
+        <div class="stat">
+          <div class="k">Jour <span class="live">en direct</span></div>
+          <div class="v tabnum">436 <small>mots/h</small></div>
+          <div class="sub tabnum">3 050 mots · 7 h 00 effectives</div>
+        </div>
+        <div class="stat">
+          <div class="k">Semaine</div>
+          <div class="v tabnum">441 <small>mots/h</small></div>
+          <div class="sub tabnum">12 400 mots · 28 h 08 effectives</div>
+        </div>
+        <div class="stat">
+          <div class="k">Mois</div>
+          <div class="v tabnum">448 <small>mots/h</small></div>
+          <div class="sub tabnum">51 300 mots · juillet</div>
+        </div>
+        <div class="stat">
+          <div class="k">Année</div>
+          <div class="v tabnum">455 <small>mots/h</small></div>
+          <div class="sub tabnum">612 400 mots · 2026</div>
+        </div>
+      </div>
+      <div class="catbar-wrap">
+        <p class="stats-cap" style="margin-bottom:8px">Répartition du temps · semaine</p>
+        <div class="catbar">
+          <span style="width:58%;background:var(--primary)"></span>
+          <span style="width:19%;background:var(--accent)"></span>
+          <span style="width:9%;background:var(--info)"></span>
+          <span style="width:8%;background:var(--warn)"></span>
+          <span style="width:6%;background:var(--faint)"></span>
+        </div>
+        <div class="catlegend">
+          <span><i style="background:var(--primary)"></i>Traduction 58 %</span>
+          <span><i style="background:var(--accent)"></i>Révision 19 %</span>
+          <span><i style="background:var(--info)"></i>Réunions 9 %</span>
+          <span><i style="background:var(--warn)"></i>Pauses 8 %</span>
+          <span><i style="background:var(--faint)"></i>Terminologie 6 %</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span> Maquette interactive · liste calme (option 1)</div>
+
+  <div class="topbar">
+    <div class="title-block">
+      <h1>Planning de traduction</h1>
+      <div class="weeklabel" id="weeklabel">Semaine du 19 au 25 juillet 2026</div>
+    </div>
+    <div class="controls">
+      <div class="segmented" role="group" aria-label="Vue">
+        <button data-view="jour" aria-pressed="false">Jour</button>
+        <button data-view="semaine" aria-pressed="true">Semaine</button>
+      </div>
+      <div class="navgroup">
+        <button class="iconbtn" id="prevweek" aria-label="Semaine précédente">‹</button>
+        <button class="ghostbtn">Aujourd'hui</button>
+        <button class="iconbtn" id="nextweek" aria-label="Semaine suivante">›</button>
+      </div>
+      <button class="ghostbtn" aria-label="Importer ou exporter">Importer / Exporter</button>
+    </div>
+  </div>
+
+  <div id="dayscroll">
+
+    <!-- Dimanche (non-work day hint, the week starts Sunday) -->
+    <section class="day offday" data-day="dimanche">
+      <div class="day-head">
+        <div class="day-id"><span class="name">dimanche 19 juill.</span></div>
+        <span class="offlabel">Jour non travaillé · début de la semaine</span>
+        <div class="addtask" style="margin-left:auto;padding:0">+ Ajouter</div>
+      </div>
+    </section>
+
+    <!-- Lundi -->
+    <section class="day" data-day="lundi">
+      <div class="day-head">
+        <div class="day-id"><span class="name">lundi 20 juill.</span></div>
+        <div class="cap">
+          <div class="meter"><div class="fill good" style="width:70%"></div><div class="buffer"></div></div>
+          <div class="cap-read tabnum"><b>5 h 15</b> planifié · 2 h 15 restant</div>
+          <span class="state good">à l'aise</span>
+        </div>
+      </div>
+      <div class="tasks">
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot accepte"></span>
+          <div class="who"><span class="client">Trad-Média</span> <span class="proj">· P-4821</span><div class="meta">Livraison 16:00</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">1 350</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">3 h 00</span></div>
+          <span class="chip trad">Traduction</span>
+          <span class="status accepte">Accepté</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot encours"></span>
+          <div class="who"><span class="client">Juri-Plus</span> <span class="proj">· P-4830</span><div class="meta">Livraison 12:00</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">800</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">1 h 45</span></div>
+          <span class="chip rev">Révision</span>
+          <span class="status encours">En cours</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot na"></span>
+          <div class="who"><span class="client">Réunion d'équipe</span><div class="meta">09:00 · retirée des heures effectives</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val">—</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">0 h 30</span></div>
+          <span class="chip">Réunion</span>
+          <span class="status na">N/A</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="addtask">+ Ajouter une tâche</div>
+    </section>
+
+    <!-- Mardi (today) -->
+    <section class="day today" data-day="mardi">
+      <div class="day-head">
+        <div class="day-id"><span class="name">mardi 21 juill.</span> <span class="todaypill">aujourd'hui</span></div>
+        <div class="cap">
+          <div class="meter"><div class="fill warn" style="width:96%"></div><div class="buffer"></div></div>
+          <div class="cap-read tabnum"><b>7 h 15</b> planifié · 0 h 15 restant</div>
+          <span class="state warn">dans la marge</span>
+        </div>
+      </div>
+      <div class="tasks">
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot encours"></span>
+          <div class="who"><span class="client">Santé Québec</span> <span class="proj">· P-4902</span><div class="meta">Livraison 17:00</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">2 100</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">4 h 40</span></div>
+          <span class="chip trad">Traduction</span>
+          <span class="status encours">En cours</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot accepte"></span>
+          <div class="who"><span class="client">Cabinet Lefebvre</span> <span class="proj">· P-4915</span><div class="meta">Livraison 14:00</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">950</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">2 h 05</span></div>
+          <span class="chip trad">Traduction</span>
+          <span class="status accepte">Accepté</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot na"></span>
+          <div class="who"><span class="client">Pause déjeuner</span><div class="meta">12:00 · retirée des heures effectives</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val">—</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">0 h 30</span></div>
+          <span class="chip">Pause</span>
+          <span class="status na">N/A</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="addtask">+ Ajouter une tâche</div>
+    </section>
+
+    <!-- Mercredi (overbooked, split slice) -->
+    <section class="day" data-day="mercredi">
+      <div class="day-head">
+        <div class="day-id"><span class="name">mercredi 22 juill.</span></div>
+        <div class="cap">
+          <div class="meter"><div class="fill bad" style="width:100%"></div><div class="buffer"></div></div>
+          <div class="cap-read tabnum"><b>8 h 35</b> planifié · <span style="color:var(--bad)">1 h 05 en trop</span></div>
+          <span class="state bad">surchargé</span>
+        </div>
+      </div>
+      <div class="tasks">
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot encours"></span>
+          <div class="who"><span class="client">Trad-Média</span> <span class="proj">· P-4821</span> <span class="split-tag">⇄ suite</span><div class="meta">1 400 mots ce jour · reste du projet porté d'hier</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">1 400</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">3 h 05</span></div>
+          <span class="chip trad">Traduction</span>
+          <span class="status encours">En cours</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot accepte"></span>
+          <div class="who"><span class="client">Éditions Nord</span> <span class="proj">· P-4880</span><div class="meta">Livraison 11:00</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">2 500</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">5 h 30</span></div>
+          <span class="chip trad">Traduction</span>
+          <span class="status accepte">Accepté</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="addtask">+ Ajouter une tâche</div>
+    </section>
+
+    <!-- Jeudi (expanded editor) -->
+    <section class="day" data-day="jeudi">
+      <div class="day-head">
+        <div class="day-id"><span class="name">jeudi 23 juill.</span></div>
+        <div class="cap">
+          <div class="meter"><div class="fill good" style="width:46%"></div><div class="buffer"></div></div>
+          <div class="cap-read tabnum"><b>3 h 25</b> planifié · 4 h 05 restant</div>
+          <span class="state good">à l'aise</span>
+        </div>
+      </div>
+      <div class="tasks">
+        <div class="row" draggable="true" aria-expanded="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot encours"></span>
+          <div class="who"><span class="client">Assurance Vitae</span> <span class="proj">· P-4931</span><div class="meta">Livraison 15:00 · ouverte pour édition</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">1 200</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">2 h 40</span></div>
+          <span class="chip trad">Traduction</span>
+          <span class="status encours">En cours</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+
+        <div class="editor">
+          <div>
+            <h4>Détails</h4>
+            <div class="field-row">
+              <div class="field"><label>Client</label><input value="Assurance Vitae"></div>
+              <div class="field"><label>Projet</label><input value="P-4931"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Catégorie</label>
+                <select><option>Traduction</option><option>Révision</option><option>Terminologie</option><option>Réunion</option><option>Pause</option><option>Administration</option></select>
+              </div>
+              <div class="field"><label>Quota (mots/h)</label><input class="tabnum" value="450"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Mots (total du projet)</label><input class="tabnum" value="1 200"></div>
+              <div class="field"><label>Livraison</label><input value="23/07/2026 15:00"></div>
+            </div>
+            <div class="field"><label>Consignes</label><textarea>Respecter le glossaire client. Ton formel, vouvoiement.</textarea></div>
+            <div class="toggle-line"><span>Exclure des statistiques</span><div class="switch"></div></div>
+          </div>
+          <div>
+            <h4>Récurrence</h4>
+            <div class="toggle-line" style="border-top:0;padding-top:0"><span>Tâche récurrente</span><div class="switch on"></div></div>
+            <div class="weekdays" style="margin:6px 0 14px">
+              <span class="wd on">L</span><span class="wd on">M</span><span class="wd on">M</span><span class="wd on">J</span><span class="wd on">V</span><span class="wd">S</span><span class="wd">D</span>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Début</label><input value="23/07/2026"></div>
+              <div class="field"><label>Fin</label><input placeholder="Toujours"></div>
+            </div>
+            <h4 style="margin-top:18px">Actions</h4>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn-soft"><svg><use href="#i-split"/></svg> Diviser sur un autre jour</button>
+              <button class="btn-soft"><svg><use href="#i-copy"/></svg> Copier</button>
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn-primary">Enregistrer</button>
+            <button class="btn-soft">Fermer</button>
+          </div>
+        </div>
+
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot na"></span>
+          <div class="who"><span class="client">Terminologie — glossaire client</span><div class="meta">retirée des heures effectives</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val">—</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">0 h 45</span></div>
+          <span class="chip">Terminologie</span>
+          <span class="status na">N/A</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="addtask">+ Ajouter une tâche</div>
+    </section>
+
+    <!-- Vendredi (light) -->
+    <section class="day" data-day="vendredi">
+      <div class="day-head">
+        <div class="day-id"><span class="name">vendredi 24 juill.</span></div>
+        <div class="cap">
+          <div class="meter"><div class="fill good" style="width:18%"></div><div class="buffer"></div></div>
+          <div class="cap-read tabnum"><b>1 h 20</b> planifié · 6 h 10 restant</div>
+          <span class="state good">à l'aise</span>
+        </div>
+      </div>
+      <div class="tasks">
+        <div class="row" draggable="true">
+          <span class="grip" aria-hidden="true"><svg><use href="#i-grip"/></svg></span>
+          <span class="sdot termine"></span>
+          <div class="who"><span class="client">Juri-Plus</span> <span class="proj">· P-4830</span><div class="meta">Révision finale · Livraison 10:00</div></div>
+          <div class="cell"><span class="lab">Mots</span><span class="val tabnum">600</span></div>
+          <div class="cell dur"><span class="lab">Durée</span><span class="val tabnum">1 h 20</span></div>
+          <span class="chip rev">Révision</span>
+          <span class="status termine">Terminé</span>
+          <div class="rowact">
+            <button class="actbtn" data-act="copy" title="Copier (⌘C)" aria-label="Copier"><svg><use href="#i-copy"/></svg></button>
+            <button class="actbtn" data-act="split" title="Diviser sur un autre jour" aria-label="Diviser"><svg><use href="#i-split"/></svg></button>
+            <button class="actbtn danger" data-act="delete" title="Supprimer (Suppr)" aria-label="Supprimer"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="addtask">+ Ajouter une tâche</div>
+    </section>
+
+    <!-- Samedi (non-work day hint) -->
+    <section class="day offday" data-day="samedi">
+      <div class="day-head">
+        <div class="day-id"><span class="name">samedi 25 juill.</span></div>
+        <span class="offlabel">Jour non travaillé · le travail reste possible et bonifie le quota de la semaine</span>
+        <div class="addtask" style="margin-left:auto;padding:0">+ Ajouter</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <h3>Comment lire cette maquette</h3>
+    <div class="items">
+      <div class="it"><span class="swatch" style="background:var(--good)"></span><div><b>Vert · à l'aise.</b> Il reste plus que la marge tampon dans la journée.</div></div>
+      <div class="it"><span class="swatch" style="background:var(--warn)"></span><div><b>Jaune · dans la marge.</b> Il ne reste que l'heure tampon gardée pour les urgences.</div></div>
+      <div class="it"><span class="swatch" style="background:var(--bad)"></span><div><b>Rouge · surchargé.</b> La journée dépasse les heures prévues. L'app le signale, sans jamais bloquer.</div></div>
+      <div class="it"><span class="swatch" style="background:var(--faint)"></span><div><b>N/A.</b> Tâches non comptabilisées (réunion, pause, terminologie). Leur temps est retiré des heures effectives.</div></div>
+      <div class="it"><span class="swatch" style="background:var(--accent)"></span><div><b>⇄ Suite.</b> Une tâche divisée sur plusieurs jours. Chaque jour garde ses mots réels.</div></div>
+      <div class="it"><span class="swatch" style="background:var(--primary)"></span><div><b>Quota.</b> Mots ÷ heures effectives (heures prévues moins temps non comptabilisé).</div></div>
+    </div>
+    <h3>Gestes et raccourcis</h3>
+    <div class="items">
+      <div class="it"><div><b>Glisser-déposer.</b> Attrape une tâche par la poignée et dépose-la sur un autre jour, ou sur <kbd>‹</kbd> / <kbd>›</kbd> pour la porter à la semaine précédente ou suivante.</div></div>
+      <div class="it"><div><b>Copier.</b> Bouton copier ou <kbd>⌘</kbd><kbd>C</kbd> en survolant une tâche.</div></div>
+      <div class="it"><div><b>Diviser.</b> Bouton diviser pour reporter le reste des mots sur un autre jour.</div></div>
+      <div class="it"><div><b>Supprimer.</b> Bouton corbeille ou <kbd>Suppr</kbd> en survolant une tâche.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+
+    // Light/dark toggle in the nav bar, mirroring AppColorModeToggle.
+    var cmBtn = document.getElementById("cmtoggle");
+    function effectiveTheme() {
+      var cur = root.getAttribute("data-theme");
+      if (cur) return cur;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function paintToggle() { cmBtn.setAttribute("data-mode", effectiveTheme()); }
+    paintToggle();
+    cmBtn.addEventListener("click", function () {
+      root.setAttribute("data-theme", effectiveTheme() === "dark" ? "light" : "dark");
+      paintToggle();
+    });
+
+    // Account popover.
+    var avBtn = document.getElementById("avatarbtn");
+    var pop = document.getElementById("acctpop");
+    avBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var willOpen = pop.hasAttribute("hidden");
+      if (willOpen) pop.removeAttribute("hidden"); else pop.setAttribute("hidden", "");
+      avBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    });
+    document.addEventListener("click", function (e) {
+      if (!pop.hasAttribute("hidden") && !pop.contains(e.target) && e.target !== avBtn) {
+        pop.setAttribute("hidden", ""); avBtn.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    // Collapsible stats: collapsed shows the quick line, expanded shows all.
+    var band = document.querySelector(".statsband");
+    var sh = document.getElementById("statshead");
+    sh.addEventListener("click", function () {
+      var open = sh.getAttribute("aria-expanded") === "true";
+      sh.setAttribute("aria-expanded", open ? "false" : "true");
+      band.setAttribute("data-open", open ? "false" : "true");
+    });
+
+    // View switcher (day / week).
+    var days = document.getElementById("dayscroll");
+    var allDays = Array.prototype.slice.call(days.querySelectorAll(".day"));
+    var viewButtons = document.querySelectorAll(".segmented button");
+    viewButtons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        viewButtons.forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+        b.setAttribute("aria-pressed", "true");
+        var jour = b.getAttribute("data-view") === "jour";
+        allDays.forEach(function (d) { d.classList.toggle("hidden", jour && !d.classList.contains("today")); });
+      });
+    });
+
+    // Toast helper.
+    var toastEl = document.getElementById("toast");
+    var toastTimer = null;
+    function toast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2200);
+    }
+
+    // Row expand (the jeudi row ships pre-open as a sample).
+    days.addEventListener("click", function (e) {
+      var actBtn = e.target.closest(".actbtn");
+      if (actBtn) {
+        e.stopPropagation();
+        var r = actBtn.closest(".row");
+        var act = actBtn.getAttribute("data-act");
+        if (act === "delete") { r.remove(); toast("Tâche supprimée"); }
+        else if (act === "copy") { var c = r.cloneNode(true); r.after(c); toast("Tâche copiée"); }
+        else if (act === "split") { toast("Diviser sur un autre jour…"); }
+        return;
+      }
+      var row = e.target.closest(".row");
+      if (row && row.getAttribute("aria-expanded") === "true") {
+        var ed = row.parentElement.querySelector(".editor");
+        if (ed) {
+          ed.classList.toggle("hidden");
+          row.setAttribute("aria-expanded", ed.classList.contains("hidden") ? "false" : "true");
+        }
+      }
+    });
+
+    // Drag and drop: move a task to another day, or onto the week arrows to transfer weeks.
+    var dragged = null;
+    function clearDrop() { document.querySelectorAll(".dropok").forEach(function (n) { n.classList.remove("dropok"); }); }
+
+    days.addEventListener("dragstart", function (e) {
+      var r = e.target.closest(".row");
+      if (!r) return;
+      dragged = r; r.classList.add("dragging");
+      if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "task"); }
+    });
+    days.addEventListener("dragend", function () {
+      if (dragged) dragged.classList.remove("dragging");
+      dragged = null; clearDrop();
+    });
+
+    allDays.forEach(function (day) {
+      day.addEventListener("dragover", function (e) { if (!dragged) return; e.preventDefault(); day.classList.add("dropok"); });
+      day.addEventListener("dragleave", function (e) { if (!day.contains(e.relatedTarget)) day.classList.remove("dropok"); });
+      day.addEventListener("drop", function (e) {
+        if (!dragged) return;
+        e.preventDefault(); day.classList.remove("dropok");
+        var list = day.querySelector(".tasks");
+        if (!list) { list = document.createElement("div"); list.className = "tasks"; day.appendChild(list); }
+        list.appendChild(dragged);
+        toast("Tâche déplacée vers " + day.querySelector(".name").textContent.trim());
+      });
+    });
+
+    ["prevweek", "nextweek"].forEach(function (id) {
+      var btn = document.getElementById(id);
+      btn.addEventListener("dragover", function (e) { if (!dragged) return; e.preventDefault(); btn.classList.add("dropok"); });
+      btn.addEventListener("dragleave", function () { btn.classList.remove("dropok"); });
+      btn.addEventListener("drop", function (e) {
+        if (!dragged) return;
+        e.preventDefault(); btn.classList.remove("dropok");
+        dragged.remove();
+        toast("Tâche portée à la semaine " + (id === "prevweek" ? "précédente" : "suivante"));
+      });
+    });
+
+    // Keyboard: Suppr deletes, Cmd/Ctrl+C copies, on the hovered task.
+    var hovered = null;
+    days.addEventListener("mouseover", function (e) { var r = e.target.closest(".row"); if (r) hovered = r; });
+    document.addEventListener("keydown", function (e) {
+      if (!hovered || !hovered.isConnected) return;
+      if (e.key === "Delete") { hovered.remove(); toast("Tâche supprimée"); hovered = null; }
+      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        var c = hovered.cloneNode(true); hovered.after(c); toast("Tâche copiée");
+      }
+    });
+  })();
+</script>
+
+</body></html>
