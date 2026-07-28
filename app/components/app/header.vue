@@ -33,6 +33,23 @@ const username = computed(() => accountName(me.value?.firstName, me.value?.lastN
 // Build initials from the first and last name for the avatar fallback.
 const initials = computed(() => accountInitials(me.value?.firstName, me.value?.lastName))
 
+// Whether the identity block tags the name as an admin. It reads the same role from the same
+// me-query the Manage users row is gated on, so the tag and that row can never disagree.
+const showAdminTag = computed(() => isAdmin(me.value?.role))
+
+// The visible name in the identity block, abbreviated only as far as it must be to share the line
+// with the tag. The space the tag needs is reserved as its own character count, so the reservation
+// follows the copy rather than a number that would silently go stale if the tag were reworded. The
+// full name stays in `username`, which still feeds the trigger's accessible name and the hover
+// title, so shortening what is drawn never costs the name a screen reader or a curious pointer gets.
+const displayName = computed(() =>
+  fitAccountName(
+    me.value?.firstName,
+    me.value?.lastName,
+    ACCOUNT_NAME_MAX_CHARS - (showAdminTag.value ? t('header.adminTag').length : 0)
+  )
+)
+
 // The greeting depends on the visitor's local hour, which the server cannot know,
 // so deriving it during SSR mismatches on hydration. It is gated on mount and stays
 // empty until then, then reacts to the name and the locale like any other computed.
@@ -162,9 +179,24 @@ const items = computed<MenuItem[][]>(() => {
             <div class="flex w-full flex-col items-center gap-2 px-2 py-3 text-center">
               <AppAccountAvatar class="size-14 text-lg" :initials="initials" :src="me?.avatarUrl" />
               <div class="flex w-full min-w-0 flex-col items-center">
-                <span v-if="username" class="w-full truncate text-sm font-medium text-highlighted">
-                  {{ username }}
-                </span>
+                <!-- The name row. The `(Admin)` tag sits beside the name for an admin and is absent
+                     from the DOM for everyone else, matching how the Manage users row is gated. The
+                     name keeps the truncation and the tag refuses to shrink, so a long name is cut
+                     rather than squeezing the tag out of the popover. -->
+                <div
+                  v-if="username"
+                  class="flex w-full min-w-0 items-baseline justify-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 truncate text-sm font-medium text-highlighted"
+                    :title="username"
+                  >
+                    {{ displayName }}
+                  </span>
+                  <span v-if="showAdminTag" class="shrink-0 text-xs text-muted">
+                    {{ t('header.adminTag') }}
+                  </span>
+                </div>
                 <span class="w-full truncate text-xs text-muted">{{ me?.email }}</span>
               </div>
             </div>

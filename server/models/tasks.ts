@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import type { StatusKey } from '#shared/planning'
+
 // The list endpoint is reused by the month and year views later, so the cap is generous rather
 // than tight. 366 days admits a full leap year and bounds the scan so a malformed or hostile
 // query can never ask for an unbounded range. A wider span is a 422.
@@ -68,7 +70,7 @@ export type TaskListQuery = z.infer<typeof TaskListQuerySchema>
 // The stored task fields the read-only planning row needs, in the order the spec lists them. There
 // is no project-manager field because PLAN-01 never added that column. The two lifecycle instants
 // (createdAt, updatedAt) are deliberately not returned; they are not row data. Nullability mirrors
-// the tasks table exactly.
+// the tasks table exactly, with one derived field at the end that no column backs.
 export type TaskListItem = {
   id: string
   date: string
@@ -86,4 +88,9 @@ export type TaskListItem = {
   instructions: string | null
   splitGroupId: string | null
   sortOrder: number
+  // Derived, not stored. The resolved status the row draws, including the 'retard' pseudo-status the
+  // list query decides for a task that is not finished and whose delivery deadline has passed. It is
+  // computed server-side because it depends on the current instant in the user's timezone, so the
+  // client is handed the verdict instead of recomputing it. Mirrors PlanningTask in shared/planning.ts.
+  statusKey: StatusKey
 }

@@ -22,7 +22,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="space-y-3.5">
+  <div class="space-y-[clamp(1rem,2vh,1.25rem)]">
     <PlanningDayCard
       v-for="day in days"
       :key="day.date"

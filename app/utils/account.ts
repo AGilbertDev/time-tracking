@@ -27,6 +27,59 @@ export function isAdmin(role?: string | null): boolean {
   return role === 'admin'
 }
 
+// How many characters of name the identity block fits on one line. The popover content is 16rem
+// (w-64, 256px) less the block's own 8px of padding either side, so about 240px, and a name is
+// text-sm, where an average character advances roughly 7px. That is a deliberately rough budget
+// rather than a measurement: a long name is a rare case, and a character count is pure, correct
+// during SSR, and needs no layout read, where measuring would flash the full name before shrinking
+// it. The `truncate` class stays on the name as the final safety net for a name that defeats even
+// the shortest form.
+export const ACCOUNT_NAME_MAX_CHARS = 32
+
+// One name segment reduced to its initial and a period. Returns an empty string for an empty
+// segment so a stray separator cannot produce a lone period.
+function initialOf(segment: string): string {
+  const first = Array.from(segment)[0]
+  return first ? `${first.toLocaleUpperCase()}.` : ''
+}
+
+// One name part (a whole first name or a whole last name) abbreviated to initials, keeping whatever
+// joined its segments, which is how a compound name is abbreviated in French: Marie-Hélène becomes
+// M.-H. and Jean Paul becomes J. P. Splitting on a capturing group leaves the separators at the odd
+// indices, so they survive the rebuild instead of being guessed at.
+function abbreviatePart(part: string): string {
+  return part
+    .trim()
+    .split(/([-\s]+)/)
+    .map((chunk, index) => (index % 2 === 0 ? initialOf(chunk) : chunk.replace(/\s+/g, ' ')))
+    .join('')
+}
+
+// The display name for the identity block, shortened only as far as it has to be to fit `maxChars`.
+// It steps down through three forms and returns the first that fits: the full name, then the first
+// name reduced to initials (`A. Gilbert`, `M.-H. Cochet`), then both names reduced (`A.-B. C.-D.`).
+// A name with only one part is never reduced, because an initial with nothing beside it identifies
+// no one; it keeps its full form and lets truncation handle it. The shortest form is returned even
+// when it still exceeds the budget, so the function always yields the most readable name available
+// rather than failing.
+export function fitAccountName(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  maxChars: number
+): string {
+  const first = firstName?.trim() ?? ''
+  const last = lastName?.trim() ?? ''
+
+  const full = accountName(first, last)
+  if (full.length <= maxChars) return full
+  if (!first || !last) return full
+
+  const firstAbbreviated = `${abbreviatePart(first)} ${last}`
+  if (firstAbbreviated.length <= maxChars) return firstAbbreviated
+
+  return `${abbreviatePart(first)} ${abbreviatePart(last)}`
+}
+
 // The trigger button's accessible name. The display name is friendliest, but it is
 // empty before onboarding, so the label falls back to the email and finally to a
 // static account label so the button always has an accessible name.
