@@ -35,3 +35,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | 10  | 2026-07-20 | Week with task rows | yes | yes             | [spec](specs/planning/week-with-task-rows.md) | [#16](https://github.com/AGilbertDev/time-tracking/pull/16) |
 | 11  | 2026-07-20 | Finish the read-only week | yes | yes             | [spec](specs/planning/read-only-week-capacity-and-nav.md) | [#17](https://github.com/AGilbertDev/time-tracking/pull/17) |
 | 12  | 2026-07-28 | Lighten the planning week | yes | no              | [spec](specs/planning/alleger-la-semaine.md) | [#18](https://github.com/AGilbertDev/time-tracking/pull/18) |
+| 13  | 2026-07-28 | Progressive disclosure for the planning week | yes | no              | [spec](specs/planning/extend-tasks.md), [design](specs/planning/extend-tasks-design.md) | [#19](https://github.com/AGilbertDev/time-tracking/pull/19) |
