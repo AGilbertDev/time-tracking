@@ -38,6 +38,26 @@ quota_wph(period) = words_translated(period) / (effective_minutes(period) / 60)
 
 Confirmed with the primary user. The employer uses this availability quota, words over scheduled hours minus non-trackable time. This replaces the old "group by project, take max words" algorithm.
 
+### One quota per category, not one quota for everything
+
+Decided 2026-07-28. Translation and revision are not the same work and do not run at the same speed, so a single global words-per-hour number cannot describe both. The quota becomes a property of the category rather than a single user setting, and the stats report a row per category rather than one blended figure.
+
+The trackable set grows past the two we shipped. The direction is translation, internal revision, external revision, and proofreading, with the user able to add her own on top and each carrying its own default quota. `PLAN-30` already lets her create categories, so this makes the quota one more field on a category she owns rather than a new mechanism.
+
+**The category names are not settled and must not be guessed.** These are the terms her employer uses, and the Canadian industry draws real distinctions here. Bilingual revision checks a translation against its source, unilingual revision works on the target alone, and proofreading is the final accuracy pass, and the three are separate billable services rather than loose synonyms ([oxo innovation](https://oxoinnovation.com/fr/blog/la-difference-entre-la-revision-bilingue-la-revision-unilingue-et-la-correction-depreuves/), [ITC Traductions Canada](https://www.itctraductionscanada.ca/service-relecture-revision/), [HEC Montréal](https://www.hec.ca/biblio/services/traduction-revision.html)). Whether her employer splits internal against external, or bilingual against unilingual, is a question for her. Confirm the list and the FR copy with her before any of it is built.
+
+There is also no industry benchmark to fall back on for the defaults. Translation measures around 500 words per hour with a wide spread, but revision speed has largely been overlooked, published figures range from under 200 to over 2000 words per hour, and practitioners openly dispute them. So every default quota comes from her employer's actual numbers, never from a researched average.
+
+**The open problem is what a per-category quota does to the availability metric.** The denominator is one pool of scheduled time minus non-trackable time, and idle time sits in that pool without belonging to any category. So the availability quota cannot simply be computed four times. Three ways out, in order of preference.
+
+- **Normalised attainment.** Give each trackable task an expected duration from its own category quota, sum the expected minutes across every trackable task whatever its category, and compare that total to the available minutes. One number, comparable across any mix of work, and it reduces to today's raw words-per-hour when every category shares a quota. Per-category words per hour then becomes a breakdown beneath the headline rather than the headline itself.
+- **Per-category throughput.** Report words over the time actually spent in that category. This is a real and useful number, but it is the CAT-tool metric this project deliberately moved away from, and it answers a different question than the employer asks.
+- **Splitting the available pool between categories.** Rejected. Any rule for attributing idle time to one category over another would be invented rather than measured.
+
+Confirm with her whether the employer itself reports separate quotas per work type, or whether one availability number covers everything and the split is for her own insight. The answer decides whether attainment is the headline or a convenience.
+
+**What this touches.** `PLAN-02` (the category contract gains a quota and the default set grows), `PLAN-22` (the engine computes per category and needs the attainment decision above), `PLAN-23` (a row per category), `PLAN-30` (a created category carries a quota), and the settings page (the single default quota becomes one per category). `quota_wph_override` on a task already exists and stays, as the per-task exception to its category's default. None of this is built yet and it may split across several features.
+
 ### History must stay correct when settings change
 
 A period's quota is computed only from facts stored on that period's days. Editing today can never reach backward. The one danger is a mutable setting silently rewriting the past, and the quota denominator reads the **work-hours setting**, so that setting is versioned by date (`PLAN-03`).
@@ -82,10 +102,10 @@ Add, inline expand-to-edit with click-outside to collapse, delete, status cycle 
 
 None of these block the build now.
 
-1. Resolved. The employer's quota is words divided by total scheduled work hours minus non-trackable time, the availability quota locked above. Worth a later check on whether revision counts words exactly like translation, but it does not block.
+1. Resolved, then extended. The employer's quota is words divided by total scheduled work hours minus non-trackable time, the availability quota locked above. The later check on whether revision counts like translation has now been answered, and it does not, so the quota is per category (see [one quota per category](#one-quota-per-category-not-one-quota-for-everything)). What stays open there is how a per-category quota folds back into a single availability number, and confirming the category list and its defaults with the primary user.
 2. Resolved. A multi-day task is per-day slices created by the split action. Day, week, and month are viewing granularities, every slice sits on one date.
 3. Resolved. Overtime and non-work-day work are a boost. Words raise the numerator over the fixed scheduled denominator, so the quota rises. A non-work day has no standalone day quota but lifts the week, month, and year.
-4. Resolved for now. Six default categories, translation and revision trackable, terminology, meetings, breaks, and admin not. The user can add their own. FR copy still to be verified.
+4. Reopened. Six default categories shipped in `PLAN-02`, translation and revision trackable, terminology, meetings, breaks, and admin not. The trackable half is now growing, with internal revision, external revision, and proofreading under discussion, and each trackable category carrying its own quota. The list, the FR copy, and the default quotas all need confirming with the primary user, since they are her employer's terms and her employer's numbers.
 5. **Status vocabulary.** Keep `Accepté` / `En cours` / `Terminé`, plus `N/A` for non-trackable tasks. Confirm the three trackable names with the user.
 6. **Row layout.** Settle on the mockup. Direction is a calm, breathable list, see [views and layout](#views-and-layout-direction).
 7. Resolved. Buffer defaults to 60 min and is editable per user on the settings page.
@@ -237,11 +257,13 @@ Depends on PLAN-20. Frontend plus backend.
 **PLAN-22 — Quota calc engine**
 Depends on PLAN-02, PLAN-03, PLAN-18. Shared plus backend, pure functions.
 - Implements the availability quota for day, week, month, and year, history-safe, reading versioned scheduled minutes and per-day `words_done`.
+- **Now also per category.** Each trackable category carries its own quota, so this engine reports a figure per category and must settle how those fold into one headline. Normalised attainment is the recommended shape. Read [one quota per category](#one-quota-per-category-not-one-quota-for-everything) before speccing this, and note that a per-category quota is a mutable setting reaching a past period, so it needs the same effective-dated treatment `PLAN-03` gave the work schedule.
 - AC1. Unit tests cover day, week, month, and year with fixtures. AC2. Non-trackable time is excluded from effective hours and contributes no words. AC3. Split `words_done` is attributed per day. AC4. Zero effective minutes does not divide by zero. AC5. A past-day edit restates that period and never touches other periods. AC6. Overtime raises the quota over a fixed scheduled denominator, and non-work-day words lift the week, month, and year while the day itself has no quota. AC7. A running quota is available from the effective minutes elapsed so far.
 
 **PLAN-23 — Stats bar UI**
 Depends on PLAN-22. Frontend.
 - A collapsible bar with a card per period showing the corrected quota, words completed, and effective time, plus today's running quota.
+- **A row per trackable category**, not one blended figure, per [one quota per category](#one-quota-per-category-not-one-quota-for-everything). The category set is user-extensible, so the layout takes an unknown number of rows rather than a fixed few.
 - AC1. Cards show day, week, month, and year for the period in view. AC2. Numbers match the engine. AC3. The running quota for today updates as the day progresses. AC4. Collapsible, copy is i18n and FR verified.
 
 **PLAN-24 — Performance history and export**
@@ -251,8 +273,10 @@ Depends on PLAN-22. Frontend plus backend.
 
 **PLAN-30 — Custom categories**
 Depends on PLAN-02. Frontend plus backend. Owned with the settings page.
-- The user creates, renames, and retires their own categories on top of the six defaults, each with a `trackable` flag.
-- AC1. A created category is usable on tasks and persists. AC2. Its `trackable` flag flows into the quota engine and the effective-hours math. AC3. Retiring a category keeps historical tasks intact.
+- The user creates, renames, and retires their own categories on top of the defaults. Creating one sets its name, whether it is **trackable**, its **quota** when it is trackable, and its **colour**.
+- **A quota belongs only to a trackable category.** A non-trackable category produces no words, so a words-per-hour figure on it would describe nothing. The form asks for a quota only once the category is marked trackable, and a non-trackable category stores none rather than storing an unused number that later reads as real.
+- AC1. A created category is usable on tasks and persists. AC2. Its `trackable` flag flows into the quota engine and the effective-hours math. AC3. Retiring a category keeps historical tasks intact. AC4. A trackable category carries a quota the engine reads, and a non-trackable one carries none. AC5. A category carries a colour, which the task row and every category selector read from the one shared mapping, so the palette has to extend to a category that did not exist when it was designed.
+- AC6. **Editing a category never restates a past period.** Both the quota and the `trackable` flag feed the stats, so changing either one reaches backward. Flipping a category from trackable to non-trackable is the sharper case, since it moves every historical task in that category from the numerator to the subtracted time and rewrites every period it touched. Both fields need the effective-dated treatment `PLAN-03` gave the work schedule, so a past day resolves the values in force on that day. This is the same "history must stay correct when settings change" rule, and it is the reason a category is versioned rather than simply edited in place.
 
 **PLAN-31 — Time distribution charts**
 Depends on PLAN-22, PLAN-30. Frontend.
