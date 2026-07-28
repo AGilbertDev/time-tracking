@@ -1,0 +1,34 @@
+-- Add the exclude_from_stats column to tasks.
+--
+-- The original app has a per-task toggle that takes a task out of the quota, and
+-- the primary user relies on it. This adds the storage for it. The flag is read
+-- by the planning row now (as a marker) and by the quota engine later (PLAN-22),
+-- where a flagged task contributes no words to the numerator and still has its
+-- duration removed from effective hours, exactly as a non-trackable task does.
+--
+-- SQLite has no boolean type, so the column is an integer holding 0 or 1, which
+-- is the Drizzle mode 'boolean' representation this repo already uses for
+-- magic_link_tokens.used. It is NOT NULL with a constant DEFAULT 0, so every
+-- existing row reads as not excluded and no backfill is needed. SQLite rejects a
+-- non-constant DEFAULT on ALTER TABLE ADD COLUMN, which is why the default is a
+-- literal, and this is exactly the 0003 pattern.
+--
+-- Expand-then-contract note. This is the expand half. It ships and is applied
+-- before 0007 drops the instructions column, so every intermediate state is
+-- valid. Old code with this column present is fine, because it never selects it.
+--
+-- This add matches how 0000 through 0005 are authored in this project, as plain
+-- statement-broken SQL applied by hand rather than by a snapshot-diffing runner,
+-- because the project keeps no drizzle-kit meta snapshot directory.
+--
+-- Idempotency note. SQLite does not support IF NOT EXISTS on ALTER TABLE ADD
+-- COLUMN, so this statement is applied through a runner that tolerates the benign
+-- duplicate column name error and continues, which makes a re-run safe.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso
+-- database, matching 0000 through 0005. It must not be pointed at a live database
+-- by CI, a deploy hook, or a dev-boot migration runner. There are no database
+-- credentials in this environment.
+
+ALTER TABLE `tasks` ADD `exclude_from_stats` integer DEFAULT 0 NOT NULL;

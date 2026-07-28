@@ -190,15 +190,24 @@
     "weekPrefix": "Week of",
     "weekSeparator": "to",
     "today": "today",
-    "words": "Words",
-    "duration": "Time",
     "emDash": "—",
-    "deliveryMeta": "Delivery {time}",
+    "notApplicable": "Not applicable",
+    "notSet": "Not set",
+    "taskCount": "{count} task | {count} tasks",
     "splitTag": "⇄ continued",
     "splitTagLabel": "Continuation of a task split across several days",
-    "splitMeta": "{count} words this day · rest of the project carried from yesterday",
+    "excluded": "excluded",
+    "excludedLabel": "Excluded from the quota calculation",
     "loadError": "The week could not be loaded.",
     "retry": "Try again",
+    "columns": {
+      "task": "Task",
+      "delivery": "Delivery",
+      "words": "Words",
+      "duration": "Time",
+      "status": "Status",
+      "category": "Category"
+    },
     "capacity": {
       "planned": "{value} planned",
       "remaining": "{value} remaining",
@@ -232,6 +241,20 @@
       "October",
       "November",
       "December"
+    ],
+    "monthsShort": [
+      "Jan.",
+      "Feb.",
+      "Mar.",
+      "Apr.",
+      "May",
+      "Jun.",
+      "Jul.",
+      "Aug.",
+      "Sep.",
+      "Oct.",
+      "Nov.",
+      "Dec."
     ]
   },
   "header": {

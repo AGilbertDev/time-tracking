@@ -139,7 +139,7 @@ Ordered for the smallest shippable increments first. Each phase leaves the app i
 
 **PLAN-01 — Tasks schema and migration**
 Depends on nothing. Backend only.
-- New `tasks` table keyed to `users.id`, with `date`, `client`, `project`, `category`, `delivery_date`, `delivery_time`, `project_word_count`, `words_done`, `quota_wph_override` (nullable), `estimated_minutes`, `actual_minutes`, `status`, `instructions`, recurrence fields, a `split_group_id`, a `sort_order`, and timestamps.
+- New `tasks` table keyed to `users.id`, with `date`, `client`, `project`, `category`, `delivery_date`, `delivery_time`, `project_word_count`, `words_done`, `quota_wph_override` (nullable), `estimated_minutes`, `actual_minutes`, `status`, `exclude_from_stats`, a `split_group_id`, a `sort_order`, and timestamps. The live column list is in [tasks-schema.md](tasks-schema.md). `instructions` shipped here and was dropped again in migration `0007`, and recurrence columns were never added, since `PLAN-19` owns that model.
 - AC1. `bunx drizzle-kit push` applies cleanly and the columns exist with the right types.
 - AC2. A foreign key ties every task to a user, and an index covers `(user_id, date)`.
 - AC3. Deleting a user cascades or is handled deliberately (decide in the spec).
@@ -172,7 +172,8 @@ Depends on PLAN-03, PLAN-04. Frontend.
 
 **PLAN-06 — Compact task row (read-only)**
 Depends on PLAN-04, PLAN-02. Frontend.
-- The redesigned compact row shows the essential fields only, PM excluded, one line at rest, with the status badge coloured per status (or `N/A` for non-trackable). Field set finalized on the mockup (open question 6).
+- The redesigned compact row shows the essential fields only, PM excluded, one line at rest, with the status badge coloured per status (or `N/A` for non-trackable).
+- **The field set is settled in [extend-tasks.md](extend-tasks.md), which supersedes the "finalized on the mockup" line this bullet used to carry.** That spec also gives the week a second layer of disclosure, since day cards now start collapsed except today, and it moves the category from a printed word to a colour on the row edge.
 - AC1. Only the agreed compact fields render. AC2. Status colour is correct per status, `N/A` for non-trackable. AC3. All copy is i18n, FR verified.
 
 **PLAN-07 — Week view stack**
@@ -200,7 +201,7 @@ Depends on PLAN-09, PLAN-06. Frontend.
 **PLAN-11 — Inline expand-to-edit form**
 Depends on PLAN-10. Frontend.
 - Clicking a row expands it to the full editor with the secondary fields, and clicking outside collapses it.
-- AC1. Expansion shows category, quota override, instructions, and the recurrence and split controls as they land. AC2. Click-outside collapses and does not lose unsaved intent unexpectedly. AC3. Only one row expanded at a time (confirm).
+- AC1. Expansion shows every field the at-rest row does not, and [extend-tasks.md](extend-tasks.md) hands over the settled list in its "Handoff to PLAN-11" section rather than leaving it to be re-decided here. `instructions` is not on it: the column was dropped in migration `0007` and the `Consignes` field it backed was dropped from the product. AC2. Click-outside collapses and does not lose unsaved intent unexpectedly. AC3. Only one row expanded at a time (confirm).
 
 **PLAN-12 — Estimated duration auto-calc and actual auto-sync**
 Depends on PLAN-11. Frontend plus shared.

@@ -140,18 +140,18 @@ Only the day header is interactive.**
 Five labelled data fields, one field carried by colour, two conditional markers, and two
 structural affordances.
 
-| At-rest field | Why it earns its place |
-| --- | --- |
-| **Client and project number** | Who the work is for. Without it a row is unidentifiable. They read as one identity, so they are one field, not two. |
-| **Livraison, date and time** | When it is due. The most-missed fact today, and the only thing that makes a week plannable. Date and time are one deadline, so they are one field. |
-| **Mots, done over the project total** | How big it is and how much is left. One progress pair, which is what the original app's single total could never answer. |
-| **Durée, the effective duration** | How long it takes, and it is the number that sums to the capacity bar printed above it. |
-| **Statut** | Where it stands. |
+| At-rest field                                                          | Why it earns its place                                                                                                                                                                                                            |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Client and project number**                                          | Who the work is for. Without it a row is unidentifiable. They read as one identity, so they are one field, not two.                                                                                                               |
+| **Livraison, date and time**                                           | When it is due. The most-missed fact today, and the only thing that makes a week plannable. Date and time are one deadline, so they are one field.                                                                                |
+| **Mots, done over the project total**                                  | How big it is and how much is left. One progress pair, which is what the original app's single total could never answer.                                                                                                          |
+| **Durée, the effective duration**                                      | How long it takes, and it is the number that sums to the capacity bar printed above it.                                                                                                                                           |
+| **Statut**                                                             | Where it stands.                                                                                                                                                                                                                  |
 | **Catégorie, carried by colour on the row edge rather than by a word** | Traduction and Révision are different work at different speeds, so which one a row is changes how its numbers read. The owner's call is that a colour answers this faster than a word and costs no width. See the decision below. |
-| **Exclusion marker** (only on an excluded trackable task) | Without it the day's visible words cannot be reconciled with the quota, and a number you cannot explain is worse than a number you cannot see. |
-| **Split continuation marker** (only on a later slice) | Tells her this row is one slice of a multi-day task, so its partial word count reads as intended rather than as a shortfall. |
-| **Drag affordance** (structural) | The only signal that rows reorder. `PLAN-15` needs the slot in place. |
-| **Row action slot** (structural) | Copy and delete appear here on hover in `PLAN-17` and `PLAN-13`. Reserved and empty now. |
+| **Exclusion marker** (only on an excluded trackable task)              | Without it the day's visible words cannot be reconciled with the quota, and a number you cannot explain is worse than a number you cannot see.                                                                                    |
+| **Split continuation marker** (only on a later slice)                  | Tells her this row is one slice of a multi-day task, so its partial word count reads as intended rather than as a shortfall.                                                                                                      |
+| **Drag affordance** (structural)                                       | The only signal that rows reorder. `PLAN-15` needs the slot in place.                                                                                                                                                             |
+| **Row action slot** (structural)                                       | Copy and delete appear here on hover in `PLAN-17` and `PLAN-13`. Reserved and empty now.                                                                                                                                          |
 
 Field-level rules that are part of the contract rather than the layout:
 
@@ -172,10 +172,10 @@ Field-level rules that are part of the contract rather than the layout:
 ### Category becomes colour, 2026-07-28
 
 The category was a labelled text field in the previous draft and was the open question the owner
-answered. Their words: *"you may collapse category if you use color coding to show the type of
-task at a glance"*, refined to *"you may use a small left and right border color on categoried
+answered. Their words: _"you may collapse category if you use color coding to show the type of
+task at a glance"_, refined to _"you may use a small left and right border color on categoried
 tasks or something similar to tell from a glance that the next task is translation without
-opening it"*.
+opening it"_.
 
 So the category stops printing a word and becomes a colour signal on the row itself. The width it
 frees goes to the task name, per D3. The intent is scanning **inside an open day**, so she can see
@@ -278,22 +278,22 @@ rest". So expansion is the edit form, not a read-only detail view, which puts it
 complete, justified field list so that feature inherits a settled contract instead of
 re-deciding one.
 
-| Editor field | Why it lives there rather than at rest |
-| --- | --- |
-| Client | Identity, editable. Read at rest, corrected here. |
-| Numéro de projet | Identity, editable. Shared across the slices of a split group. |
-| Catégorie | Decides `trackable`, which decides whether the task's words count at all. Read at rest as an edge colour, named and changed here. Two requirements come with it, both the owner's and neither built here. **The selector shows each category in its own row colour**, *"Categories in the selector should also show those colors to associate row color to categories"*, so the association is learnable rather than memorised. And the colour updates live as the field changes, *"switching category also change the color"*, rather than only after a save. Both read the one shared category-to-colour mapping described under "Category becomes colour", never a second copy. |
-| Livraison, date | One of the two inputs behind the single at-rest deadline. |
-| Livraison, heure | The other. Separate inputs because a deadline can have a day and no hour. |
-| Mots du projet | The planning total. It drives the frozen estimate in `PLAN-12`, so it must be correctable. |
-| Mots faits | The quota numerator and the single most important stored number in the app. |
-| **Durée estimée** | The plan, frozen from `words / quota` by `PLAN-12`. Folded into the at-rest duration, corrected here. |
-| **Durée réelle** | The record. It moves the quota denominator on non-trackable and excluded tasks and it drives the capacity meter. Must stay genuinely nullable, see the caution below. |
-| Quota (mots/h) | The existing `quota_wph_override`. Null means the user's default. Rare enough that it never belongs on a row. |
-| **Exclure des stats** | The toggle this feature adds storage for. The at-rest marker is its read-only face. |
-| Statut | Editable here, and also cyclable straight from the row in `PLAN-14`. |
-| Répartir sur plusieurs jours | `PLAN-18`. An action, not a field, but it lives in the same panel. |
-| Récurrence | `PLAN-19`, `PLAN-20`, `PLAN-21`. Its own model and its own edit-scope rules. |
+| Editor field                 | Why it lives there rather than at rest                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client                       | Identity, editable. Read at rest, corrected here.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Numéro de projet             | Identity, editable. Shared across the slices of a split group.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Catégorie                    | Decides `trackable`, which decides whether the task's words count at all. Read at rest as an edge colour, named and changed here. Two requirements come with it, both the owner's and neither built here. **The selector shows each category in its own row colour**, _"Categories in the selector should also show those colors to associate row color to categories"_, so the association is learnable rather than memorised. And the colour updates live as the field changes, _"switching category also change the color"_, rather than only after a save. Both read the one shared category-to-colour mapping described under "Category becomes colour", never a second copy. |
+| Livraison, date              | One of the two inputs behind the single at-rest deadline.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Livraison, heure             | The other. Separate inputs because a deadline can have a day and no hour.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Mots du projet               | The planning total. It drives the frozen estimate in `PLAN-12`, so it must be correctable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Mots faits                   | The quota numerator and the single most important stored number in the app.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Durée estimée**            | The plan, frozen from `words / quota` by `PLAN-12`. Folded into the at-rest duration, corrected here.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Durée réelle**             | The record. It moves the quota denominator on non-trackable and excluded tasks and it drives the capacity meter. Must stay genuinely nullable, see the caution below.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Quota (mots/h)               | The existing `quota_wph_override`. Null means the user's default. Rare enough that it never belongs on a row.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Exclure des stats**        | The toggle this feature adds storage for. The at-rest marker is its read-only face.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Statut                       | Editable here, and also cyclable straight from the row in `PLAN-14`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Répartir sur plusieurs jours | `PLAN-18`. An action, not a field, but it lives in the same panel.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Récurrence                   | `PLAN-19`, `PLAN-20`, `PLAN-21`. Its own model and its own edit-scope rules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 Two of the original app's expanded fields are deliberately not on that list. `Gestionnaire de
 projet` is dropped, and `Consignes` is dropped with the `instructions` column.
@@ -302,23 +302,23 @@ projet` is dropped, and `Consignes` is dropped with the `instructions` column.
 
 From the screenshots the owner supplied, so nothing is silently lost.
 
-| Original field | Where it lands |
-| --- | --- |
-| Client | At rest, in the identity field. |
-| Numéro de projet | At rest, in the identity field. Editor. |
-| Livraison (date) | At rest, in the deadline field. Editor. |
-| Heure | At rest, merged into the deadline field. Editor. |
-| Mots (total du projet) | At rest, as the second half of the words pair. Editor. |
-| Durée estimée | Editor. Folded into the at-rest duration. |
-| Durée réelle | Editor. Folded into the at-rest duration. |
-| Statut | At rest. Editor, and `PLAN-14`. |
-| Row actions (copy, delete) | Slot reserved at rest, built in `PLAN-17` and `PLAN-13`. |
-| Gestionnaire de projet | Dropped from the product. |
-| Tâche (expanded) | Already our `category`. At rest and in the editor. |
-| Quota (mots/h) (expanded) | Editor. |
-| Exclure des stats (expanded) | Stored here, marked at rest, toggled in the editor. |
-| Consignes (expanded) | Dropped from the product, with the `instructions` column. |
-| Récurrence (expanded) | `PLAN-19` through `PLAN-21`. |
+| Original field               | Where it lands                                            |
+| ---------------------------- | --------------------------------------------------------- |
+| Client                       | At rest, in the identity field.                           |
+| Numéro de projet             | At rest, in the identity field. Editor.                   |
+| Livraison (date)             | At rest, in the deadline field. Editor.                   |
+| Heure                        | At rest, merged into the deadline field. Editor.          |
+| Mots (total du projet)       | At rest, as the second half of the words pair. Editor.    |
+| Durée estimée                | Editor. Folded into the at-rest duration.                 |
+| Durée réelle                 | Editor. Folded into the at-rest duration.                 |
+| Statut                       | At rest. Editor, and `PLAN-14`.                           |
+| Row actions (copy, delete)   | Slot reserved at rest, built in `PLAN-17` and `PLAN-13`.  |
+| Gestionnaire de projet       | Dropped from the product.                                 |
+| Tâche (expanded)             | Already our `category`. At rest and in the editor.        |
+| Quota (mots/h) (expanded)    | Editor.                                                   |
+| Exclure des stats (expanded) | Stored here, marked at rest, toggled in the editor.       |
+| Consignes (expanded)         | Dropped from the product, with the `instructions` column. |
+| Récurrence (expanded)        | `PLAN-19` through `PLAN-21`.                              |
 
 ## Why this stays read-only
 
@@ -400,9 +400,9 @@ The capacity meter is deliberately not affected. `booked` still sums every task 
 excluded or not, because the meter reports how full the day is and not what counts toward the
 quota. An excluded meeting still eats the day, and a collapsed day must still warn about it.
 
-**Both halves of this were confirmed by the owner**, in their words: *"yes it counts, but also
+**Both halves of this were confirmed by the owner**, in their words: _"yes it counts, but also
 subtracts total hours when calculating productivity wph. since less of the day is dedicated to
-translation/revision tasks where wph apply."* The task counts toward the day's booked time, so
+translation/revision tasks where wph apply."_ The task counts toward the day's booked time, so
 the meter keeps warning, **and** its minutes come out of the quota denominator, because the day
 had less time available for the work the quota measures. That is exactly the split above, so
 nothing changes. It is recorded here because "counts" and "subtracts" sound contradictory until
@@ -430,9 +430,9 @@ you notice they are about two different totals.
     ``ALTER TABLE `tasks` DROP COLUMN `instructions`;``. SQLite supports `DROP COLUMN` from 3.35
     and the column is not a primary key, not unique, not indexed, and not referenced by a
     constraint or a generated column, so the drop is permitted.
-  Both apply cleanly on a fresh SQLite database replayed from `0000`. Neither existing migration
-  file is edited, so `0004` still creates the table with `instructions` and the sequence replays
-  correctly from zero.
+    Both apply cleanly on a fresh SQLite database replayed from `0000`. Neither existing migration
+    file is edited, so `0004` still creates the table with `instructions` and the sequence replays
+    correctly from zero.
 - **AC3. Every intermediate state is valid, and the drop has a stated undo.** The order is:
   apply `0006`, deploy, then apply `0007`. Old code with the new column present is fine, because
   it never selects it. New code with `instructions` still present is fine, because it never
@@ -460,13 +460,13 @@ you notice they are about two different totals.
     boolean mode.
   - `trackable: boolean`, derived server-side with `isTrackableCategory(task.category)` from the
     `PLAN-02` contract, resolved in the same `.map()` that already resolves `statusKey`.
-  `TaskRow.vue` no longer imports `isTrackableCategory` and draws the trackable-ness it is
-  handed. This follows the shipped `statusKey` precedent and the project rule that a derived
-  value arrives resolved. The raw `category` string stays on the response uncoerced, because
-  `PLAN-11` will round-trip it on save and a coerced value would silently rewrite a user's stale
-  category. **No task-count field is added.** The count is the length of the array the page
-  already hands each card, so inventing an endpoint field would create a number that could
-  disagree with the rows it labels.
+    `TaskRow.vue` no longer imports `isTrackableCategory` and draws the trackable-ness it is
+    handed. This follows the shipped `statusKey` precedent and the project rule that a derived
+    value arrives resolved. The raw `category` string stays on the response uncoerced, because
+    `PLAN-11` will round-trip it on save and a coerced value would silently rewrite a user's stale
+    category. **No task-count field is added.** The count is the length of the array the page
+    already hands each card, so inventing an endpoint field would create a number that could
+    disagree with the rows it labels.
 
 ### Day card disclosure
 
@@ -526,6 +526,14 @@ you notice they are about two different totals.
     already the accessible carrier. If the dot is the one dropped, `StatusDot.vue` is deleted.
     `statusKey` and its server-side resolution, including the `retard` pseudo-status, are
     unchanged either way.
+  - **A non-trackable row shows the em dash rather than `N/A`.** Amended 2026-07-28, after the
+    design stage removed the badge's pill and `N/A` became the loudest mark on a break or a
+    meeting row. The em dash is what the same row's `Mots` cell already shows, so the two read as
+    one consistent statement that neither figure applies. It is also the more honest mark, since a
+    break has no status rather than having a status called "not applicable". `statusKey` still
+    resolves to `na` and the change is presentational only, so the shared contract, the server
+    resolution, and the `planning.status.na` key are all untouched and the key simply stops being
+    read by the row. The dashed-border `N/A` span in `StatusBadge.vue` goes with it.
   - The category's colour is a supplement, never the whole signal. **The row carries an accessible
     name giving the localized category (`Traduction`, `Révision`, `Réunions`, and so on), so a
     colourblind or screen-reader user can tell one category from another with no colour at all.**
@@ -698,13 +706,13 @@ column removes no copy. It is a schema and code change only.
 field has a name available. They are grouped under `planning.columns` and the two existing keys
 move into the same group so the set lives in one place:
 
-| Key | FR | EN | Printed on screen? |
-| --- | --- | --- | --- |
-| `planning.columns.task` | `Tâche` | `Task` | Design's call |
-| `planning.columns.delivery` | `Livraison` | `Delivery` | Design's call |
-| `planning.columns.words` | `Mots` | `Words` | Design's call |
-| `planning.columns.duration` | `Durée` | `Time` | Design's call |
-| `planning.columns.status` | `Statut` | `Status` | Design's call |
+| Key                         | FR          | EN         | Printed on screen?            |
+| --------------------------- | ----------- | ---------- | ----------------------------- |
+| `planning.columns.task`     | `Tâche`     | `Task`     | Design's call                 |
+| `planning.columns.delivery` | `Livraison` | `Delivery` | Design's call                 |
+| `planning.columns.words`    | `Mots`      | `Words`    | Design's call                 |
+| `planning.columns.duration` | `Durée`     | `Time`     | Design's call                 |
+| `planning.columns.status`   | `Statut`    | `Status`   | Design's call                 |
 | `planning.columns.category` | `Catégorie` | `Category` | **No. Accessible name only.** |
 
 The last column is the one thing about these keys that is settled here rather than by design. The
@@ -722,8 +730,8 @@ category-to-colour mapping lives in `shared/`, as described under "Category beco
 
 **Key added**, the collapsed task count, as a vue-i18n pluralized message:
 
-| Key | FR | EN |
-| --- | --- | --- |
+| Key                  | FR                                | EN                              |
+| -------------------- | --------------------------------- | ------------------------------- |
 | `planning.taskCount` | `{count} tâche \| {count} tâches` | `{count} task \| {count} tasks` |
 
 Called as `t('planning.taskCount', n)`, which binds `count` implicitly. A zero count never
@@ -738,9 +746,9 @@ fact the platform already reports.
 
 **Keys added**, the exclusion marker:
 
-| Key | FR | EN |
-| --- | --- | --- |
-| `planning.excluded` | `hors stats` | `excluded` |
+| Key                      | FR                          | EN                                    |
+| ------------------------ | --------------------------- | ------------------------------------- |
+| `planning.excluded`      | `hors stats`                | `excluded`                            |
 | `planning.excludedLabel` | `Exclue du calcul du quota` | `Excluded from the quota calculation` |
 
 `hors stats` is the visible text, lowercase so it sits quietly beside the task name the way the
@@ -770,7 +778,7 @@ middle-dot separator and is not a translatable string.
 time as `16 h 30`, but the row prints durations as `3 h 00` through `formatDuration`, and a
 duration field near a `16 h 00` deadline would read as two durations. Keeping the numeric `16:00`
 for a clock time and `3 h 00` for a duration disambiguates the two at a glance. The owner
-confirmed this directly, *"i assume 16:00 is a time and 16h00 is a duration"*, so it is settled
+confirmed this directly, _"i assume 16:00 is a time and 16h00 is a duration"_, so it is settled
 rather than open, and it matches the format already stored in `delivery_time`.
 
 ## Out of scope

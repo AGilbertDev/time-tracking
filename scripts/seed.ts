@@ -100,14 +100,17 @@ type SeedTask = {
   estimatedMinutes: number
   actualMinutes?: number | null
   status?: string | null
-  instructions?: string | null
+  // Omitted on almost every row. The column is NOT NULL with a false default, so leaving it out
+  // seeds a task that counts normally, and only the deliberately excluded ones set it.
+  excludeFromStats?: boolean
   splitGroupId?: string | null
   sortOrder: number
 }
 
-// One entry in a day pattern: the main trackable piece of work carries a word count, a filler task
-// carries the label it shows instead of a client and project.
-type PatternEntry = { category: string; minutes: number; words?: number; instructions?: string }
+// One entry in a day pattern. The main trackable piece of work carries a word count; a non-trackable
+// entry carries none, which is what tells the row builder to leave its client and project unset so
+// the row renders by its localized category name.
+type PatternEntry = { category: string; minutes: number; words?: number }
 
 // A day's shape. `state` is the capacity band it lands in against the seeded 450-minute work day
 // with its 60-minute buffer, so the seeded week exercises all three meter colours. `main` is the
@@ -129,19 +132,6 @@ const CLIENTS = [
   'Institut Norda',
   'Éditions Pluriel'
 ] as const
-
-// Filler labels for the non-trackable categories, which show their instructions where a trackable
-// row shows its client and project.
-const FILLER_LABELS: Record<string, readonly string[]> = {
-  admin: ['Suivi des courriels', 'Facturation mensuelle', 'Planification de la semaine'],
-  breaks: ['Pause déjeuner', 'Pause'],
-  meetings: ['Réunion d’équipe', 'Réunion de lancement de projet', 'Appel client'],
-  terminology: [
-    'Recherche terminologique',
-    'Constitution du glossaire client',
-    'Mise à jour du glossaire'
-  ]
-}
 
 // The day patterns, grouped by the capacity band they produce. The first entry of every pattern is
 // the trackable work; the rest is the non-trackable time that still eats the day. Durations are
@@ -269,8 +259,9 @@ const STATUS_BY_PHASE: Record<Phase, string> = {
 // --- row construction ----------------------------------------------------------------------------
 
 // Builds the rows for one day from its pattern. The trackable entry gets a client, a project, a word
-// count, and a delivery; the rest get a filler label and a null status, which is what makes the row
-// read N/A. `sortOrder` follows the entry order, which is the order the day is worked.
+// count, and a delivery; the rest get no client, no project, and a null status, which is what makes
+// the row read N/A and take its name from its own category. `sortOrder` follows the entry order,
+// which is the order the day is worked.
 function rowsForDay(
   date: string,
   pattern: DayPattern,
@@ -289,13 +280,12 @@ function rowsForDay(
       sortOrder: entryIndex
     }
 
-    // A non-trackable filler. It keeps a null status and no client, project, or word count, and its
-    // duration is recorded once the day has happened.
+    // A non-trackable filler. It keeps a null status and no client, project, or word count, so the
+    // row has nothing to name itself with and falls back to its localized category, which is the
+    // whole point of leaving those columns empty. Its duration is recorded once the day has happened.
     if (entry.words === undefined) {
-      const labels = FILLER_LABELS[entry.category] ?? ['Tâche']
       return {
         ...base,
-        instructions: pick(labels, weekIndex, dayIndex, entryIndex),
         actualMinutes: phase === 'future' ? null : entry.minutes,
         status: null
       }
@@ -405,6 +395,22 @@ weeks.forEach((weekDays, weekIndex) => {
     }
   }
 
+  // One trackable task per week is excluded from the quota, so the exclusion marker is visible in
+  // every seeded week in both directions. The pick is the week's first trackable task that was not
+  // left late, so the two markers land on different rows and each reads on its own. The flag is only
+  // ever put on a trackable task, because on a break or a meeting it changes nothing and the row
+  // would carry a marker for a fact with no effect. Nothing else about the row moves: an excluded
+  // task keeps its real words and its real duration, and the capacity meter still counts it, so the
+  // day keeps the band its pattern was chosen to demonstrate.
+  const excludedTrackable = rows.find(
+    (row) =>
+      weekDays.includes(row.date) &&
+      row.date !== lateDay &&
+      (row.category === 'translation' || row.category === 'revision')
+  )
+
+  if (excludedTrackable) excludedTrackable.excludeFromStats = true
+
   // Some off days carry recorded work and some are empty, which is the common case. Every third week
   // logs a short Saturday translation, honouring the do-not-police rule that weekend work is recorded
   // and bonifies the week; every fourth week starts with a Sunday admin task.
@@ -432,7 +438,6 @@ weeks.forEach((weekDays, weekIndex) => {
       userId: ownerId,
       date: sunday,
       category: 'admin',
-      instructions: 'Planification de la semaine',
       estimatedMinutes: 30,
       actualMinutes: phaseOf(sunday) === 'future' ? null : 30,
       status: null,

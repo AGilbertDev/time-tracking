@@ -91,7 +91,12 @@ export const tasks = sqliteTable(
     // Free text. Trackable only ('Accepté' / 'En cours' / 'Terminé'); NULL reads
     // as 'N/A' for non-trackable tasks. Validated at the PLAN-09 write boundary.
     status: text('status'),
-    instructions: text('instructions'),
+    // Takes this task out of the quota numerator while its duration still comes out of the
+    // denominator, which is the split PLAN-22 implements. SQLite has no boolean type, so the
+    // mode 'boolean' integer is how this repo already stores one (magicLinkTokens.used). It is
+    // NOT NULL with a false default because "not excluded" is the answer for every existing row
+    // and a nullable flag would give the quota engine a third state to interpret.
+    excludeFromStats: integer('exclude_from_stats', { mode: 'boolean' }).notNull().default(false),
     // A plain grouping key (a shared uuid) linking the per-day slices of one
     // logical multi-day task. No self-FK: all slices are peers with no parent,
     // and a group of one (an interrupted split) is a valid state.
