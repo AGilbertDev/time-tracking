@@ -192,7 +192,7 @@
     "today": "aujourd'hui",
     "emDash": "—",
     "notApplicable": "Sans objet",
-    "notSet": "Non renseigné",
+    "notSet": "Non précisé",
     "taskCount": "{count} tâche | {count} tâches",
     "splitTag": "⇄ suite",
     "splitTagLabel": "Suite d'une tâche répartie sur plusieurs jours",
