@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
 
 import { allowedEmails, settings, tasks, users, workSchedule } from '../server/db/schema'
+import { type DefaultCategoryId, isTrackableCategory } from '../shared/categories'
 import { addDays, DEFAULT_SCHEDULE, getWeekDays, todayInZone } from '../shared/planning'
 
 // The one dev seed. It sets up the owner account, then wipes the owner's task and work-schedule rows
@@ -114,10 +115,12 @@ type PatternEntry = { category: string; minutes: number; words?: number }
 
 // A day's shape. `state` is the capacity band it lands in against the seeded 450-minute work day
 // with its 60-minute buffer, so the seeded week exercises all three meter colours. `main` is the
-// category of the first entry, which is what a split pair links across two days.
+// category of the first entry, which is what a split pair links across two days. It is typed from
+// the shared contract rather than from a list written out here, so the next change to the default
+// set does not have to find this line again.
 type DayPattern = {
   state: 'good' | 'warn' | 'bad'
-  main: 'translation' | 'revision'
+  main: DefaultCategoryId
   entries: PatternEntry[]
 }
 
@@ -137,6 +140,12 @@ const CLIENTS = [
 // the trackable work; the rest is the non-trackable time that still eats the day. Durations are
 // whole minutes and the sums are deliberate: under 390 reads good, 390 through 450 reads warn (the
 // remaining time has fallen into the buffer), and over 450 reads overbooked.
+//
+// Between them these patterns and the two off-day rows further down put every one of the nine
+// default categories on at least one seeded row, so a developer opening the dev app sees the whole
+// set rather than a subset. The two revision members lead one pattern each rather than sharing one,
+// because they are separate categories with separate quotas and a seed that only ever wrote one of
+// them would make the pair look like a single category with a longer name.
 const PATTERNS: DayPattern[] = [
   // good: 315
   {
@@ -151,9 +160,9 @@ const PATTERNS: DayPattern[] = [
   // good: 285
   {
     state: 'good',
-    main: 'revision',
+    main: 'revision_internal',
     entries: [
-      { category: 'revision', minutes: 180, words: 1500 },
+      { category: 'revision_internal', minutes: 180, words: 1500 },
       { category: 'terminology', minutes: 60 },
       { category: 'breaks', minutes: 45 }
     ]
@@ -164,6 +173,16 @@ const PATTERNS: DayPattern[] = [
     main: 'translation',
     entries: [
       { category: 'translation', minutes: 300, words: 2600 },
+      { category: 'breaks', minutes: 45 }
+    ]
+  },
+  // good: 375
+  {
+    state: 'good',
+    main: 'proofreading',
+    entries: [
+      { category: 'proofreading', minutes: 255, words: 3200 },
+      { category: 'dtp', minutes: 75 },
       { category: 'breaks', minutes: 45 }
     ]
   },
@@ -180,9 +199,9 @@ const PATTERNS: DayPattern[] = [
   // warn: 435
   {
     state: 'warn',
-    main: 'revision',
+    main: 'revision_external',
     entries: [
-      { category: 'revision', minutes: 240, words: 2100 },
+      { category: 'revision_external', minutes: 240, words: 2100 },
       { category: 'admin', minutes: 60 },
       { category: 'meetings', minutes: 90 },
       { category: 'breaks', minutes: 45 }
@@ -298,7 +317,10 @@ function rowsForDay(
     return {
       ...base,
       client: pick(CLIENTS, weekIndex, dayIndex, entryIndex),
-      project: `${entry.category === 'revision' ? 'R' : 'P'}-${1000 + weekIndex * 137 + dayIndex * 11 + entryIndex}`,
+      // P for a new translation, R for a review pass on a file somebody else wrote, which is what
+      // the two revision members and proofreading all are. The letter is invented dev data and
+      // nothing reads it, so it only has to stay legible to a developer scanning the column.
+      project: `${entry.category === 'translation' ? 'P' : 'R'}-${1000 + weekIndex * 137 + dayIndex * 11 + entryIndex}`,
       deliveryDate,
       deliveryTime: dayIndex % 2 === 0 ? '16:00' : '12:00',
       projectWordCount: entry.words,
@@ -380,8 +402,7 @@ weeks.forEach((weekDays, weekIndex) => {
 
   if (lateDay) {
     const lateTrackable = rows.find(
-      (row) =>
-        row.date === lateDay && (row.category === 'translation' || row.category === 'revision')
+      (row) => row.date === lateDay && isTrackableCategory(row.category)
     )
     if (lateTrackable) {
       // Only the status and the delivery move. The durations are left exactly as the pattern set them,
@@ -404,9 +425,7 @@ weeks.forEach((weekDays, weekIndex) => {
   // day keeps the band its pattern was chosen to demonstrate.
   const excludedTrackable = rows.find(
     (row) =>
-      weekDays.includes(row.date) &&
-      row.date !== lateDay &&
-      (row.category === 'translation' || row.category === 'revision')
+      weekDays.includes(row.date) && row.date !== lateDay && isTrackableCategory(row.category)
   )
 
   if (excludedTrackable) excludedTrackable.excludeFromStats = true

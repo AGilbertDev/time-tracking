@@ -179,11 +179,14 @@
   },
   "categories": {
     "translation": "Traduction",
-    "revision": "Révision",
+    "revision_internal": "Révision interne",
+    "revision_external": "Révision externe",
+    "proofreading": "Relecture",
     "terminology": "Terminologie",
     "meetings": "Réunions",
     "breaks": "Pauses",
-    "admin": "Administration"
+    "admin": "Administration",
+    "dtp": "Mise en page"
   },
   "planning": {
     "title": "Tableau de bord",

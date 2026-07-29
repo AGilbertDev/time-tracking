@@ -179,11 +179,14 @@
   },
   "categories": {
     "translation": "Translation",
-    "revision": "Revision",
+    "revision_internal": "Internal revision",
+    "revision_external": "External revision",
+    "proofreading": "Proofreading",
     "terminology": "Terminology",
     "meetings": "Meetings",
     "breaks": "Breaks",
-    "admin": "Admin"
+    "admin": "Admin",
+    "dtp": "DTP"
   },
   "planning": {
     "title": "Dashboard",
