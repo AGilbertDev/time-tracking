@@ -80,6 +80,32 @@ This amends `AC20` of [extend-tasks.md](extend-tasks.md) and removes one of the 
 
 Two things for the implementing feature to settle. Whether `words_done` is written at save time from the total or derived at read time, and what a task shows once it is split, since the slice's own words are then genuinely different from the project total and hiding that could make a split slice look like it did the whole job.
 
+### The duration pair is the progress signal, and that reopens a shipped decision
+
+Raised by the primary user on 2026-07-29, straight after the words decision above: "i think that's why we previously tracked estimated vs actual durations."
+
+That is the missing half of why the old app looked the way it did, and it corrects reasoning already written into a shipped spec.
+
+Words on a task are a static total, known when the job arrives and never revised as it progresses. So `estimated_minutes = words / quota` is fully derived and tells her nothing she did not already type. `actual_minutes` is then the **only** field on an ordinary task that records what happened rather than what was planned. The estimated-against-actual pair is not a second progress indicator competing with the words pair, it is the one that exists **because** the words pair does not.
+
+Better than that, the pair encodes quota attainment per task with no word arithmetic at all. If `estimated = words / quota`, then `actual < estimated` means the task beat its quota and `actual > estimated` means it missed, directly and at a glance.
+
+**One correction to that story, checked against the old code rather than assumed.** The primary user's reading is that the pair was tracked "to get estimated vs real stats". Half of that holds. `actual_minutes` absolutely existed to feed statistics: in the old `StatsBar.vue` it was the entire denominator of `Quota réel calculé (mots/durée réelle)`. But the old app never computed an estimated-against-actual statistic. Its `correctedWph` reads only the actual duration, and the estimate appears nowhere in its stats. The estimate was the auto-filled starting value for actual and the plan figure on the row, nothing more.
+
+That matters twice over. Actual time's old statistical job is gone, because the availability quota divides by scheduled hours rather than by time spent, so actual no longer feeds the headline number at all. And an estimated-against-actual statistic would therefore be **new work rather than a restoration**. It is probably worth building, since both figures are already stored and it is the cleanest per-task attainment signal available, but it should be specced as an addition and not smuggled in as something the rebuild dropped.
+
+**Where this leaves [extend-tasks.md](extend-tasks.md).** Its "two durations, decided" section collapses the pair to a single `effectiveDuration` at rest and sends the breakdown to `PLAN-11`'s editor. Its reasons were that the at-rest number has to explain the capacity bar, that comparing plan against reality is a review question rather than a reading one, and that two duration columns were the clearest example of the clutter being removed. The first reason still holds and is still good. The second does not survive this: comparing plan against reality is not an occasional review question here, it is the only performance signal the row has left, and this feature removed the other one in the same pass. Between the words pair and the duration pair, the shipped row now carries nothing that says how a task is actually going.
+
+**Not implemented, and not obvious enough to decide here.** Three routes, for whoever picks this up.
+
+- Restore both durations at rest and accept two columns. Honest and complete, but it is the exact clutter the simplifying pass and this feature both cut, and the capacity bar then sums neither column cleanly, since it sums actual where present and estimated where not.
+- Keep one duration and add a variance marker beside it, so the row shows the effective duration plus a quiet signal that the task ran over or under its estimate. Keeps the bar explainable and one column, and carries the attainment reading that matters.
+- Leave it to the stats. Per-task attainment rolls into the per-category quota rows anyway, so the row stays quiet and the question is answered one level up.
+
+The middle route looks strongest, because it keeps the property the first reason depends on while restoring what the second reason wrongly dismissed. It should still be designed rather than assumed.
+
+**A fourth thing to consider alongside them, and the one the primary user was reaching for.** An estimated-against-actual statistic, per category and per period, sitting beside the availability quota in `PLAN-23`. It answers "am I faster or slower than my quota says I should be", which is a different and more actionable question than "what does my employer see", and it is the CAT-style throughput reading this project deliberately set aside as the headline. Both inputs are already stored, so it costs an aggregation rather than a schema change. If that stat exists, the case for putting the pair back on every row weakens considerably, because the question it answers is a period question rather than a row question.
+
 ### The original category colours, deferred to a later feature
 
 Given 2026-07-29, from the app she uses today. **Not implemented.** The shipped palette in `shared/categories.ts` is the design stage's invented one and stays until a feature picks this up. Recorded here so that feature inherits a decision rather than re-deriving one.
