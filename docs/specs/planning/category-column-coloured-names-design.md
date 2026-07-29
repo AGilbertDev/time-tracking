@@ -409,7 +409,7 @@ to re-measure a table of ratios.
 project the name cell prints the em dash with `planning.notSet` behind it, using the row's existing
 missing-value pattern. **No new i18n key.**
 
-```
+```text
 Grip │ Catégorie │ Tâche │ Livraison │ Mots │ Durée │ Statut
   ⠿  │ Pauses    │   —   │     —     │  —   │ 1 h 00│   —
 ```
@@ -489,7 +489,7 @@ carries `whitespace-nowrap` and no `truncate`.
 
 Eight tracks. One insertion, and the 3 px border leaves.
 
-```
+```text
 grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_7.5rem_4.5rem_6rem_3rem]
 gap-x-4 items-center
 ```

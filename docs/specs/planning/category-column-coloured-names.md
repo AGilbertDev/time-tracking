@@ -589,10 +589,24 @@ answers are recorded here so the spec stops reading as though the questions are 
    This is the one answer that overrides a colour the primary user gave, it is approved by the owner,
    she will be told it changed and why, and it stays hers to overrule. The measured reason is in `AC4`
    above and in blueprint decision 3.
-4. **How the status collision is solved.** Closed. Position first and weight second, with chromatic
-   separation measured as unavailable and explicitly not relied on, which is what let her colours
-   survive verbatim. Category at track 2 in `font-normal`, status at track 7 in `font-semibold`.
-   Blueprint decision 4.
+4. **How the status collision is solved.** Closed, then amended. Position first and weight second,
+   category at track 2 in `font-normal` and status at track 7 in `font-semibold`. Blueprint
+   decision 4, and its amendment.
+
+   This summary said chromatic separation was measured as unavailable and explicitly not relied on.
+   **That is no longer the whole answer.** The accessibility stage measured on rendered pixels that
+   `success` green sat closer to `revision_internal` (Oklab 0.0336) than the two revision siblings
+   sat to each other (0.0461), inverting the relationship the palette exists to carry, and collapsing
+   to 0.0201 under simulated protanopia. So `success` moved to emerald, giving a worst case of 0.0604
+   normal and 0.0548 protan.
+
+   The distinction that matters, and the reason this is an addition rather than a reversal: **the
+   category hues are the primary user's and ship verbatim, while `success` is a reserved role and is
+   ours to move.** Chromatic separation was never available _on her side_, and that part still holds.
+   Position and weight remain the primary defences, because the two mechanisms fail differently.
+   Position survives a palette change and does nothing for a viewer who cannot separate the hues at
+   all, and the hue shift survives a layout change and does nothing if the two cells end up adjacent.
+
 5. **What a non-trackable row shows in the task column.** Closed. The em dash with `planning.notSet`
    behind it, no new key, and `notSet` rather than `notApplicable` because a name is a fact nobody
    entered rather than one that cannot exist. Blueprint decision 5.
