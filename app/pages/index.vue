@@ -151,24 +151,17 @@ const continuationIds = computed<Set<string>>(() => {
   return ids
 })
 
-// The seven day views, Sunday first. The week's Sunday is index 0 and its Saturday index 6, so the
-// contextual off-day suffixes are keyed off the position rather than any ad-hoc date math. A non-work
-// day gets its italic label; a working day gets none. The API already returns the tasks ordered by
-// date then sortOrder, so filtering by day preserves that order.
+// The seven day views, Sunday first. A non-work day gets the plain `Congé` label; a working day gets
+// none. The API already returns the tasks ordered by date then sortOrder, so filtering by day
+// preserves that order.
 const days = computed<PlanningDayView[]>(() => {
   const all = tasks.value ?? []
   const schedule = scheduleRecords.value ?? []
-  return getWeekDays(anchorDate.value).map((date, index) => {
+  return getWeekDays(anchorDate.value).map((date) => {
     const dayWork = isWorkDay(date, workDays.value)
     const dayTasks = all.filter((task) => task.date === date)
 
-    let offLabel: string | null = null
-    if (!dayWork) {
-      const base = t('planning.offDay.base')
-      if (index === 0) offLabel = `${base} ${t('planning.offDay.sundaySuffix')}`
-      else if (index === 6) offLabel = `${base} ${t('planning.offDay.saturdaySuffix')}`
-      else offLabel = base
-    }
+    const offLabel = dayWork ? null : t('planning.offDay.base')
 
     // Capacity is a work-day concern only. A non-work day carries null so its card shows the off-day
     // hint and no meter (the do-not-police rule). workMinutes / bufferMinutes resolve from the

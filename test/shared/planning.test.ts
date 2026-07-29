@@ -15,6 +15,7 @@ import {
   getWeekDays,
   getWeekRange,
   isWorkDay,
+  nowInZone,
   resolveSchedule,
   statusKey,
   sumEffectiveDuration,
@@ -97,6 +98,40 @@ describe('todayInZone', () => {
   // In UTC the calendar day is the raw UTC day, even at the last minute before midnight.
   it('returns the raw UTC day for the UTC zone at the last minute of the day', () => {
     expect(todayInZone(new Date('2026-07-20T23:59:00Z'), 'UTC')).toBe('2026-07-20')
+  })
+})
+
+describe('nowInZone', () => {
+  // The late comparison joins a task's delivery date and time into 'YYYY-MM-DDTHH:MM' and compares it
+  // as a plain string, so this has to produce exactly that shape and zero-pad every field.
+  it('returns the local date and time in the requested zone', () => {
+    expect(nowInZone(new Date('2026-07-20T16:30:00Z'), 'America/Toronto')).toBe('2026-07-20T12:30')
+  })
+
+  // The same non-drift guarantee todayInZone gives, carried through with the clock attached.
+  it('does not drift a day for a late-UTC instant still on the previous day in Toronto', () => {
+    expect(nowInZone(new Date('2026-07-21T03:00:00Z'), 'America/Toronto')).toBe('2026-07-20T23:00')
+  })
+
+  it('reads the next day for a positive-offset zone that has already rolled over', () => {
+    expect(nowInZone(new Date('2026-07-20T20:00:00Z'), 'Asia/Tokyo')).toBe('2026-07-21T05:00')
+  })
+
+  // hourCycle h23 has to render midnight as 00, not the 24 an hour12:false format can emit, or a
+  // deadline string would sort after every time on its own day.
+  it('renders midnight as 00 rather than 24', () => {
+    expect(nowInZone(new Date('2026-07-20T00:00:00Z'), 'UTC')).toBe('2026-07-20T00:00')
+  })
+
+  it('zero-pads a single-digit month, day, hour, and minute', () => {
+    expect(nowInZone(new Date('2026-01-02T03:04:00Z'), 'UTC')).toBe('2026-01-02T03:04')
+  })
+
+  // The whole point of the string shape: a deadline that has passed sorts below the current instant.
+  it('sorts chronologically against a joined delivery deadline', () => {
+    const now = nowInZone(new Date('2026-07-20T16:30:00Z'), 'America/Toronto')
+    expect('2026-07-20T11:00' < now).toBe(true)
+    expect('2026-07-20T23:59' < now).toBe(false)
   })
 })
 
@@ -400,6 +435,32 @@ describe('statusKey', () => {
   it('maps a null non-trackable status to na', () => {
     expect(statusKey(null, false)).toBe('na')
   })
+
+  // The late pseudo-status. The flag comes from the list query, which decides lateness against the
+  // user's own clock; these cover how the flag interacts with the guards it has to respect.
+  it('omitting the overdue flag leaves the stored status untouched', () => {
+    expect(statusKey('En cours', true)).toBe('encours')
+  })
+
+  it.each([['Accepté'], ['En cours'], ['Brouillon'], [null], [undefined]])(
+    'maps an overdue trackable task with stored status %s to retard',
+    (status) => {
+      expect(statusKey(status, true, true)).toBe('retard')
+    }
+  )
+
+  // A finished task is never late, however long ago its delivery was, so Terminé outranks the flag.
+  it('never reports a finished task as retard', () => {
+    expect(statusKey('Terminé', true, true)).toBe('termine')
+  })
+
+  // A break or a meeting has no delivery to miss, so non-trackable stays na even if the flag is set.
+  it.each([['Accepté'], ['En cours'], ['Terminé'], [null]])(
+    'forces na for an overdue non-trackable task with stored status %s',
+    (status) => {
+      expect(statusKey(status, false, true)).toBe('na')
+    }
+  )
 })
 
 describe('chipVariant', () => {

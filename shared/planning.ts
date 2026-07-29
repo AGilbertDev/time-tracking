@@ -25,10 +25,17 @@ export type PlanningTask = {
   instructions: string | null
   splitGroupId: string | null
   sortOrder: number
+  // The resolved presentation key for the row's status, decided by the server rather than here. It is
+  // not a stored column: 'retard' in particular depends on the current instant in the user's own
+  // timezone, which only the server can answer, so the row is handed the answer instead of working it
+  // out. The raw `status` above stays on the contract as the stored fact.
+  statusKey: StatusKey
 }
 
-// The colour and CSS key a status maps to. A non-trackable task is always 'na'.
-export type StatusKey = 'accepte' | 'encours' | 'termine' | 'na'
+// The colour and CSS key a status maps to. A non-trackable task is always 'na'. 'retard' is the
+// pseudo-status for a task that is not finished and whose delivery deadline has passed; no task ever
+// stores it, and it outranks whatever the stored status says.
+export type StatusKey = 'accepte' | 'encours' | 'termine' | 'na' | 'retard'
 
 // The category chip colour role. Translation and revision get their own washes; everything else is
 // the neutral chip.
@@ -85,6 +92,26 @@ export function todayInZone(now: Date, timeZone: string): string {
   }).formatToParts(now)
   const lookup = new Map(parts.map((part) => [part.type, part.value]))
   return `${lookup.get('year') ?? ''}-${lookup.get('month') ?? ''}-${lookup.get('day') ?? ''}`
+}
+
+// The current local date and time in `timeZone` as 'YYYY-MM-DDTHH:MM', the same shape a task's
+// delivery deadline takes when its date and time are joined. Both sides sort chronologically as plain
+// strings, so the late comparison is a string comparison the database can make without any date
+// arithmetic or timezone knowledge of its own. hourCycle 'h23' pins midnight to '00' rather than the
+// '24' some runtimes emit for an hour12:false format.
+export function nowInZone(now: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(now)
+  const lookup = new Map(parts.map((part) => [part.type, part.value]))
+  const day = `${lookup.get('year') ?? ''}-${lookup.get('month') ?? ''}-${lookup.get('day') ?? ''}`
+  return `${day}T${lookup.get('hour') ?? ''}:${lookup.get('minute') ?? ''}`
 }
 
 // The 'YYYY-MM-DD' that is `n` days after `date`, negative moving backward, correct across month and
@@ -185,8 +212,21 @@ export function formatWeekLabel(from: string, to: string, parts: WeekLabelParts)
 // The colour and CSS key for a stored status. A trackable task maps the three confirmed status names
 // to their keys and an unknown value to `na`. A non-trackable task is always `na`, so a stray status
 // left on a meeting or a break never colours the row.
-export function statusKey(status: string | null | undefined, trackable: boolean): StatusKey {
+//
+// `isOverdue` carries the late decision, which the server makes in the query because it needs the
+// current instant in the user's timezone. When it is set the row reads `retard`, outranking the
+// stored status, because a task being late is the more urgent fact about it. The three guards are
+// ordered deliberately: a non-trackable task is `na` before lateness is even considered, since a
+// break or a meeting has no delivery to miss, and a finished task is never late however long ago it
+// was delivered, so `Terminé` is checked before the flag is honoured. That makes the flag safe to
+// pass for any row, and the function stays pure, total, and DB-free.
+export function statusKey(
+  status: string | null | undefined,
+  trackable: boolean,
+  isOverdue = false
+): StatusKey {
   if (!trackable) return 'na'
+  if (isOverdue && status !== 'Terminé') return 'retard'
   switch (status) {
     case 'Accepté':
       return 'accepte'

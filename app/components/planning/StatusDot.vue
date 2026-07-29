@@ -11,6 +11,9 @@ const dotClass: Record<StatusKey, string> = {
   accepte: 'bg-[var(--ui-info)]',
   encours: 'bg-[var(--ui-warning)]',
   termine: 'bg-[var(--ui-success)]',
+  // A missed delivery is the one status that is a problem rather than a stage, so it takes the error
+  // token, the same red the overbooked capacity reading uses.
+  retard: 'bg-[var(--ui-error)]',
   na: 'bg-[var(--ui-text-dimmed)] opacity-50'
 }
 </script>

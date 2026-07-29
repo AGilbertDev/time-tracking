@@ -186,7 +186,7 @@
     "admin": "Admin"
   },
   "planning": {
-    "title": "Translation planning",
+    "title": "Dashboard",
     "weekPrefix": "Week of",
     "weekSeparator": "to",
     "today": "today",
@@ -194,7 +194,6 @@
     "duration": "Time",
     "emDash": "—",
     "deliveryMeta": "Delivery {time}",
-    "nonTrackableMeta": "removed from effective hours",
     "splitTag": "⇄ continued",
     "splitTagLabel": "Continuation of a task split across several days",
     "splitMeta": "{count} words this day · rest of the project carried from yesterday",
@@ -211,13 +210,12 @@
       "nextWeek": "Next"
     },
     "offDay": {
-      "base": "Day off",
-      "sundaySuffix": "· start of the week",
-      "saturdaySuffix": "· work is still possible and boosts the week's quota"
+      "base": "Day off"
     },
     "status": {
       "accepte": "Accepted",
       "encours": "In progress",
+      "retard": "Overdue",
       "termine": "Done",
       "na": "N/A"
     },
@@ -242,6 +240,7 @@
     "greetingEvening": "Good evening, {name}",
     "profile": "Profile",
     "settings": "Settings",
+    "adminTag": "(Admin)",
     "manageUsers": "Manage users",
     "accountMenu": "Account menu",
     "language": "Language: {code}",
