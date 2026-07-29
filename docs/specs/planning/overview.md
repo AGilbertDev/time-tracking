@@ -64,7 +64,17 @@ Given 2026-07-29. These are her employer's categories and her employer's numbers
 
 **Proofreading is new.** The six defaults that shipped in `PLAN-02` do not include it, so the contract grows by one trackable category.
 
-**Revision is two categories, not one.** Her list names a single `revision` but her quotas give internal 1000 and external 1300, and two rates cannot share one category. Confirm the exact names with her before `PLAN-02` is amended.
+**Revision is two categories, not one.** Her list names a single `revision` but her quotas give internal 1000 and external 1300, and two rates cannot share one category.
+
+**The split is who wrote the text she is revising**, clarified 2026-07-29: internal is an employee's translation, external is a contractor's. It is not about who performs the revision, which is always her, and it is not about where the work sits. So the category answers "whose work is this", and that is why it carries its own rate.
+
+Note the direction, because it looks like a transposition and is not. **External revision is the faster quota at 1300, internal the slower at 1000.** Revising a contractor's work is expected to move quicker than revising a colleague's. Recorded explicitly so nobody later reads it as a typo and swaps them.
+
+**Decided 2026-07-29: split it into two categories, the simplest way.** The shipped `revision` id is replaced by `revision_internal` and `revision_external` rather than one being renamed and the other added, because a clean pair is easier to read than a pair where one member is a rename of something else.
+
+That is only simple because there is no history to protect. `PLAN-09`, the write API, is not built, so no task has ever been created by a user and the only rows carrying `revision` come from the dev seed, which this change rewrites anyway. Whoever implements it should confirm that is still true rather than inherit the assumption, because the same change after `PLAN-09` ships would need a data migration and would stop being simple.
+
+Proposed copy: `Révision interne` and `Révision externe` in French, `Internal revision` and `External revision` in English. These are the direct renderings of the terms she used and read correctly in Canadian French, but they are her employer's vocabulary, so confirm them before they ship.
 
 **DTP is desktop publishing**, the layout pass after translation that makes the translated text fit the original design, which is the PowerPoint work she described. The industry bills it per page or per hour and never per word, so it produces no words and is non-trackable here: its time comes out of effective hours exactly as a meeting's does. Whether it joins the defaults or she adds it herself is open.
 
