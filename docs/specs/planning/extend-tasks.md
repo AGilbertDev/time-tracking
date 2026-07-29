@@ -4,7 +4,7 @@ The read-only planning week has shipped. It runs on `PLAN-04` (the list endpoint
 (the compact row), `PLAN-07` (the week stack), `PLAN-03` plus `PLAN-05` (the capacity meter),
 `PLAN-08` (the week switcher), and the styling pass in
 [`alleger-la-semaine.md`](alleger-la-semaine.md). It shows every day open, every row flat, and
-several facts the primary user reads every day are missing from both.
+several facts the user reads every day are missing from both.
 
 This feature gives the week two layers of progressive disclosure and brings the missing data
 across. Day cards start collapsed except today and open on demand. Inside an open day, the task
@@ -27,27 +27,27 @@ document once this lands.
 
 ## Problem
 
-The original app the user is still working in every day is a spreadsheet. She calls it a
+The original app the user is still working in every day is a spreadsheet. The user calls it a
 nightmare, and `overview.md` records that judgement as the reason the redesign went the other
-way. But it did one thing right, and she has now named it: **a row showed only the most
+way. But it did one thing right, and the user has now named it: **a row showed only the most
 important columns at first glance and expanded on edit.** Everything else lived behind that
 expansion.
 
 Our shipped week went calm but flat. Everything is open all the time, so there is no cheap way
-to see the shape of a week, and there is nowhere to put a fact that matters sometimes. Data she
+to see the shape of a week, and there is nowhere to put a fact that matters sometimes. Data the user
 needs got dropped rather than deferred.
 
 What is actually wrong today:
 
 - **Every day is open all the time.** Seven full day cards with all their rows is a long scroll
   to answer a question as simple as "how is Thursday looking".
-- The delivery date is stored and never rendered anywhere. It reaches her only indirectly,
-  through the `En retard` badge the list endpoint derives from it. She cannot see when anything
+- The delivery date is stored and never rendered anywhere. It reaches the user's only indirectly,
+  through the `En retard` badge the list endpoint derives from it. The user cannot see when anything
   is due.
-- The project word total is stored and never rendered, so she cannot see how much of a project
+- The project word total is stored and never rendered, so the user cannot see how much of a project
   is left.
 - There is no way to mark a task as excluded from the quota. The original has that toggle and
-  she relies on it.
+  the user relies on it.
 - The `instructions` column exists, holds nothing real, and is load-bearing for a naming
   fallback it was never meant to serve.
 
@@ -63,7 +63,7 @@ deleted, it is one click away.
 ## Layer one, the day card
 
 The week becomes a short stack of day headers. Every day starts collapsed except today, and the
-user opens the day she cares about.
+user opens the day the user cares about.
 
 ### What a collapsed day shows
 
@@ -149,7 +149,7 @@ structural affordances.
 | **Statut**                                                             | Where it stands.                                                                                                                                                                                                                  |
 | **Catégorie, carried by colour on the row edge rather than by a word** | Traduction and Révision are different work at different speeds, so which one a row is changes how its numbers read. The owner's call is that a colour answers this faster than a word and costs no width. See the decision below. |
 | **Exclusion marker** (only on an excluded trackable task)              | Without it the day's visible words cannot be reconciled with the quota, and a number you cannot explain is worse than a number you cannot see.                                                                                    |
-| **Split continuation marker** (only on a later slice)                  | Tells her this row is one slice of a multi-day task, so its partial word count reads as intended rather than as a shortfall.                                                                                                      |
+| **Split continuation marker** (only on a later slice)                  | Tells the user's this row is one slice of a multi-day task, so its partial word count reads as intended rather than as a shortfall.                                                                                                      |
 | **Drag affordance** (structural)                                       | The only signal that rows reorder. `PLAN-15` needs the slot in place.                                                                                                                                                             |
 | **Row action slot** (structural)                                       | Copy and delete appear here on hover in `PLAN-17` and `PLAN-13`. Reserved and empty now.                                                                                                                                          |
 
@@ -178,7 +178,7 @@ tasks or something similar to tell from a glance that the next task is translati
 opening it"_.
 
 So the category stops printing a word and becomes a colour signal on the row itself. The width it
-frees goes to the task name, per D3. The intent is scanning **inside an open day**, so she can see
+frees goes to the task name, per D3. The intent is scanning **inside an open day**, so the user can see
 that the next task is a translation from the row alone without opening that task. It is not about
 a collapsed day, where no rows render at all.
 
@@ -339,7 +339,7 @@ does not earn a place at rest, and the reason is subtle enough to write down.
 
 The original app's headline number was `mots / durée réelle`, words over actual tracked time,
 grouped by project name taking `max(wordCount)` once per group. `overview.md` replaces that,
-confirmed with the primary user, with the availability quota:
+confirmed with the user, with the availability quota:
 
 ```
 quota_wph(period) = words_translated(period) / (effective_minutes(period) / 60)
@@ -347,7 +347,7 @@ effective_minutes(day) = work_minutes_setting(day) − non_trackable_minutes(day
 ```
 
 The denominator is scheduled availability. Idle-but-available time stays in it and lowers the
-quota, which is how the employer measures productivity. Overtime is a boost because the
+quota, which is how availability-based productivity is measured. Overtime is a boost because the
 denominator is fixed.
 
 **So actual time on a trackable task never touches the quota.** A translation estimated at three
@@ -560,8 +560,8 @@ you notice they are about two different totals.
   dash rather than `0`, so a planned task is not misread as a recorded zero. A null
   `projectWordCount` drops the second figure. Both null shows the em dash alone. An excluded task
   shows its real figures in full.
-  - **Superseded 2026-07-29, not yet implemented.** The owner does not track words as she goes, so
-    a done-over-total pair shows progress she never records. Her words: "we don't track words
+  - **Superseded 2026-07-29, not yet implemented.** The owner does not track words as the user goes, so
+    a done-over-total pair shows progress the user never records. The user's words: "we don't track words
     translated in realtime. useless to track x/y. only totals." The field becomes the project total
     alone, matching the original app's `Mots (total du projet)` column. This shipped as the pair and
     a later feature reduces it, so the code and this criterion are correct as of the commit and
@@ -872,7 +872,7 @@ None of these block the build.
    or overlays the group on hover. Worth deciding when `PLAN-18` is specced.
 2. **Whether the deadline should be hidden when it falls on the task's own day.** It is the common
    case for a same-day task and printing it repeats the day header. AC19 shows it always,
-   matching the original app, which is the safer default until she says otherwise.
+   matching the original app, which is the safer default until the user says otherwise.
 3. **Whether an open day should close when another is opened.** AC7 makes the toggles fully
    independent, per the owner's decision. If opening several days at once turns out to recreate
    the long scroll the collapse was meant to fix, an accordion that keeps one day open is a small

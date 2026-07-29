@@ -4,7 +4,7 @@
 
 The signed-in user needs an authenticated page for **configuration**: the per-user numbers the dashboard surfaces at review time, and the account password. This is the sibling of the Profile page (`docs/specs/settings/profile-page.md`); the split is the locked information architecture and is not re-litigated here. The Profile page holds identity (avatar, name, email); this Settings page holds two clearly separated sections on **one** page, following the Nuxt UI dashboard-settings pattern:
 
-- **Work** — daily work target, work days, words-per-hour quota, and timezone. These are captured once during onboarding and, until now, cannot be edited afterwards, even though they are the exact numbers the employer uses at review time.
+- **Work** — daily work target, work days, words-per-hour quota, and timezone. These are captured once during onboarding and, until now, cannot be edited afterwards, even though they are the exact numbers throughput is reviewed against.
 - **Security** — changing the account password, authorized by the current password, under the same NIST-aligned policy and Have I Been Pwned breach check the onboarding wizard already enforces.
 
 This is the destination the header popover's Settings item link-aheads to (`docs/specs/settings/profile-menu-popover.md`). It reuses the established `/api/me/*` server-route conventions, the shared password and work-field validators, the `loadUserPreferences` single-read-path pattern, and the onboarding work-step UI idiom.

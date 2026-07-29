@@ -1,6 +1,6 @@
 # Time-Tracking App — v1 Spec
 
-First-pass spec for the rebuild. Loosely scoped — we will refine sections marked **TBD** after a working session with the primary user (the developer's partner, a professional translator).
+First-pass spec for the rebuild. Loosely scoped, and sections marked **TBD** get refined after a working session with the user, a professional translator.
 
 > **Build status & next steps live in [`docs/TODO.md`](./TODO.md).** Read it first if you are picking this up.
 
@@ -22,15 +22,15 @@ First-pass spec for the rebuild. Loosely scoped — we will refine sections mark
 
 ## 1. Audience & purpose
 
-A planning + productivity tool for **professional translators**. Single primary user today (the developer's partner) but built multi-user from day one so it can grow into a portfolio piece and serve other translators.
+A planning + productivity tool for **freelance translators**. Single user today, but built multi-user from day one so it can grow into a portfolio piece and serve other translators.
 
-Translators are paid against a **words-per-hour quota** set by their employer. The tool's reason for existing is to (a) make daily/weekly planning low-friction and (b) surface the same WPH numbers the employer uses for performance reviews.
+Translators work against a **words-per-hour target**, and the target differs by kind of work. The tool's reason for existing is to (a) make daily/weekly planning low-friction and (b) surface the same WPH numbers the work is reviewed against.
 
 ---
 
 ## 2. Non-negotiables
 
-- **Copy quality**: every visible string must be **researched, verified, and accurate** — never LLM-guessed. The primary user is a translator; UI grammar/spelling errors are disqualifying. Applies to French first, English second, and any future locale.
+- **Copy quality**: every visible string must be **researched, verified, and accurate** — never LLM-guessed. The user is a translator; UI grammar/spelling errors are disqualifying. Applies to French first, English second, and any future locale.
 - **i18n-first**: locale switching is a core feature, not a retrofit. Default locale: **French**. English support planned. Locale should be persisted per user.
 - **Don't police the user**: the app may *signal* (holiday, exceeded daily target, working a non-work day) but never *block*. The user decides what they actually do with their time. The app records reality, not what the schedule says reality should be.
 
@@ -128,7 +128,7 @@ A date within a week. Carries:
 ### Task
 The unit of work. Fields split into **primary** (visible in the compact row) and **secondary** (visible in the expanded edit form).
 
-**Primary** *(working list — confirm with primary user)*:
+**Primary** *(working list — confirm with user)*:
 - Client
 - Project number / name
 - Delivery date + time
@@ -138,7 +138,7 @@ The unit of work. Fields split into **primary** (visible in the compact row) and
 - Actual duration (auto-synced from estimated until the user overrides it)
 - Status (e.g. Accepté / En cours / Terminé — names TBD)
 
-**Secondary** *(working list — confirm with primary user)*:
+**Secondary** *(working list — confirm with user)*:
 - Project manager
 - Per-task WPH quota override
 - Exclude-from-stats flag
@@ -146,7 +146,7 @@ The unit of work. Fields split into **primary** (visible in the compact row) and
 - Recurrence config (see below)
 - Split-task linkage (see below)
 
-**Categories** are an enum we'll define with the primary user. Not every task is a translation; some categories (admin, training) may default to excluded-from-stats.
+**Categories** are an enum we'll define with the user. Not every task is a translation; some categories (admin, training) may default to excluded-from-stats.
 
 ### Recurring tasks
 Like Google Calendar: a task can repeat
@@ -160,7 +160,7 @@ Recurring tasks materialize as individual day-tasks the user can still tweak ind
 ### Split tasks
 A single project's work can be **split across multiple days**. The user only knows the **total word count for the project**, not how many words they did each day. This creates a stats tension we have to handle deliberately:
 
-Approaches (decide with the primary user):
+Approaches (decide with the user):
 1. **Time-weighted split** — divide the project's words across its day-tasks proportionally to actual time spent each day.
 2. **Prompt on completion** — when the user marks the project Terminé, ask them to confirm a per-day word breakdown.
 3. **Project-level aggregation** — don't try to attribute words to specific days; only aggregate WPH at week/month/year level (the corrected algorithm from the old app already does this).
@@ -174,9 +174,9 @@ A date marked non-working at the user level. The day still exists, the user can 
 
 ## 5. Stats
 
-Goal: **match the employer's WPH formula** exactly. Whatever number the employer puts on the performance review, the app shows the same.
+Goal is to **match the WPH formula the user is measured by**, exactly. Whatever number lands on the throughput review, the app shows the same.
 
-We need to confirm the employer's formula with the primary user. Working assumption (carried from the old app):
+We need to confirm the formula with the user. Working assumption (carried from the old app):
 
 > Group tasks by project, take each project's total word count once, divide total project-words by total actual time on those projects.
 
@@ -219,7 +219,7 @@ Performance-review surfacing:
 - **Delete** a task.
 - **Cycle status** with a single click.
 
-Mandatory fields enforce on save (the primary-row fields). Secondary fields are optional. Final mandatory list: **TBD with primary user**.
+Mandatory fields enforce on save (the primary-row fields). Secondary fields are optional. Final mandatory list: **TBD with user**.
 
 ---
 
@@ -246,11 +246,11 @@ Mandatory fields enforce on save (the primary-row fields). Secondary fields are 
 
 ## 10. Open decisions
 
-1. **Stats formula** — confirm the employer's exact WPH formula with the primary user.
+1. **Stats formula**. Confirm the exact WPH formula with the user.
 2. **Split-task accounting** — pick from the three approaches in §4.
-3. **Status vocabulary** — keep `Accepté / En cours / Terminé` or refine with primary user.
-4. **Mandatory vs. optional task fields** — confirm with primary user.
-5. **Categories list** — define with primary user.
+3. **Status vocabulary** — keep `Accepté / En cours / Terminé` or refine with user.
+4. **Mandatory vs. optional task fields** — confirm with user.
+5. **Categories list** — define with user.
 6. **"Today" placement** in the week view — pinned-top, scroll-to, sticky header, etc.
 7. **Holiday data source** — manual entry only, or seed with statutory holidays per region? Quebec stat holidays as a default suggestion?
 8. **Performance-review export format** — CSV vs. PDF vs. shareable read-only link.
@@ -259,18 +259,18 @@ Mandatory fields enforce on save (the primary-row fields). Secondary fields are 
 
 ---
 
-## 11. Questions to bring to the primary user
+## 11. Questions to bring to the user
 
 (Placeholder — we'll build the full list once the spec stabilizes a bit more.)
 
 Initial seed:
-- What does the employer's WPH formula actually look like, in their own words / on a performance review?
-- What task categories does she use? Which ones should be excluded from WPH stats?
-- Which fields are mandatory on every task, and which she only fills in sometimes?
-- How does she currently handle a task split across two days for word-count purposes?
-- What does she want to see when she opens the app on Monday morning? On Friday afternoon?
+- What does the WPH formula actually look like, in their own words or on a throughput review?
+- What task categories does the user use? Which ones should be excluded from WPH stats?
+- Which fields are mandatory on every task, and which the user only fills in sometimes?
+- How does the user currently handle a task split across two days for word-count purposes?
+- What does the user want to see when they open the app on Monday morning? On Friday afternoon?
 - Day length: always the same, or does it vary by client / contract?
-- Does she want to log non-work events (vacation, sick day, training)? If so, do those count toward day totals?
+- Does the user want to log non-work events (vacation, sick day, training)? If so, do those count toward day totals?
 
 ---
 
@@ -348,4 +348,4 @@ Notes:
 - Time-tracking via running timer (only manual duration entry).
 - Mobile-first design (responsive yes, mobile-native no).
 - Notifications / reminders.
-- Integration with employer's TMS or job-assignment system.
+- Integration with an agency TMS or job-assignment system.

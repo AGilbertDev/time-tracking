@@ -201,7 +201,7 @@ Retention acceptance criteria:
 
 Page and control copy lives under a new `adminUsers` namespace in both `i18n/locales/fr.json` and `i18n/locales/en.json`. Email bodies live in `server/utils/email-templates.ts`, following the existing pattern (bilingual for the invite, per-locale for the deactivation notice). All French uses a space before `? ! : ;`.
 
-The primary user is a professional translator, so every string below is a **proposal pending owner verification**, not final copy. Keys needed:
+The user is a professional translator, so every string below is a **proposal pending owner verification**, not final copy. Keys needed:
 
 - Page: title, intro/description, `noindex` needs no copy.
 - Invite: section heading, email field label and placeholder, submit button, success toast, "already a user" message, "use reactivate" message, delivery-warning message.

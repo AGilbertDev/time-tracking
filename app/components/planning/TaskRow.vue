@@ -127,7 +127,7 @@ const primaryName = computed(() => task.client || task.project || null)
          the four trackable categories can ever show a coloured status, so `revision_internal` beside a
          green `Terminé` was the one pair that landed in the same row at nearly the same colour. The
          accessibility stage measured it and moved `success` from green to emerald in app.config.ts,
-         which is a reserved role rather than one of the primary user's colours, so her hues still ship
+         which is a reserved role rather than one of the user's colours, so those hues still ship
          verbatim. All three defences are kept because they fail differently: position survives a
          palette change, hue survives a layout change. -->
     <span

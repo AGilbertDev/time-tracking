@@ -17,10 +17,10 @@ the interface shows only what is functional.
 
 | #   | Question                               | Decision                                                                                                                                                                                 |
 | --- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | The nine colours                       | Her hues kept verbatim where she gave them. `revision_external` 115, `admin` 305, `dtp` 60, `proofreading` 230. Worst measured cell in the whole set is 5.07:1.                          |
+| 1   | The nine colours                       | The user's hues kept verbatim where they were given. `revision_external` 115, `admin` 305, `dtp` 60, `proofreading` 230. Worst measured cell in the whole set is 5.07:1.                          |
 | 2   | Does fixed lightness survive at 4.5:1  | Yes, whole, with **zero exceptions**. One lightness and one chroma per mode carries all nine and in fact carries all 360 hues. Light moves from 0.55 to 0.47, dark stays at 0.74.        |
-| 3   | Proofreading's pale grey               | It does not survive. `Relecture` becomes slate blue at hue 230. Measured reason below, and it goes back to the primary user as a substitution rather than a silent fix.                  |
-| 4   | The status collision                   | Positional first, typographic second. Chromatic separation is measured as unavailable and is explicitly not relied on, which is what lets her hues survive verbatim.                     |
+| 3   | Proofreading's pale grey               | It does not survive. `Relecture` becomes slate blue at hue 230. Measured reason below, and it goes back to the user as a substitution rather than a silent fix.                  |
+| 4   | The status collision                   | Positional first, typographic second. Chromatic separation is measured as unavailable and is explicitly not relied on, which is what lets the user's hues survive verbatim.                     |
 | 5   | The task column on a non-trackable row | The em dash with `planning.notSet` behind it. No new key.                                                                                                                                |
 | 6   | Column position and width              | Track 2, right after the grip, `9rem`. `min-w-[52rem]` becomes `min-w-[62rem]`. The container does not widen, because it already does at `xl`.                                           |
 | 7   | The delivery separator                 | A plain space, no glyph. The join moves into a pure `formatDeadline` in `shared/planning.ts` that returns the two parts, so the two-tone rendering survives and the space is assertable. |
@@ -85,7 +85,7 @@ surface the `--planning-cat-l` comment already names, measured against the stric
 
 ### The resolved palette
 
-| Category            | Her colour              | Hue | Light     | Effective C | Dark      | Effective C |
+| Category            | The user's colour              | Hue | Light     | Effective C | Dark      | Effective C |
 | ------------------- | ----------------------- | --- | --------- | ----------- | --------- | ----------- |
 | `translation`       | cyan                    | 195 | `#006b6c` | 0.080       | `#00c4c4` | 0.126       |
 | `revision_internal` | apple green             | 140 | `#36692a` | 0.110       | `#7dbf6e` | 0.130       |
@@ -231,7 +231,7 @@ uniqueness of the closest pair, which is the property doing the work.
 
 The honest cost is that at a lightness dark enough to pass 4.5:1, hue 115 resolves to an olive green
 (`#596100`) in light mode rather than to a fresh apple green. That is the same compromise the
-fixed-lightness rule already makes for navy and wine red, and the primary user chose that rule over
+fixed-lightness rule already makes for navy and wine red, and the user chose that rule over
 literal fidelity. In dark mode the pair reads as two clear greens, `#a8b44b` and `#7dbf6e`.
 
 ### Watch items for the accessibility read, none of them blockers
@@ -255,7 +255,7 @@ and the wine-red-against-pink pair, and the measurements support neither.
 - **Wine red 20 against pink 340** are 40 degrees apart, which is joint second-widest in the set.
   Their Oklab chord is 0.075, well past the revision pair's 0.047. `#8e3d40` and `#823f6e` in light,
   `#f28788` and `#e189c5` in dark. The overview's worry was that fixed lightness drops the very
-  difference her original palette used to tell them apart, and it does, but 40 degrees at 0.11 chroma
+  difference the user's original palette used to tell them apart, and it does, but 40 degrees at 0.11 chroma
   is enough on its own.
 
 The rule also survives in a stronger form than it had. **Every hue from 0 to 359 clears the floor at
@@ -265,12 +265,12 @@ is covered under the contract below.
 
 ## Decision 3. Proofreading loses pale grey and becomes slate blue
 
-**`Relecture` renders at hue 230, `#00658c` in light and `#3bb9ed` in dark.** Her literal pale grey
-does not ship, and this is a substitution to put back to her rather than a fix to bury.
+**`Relecture` renders at hue 230, `#00658c` in light and `#3bb9ed` in dark.** The user's literal pale grey
+does not ship, and this is a substitution to put back to the user's rather than a fix to bury.
 
 **Approved rather than proposed.** The owner approved the substitution on 2026-07-29 and will tell the
-primary user that her colour for `Relecture` changed and why. So this ships as a decision rather than
-as a recommendation waiting on her, and it stays hers to overrule.
+user that their colour for `Relecture` changed and why. So this ships as a decision rather than
+as a recommendation waiting on theirs, and it stays theirs to overrule.
 
 Grey was tested first and fails both halves of `AC4`.
 
@@ -278,7 +278,7 @@ Grey was tested first and fails both halves of `AC4`.
   same tonal band as the row's own `text-muted`. The five themes' light `text-muted` measures
   `L 0.47` to `L 0.53` at chroma 0.03 to 0.06. A chroma-zero category name would sit inside that
   band, so `Relecture` would read as the one row whose colour failed to load rather than as one of
-  her nine colours. Passing contrast is necessary and is not sufficient, exactly as `AC4` says.
+  the user's nine colours. Passing contrast is necessary and is not sufficient, exactly as `AC4` says.
 - **A low-chroma slate, as a compromise, is worse rather than better.** The obvious middle route is
   to keep the intent of pale by giving proofreading the palette's lowest chroma at a cool hue. That
   collides head-on with the tinted neutral ramps. Encre's `neutral-500` is `#5a6b85`, which resolves
@@ -287,7 +287,7 @@ Grey was tested first and fails both halves of `AC4`.
   theme the compromise reproduces exactly the failure it was meant to avoid.
 
 So the only version of proofreading that both passes 4.5:1 and reads as a deliberate colour is a
-real hue at the shared chroma. Hue 230 is chosen because 195 to 265 is the widest empty arc in her
+real hue at the shared chroma. Hue 230 is chosen because 195 to 265 is the widest empty arc in the user's
 palette, and 230 is its centre, so proofreading takes the one place in the circle where a new member
 costs the least separation from everything else. At `C 0.11` it is 0.094 after gamut mapping, which
 is more than twice any theme neutral's chroma, so it cannot be mistaken for a neutral in any theme.
@@ -303,7 +303,7 @@ Two things this buys beyond passing.
   the circle, while the five non-trackables sit in the warm and violet arc. That is not load-bearing
   and nothing in the app reads it, but it is a real pattern the eye can pick up for free.
 
-**What goes back to her, in one sentence.** `Relecture` is a slate blue rather than a pale grey,
+**What goes back to the user's, in one sentence.** `Relecture` is a slate blue rather than a pale grey,
 because a grey dark enough to read as text at 14 px stops reading as one of your colours and starts
 reading as the row's ordinary muted text.
 
@@ -326,7 +326,7 @@ with the status roles read from `app.config.ts` (`success: green`, `info: blue`,
 at `L 0.47 C 0.110` against `L 0.448 C 0.119`, which is functionally the same colour. In dark,
 `terminology` `#f28788` and `error` `#ff6467` are 2.2 degrees apart.
 
-**Nothing can be done about that without giving up her colours, so hue is not the mechanism.** There
+**Nothing can be done about that without giving up the user's colours, so hue is not the mechanism.** There
 is one tendency worth recording and not relying on. The status roles are more saturated than the
 categories in three of four cases, because the category chroma is capped at 0.11 while the status
 shades run 0.137 to 0.199. It fails for `success` in light (0.119 against 0.110), which is the
@@ -338,9 +338,9 @@ Refusing the chromatic mechanism is what lets wine red stay at 20, apple green a
 
 Everything above stays as written, because the reasoning is still the reasoning and a later reader
 should see what was decided and why. One conclusion is amended. The sentence "Nothing can be done
-about that without giving up her colours, so hue is not the mechanism" carried its own escape hatch
-and this stage walked through it. **Moving `success` gives up nothing of hers.** A category hue is the
-primary user's own colour and ships verbatim. `success` is a reserved role that nobody chose for its
+about that without giving up the user's colours, so hue is not the mechanism" carried its own escape hatch
+and this stage walked through it. **Moving `success` gives up nothing of the user's.** A category hue is the
+user's own colour and ships verbatim. `success` is a reserved role that nobody chose for its
 looks, so it is the cheapest thing on the row to move, and the design stage had already ruled out the
 expensive move rather than this one.
 
@@ -369,7 +369,7 @@ Two consequences to record rather than discover later. The hue move also improve
 worst `Terminé` reading on the muted off-day card goes from 5.74:1 to 6.13:1, so emerald would be
 defensible on that ground alone. And `success` is a reserved semantic role, so every success state in
 the app shifts from green to emerald and not only the planning rows. The owner accepted that on
-2026-07-29, on the grounds that the alternative was overriding a colour the primary user gave.
+2026-07-29, on the grounds that the alternative was overriding a colour the user gave.
 
 ### What actually separates them
 
@@ -461,7 +461,7 @@ looking identical is kept, because it is still true and still accepted.
 
 **Track 2, immediately after the grip.** Four reasons, in order of weight.
 
-1. It is where the edge was, so the association she has already learned between a colour and a kind
+1. It is where the edge was, so the association the user has already learned between a colour and a kind
    of work survives the change of carrier. A column of colour running down the left of a card is the
    at-a-glance vertical scan the edge existed for, now made of words.
 2. It is the far end of the row from the status, which is decision 4's primary mechanism.
@@ -702,7 +702,7 @@ a measured guarantee over the whole circle.** At `0.47 0.11` in light and `0.74 
 integer hue from 0 to 359 clears 4.5:1 on all twenty card surfaces, with the worst reading anywhere
 being 5.02:1 at hue 175 in light and 6.07:1 at hue 352 in dark.
 
-So `PLAN-30` may hand the user a full hue wheel and every choice she can make passes by construction.
+So `PLAN-30` may hand the user a full hue wheel and every choice they can make passes by construction.
 That is strictly stronger than eight pre-approved slots, and it is why the ring goes rather than
 being resized. What `PLAN-30` still owns is uniqueness, which is a product question about two
 categories looking alike rather than a contrast question.
@@ -715,7 +715,7 @@ The exports that change.
 // A category descriptor. It carries the id, the trackable flag, and the hue its name is printed at,
 // and deliberately no display name, because per project convention all visible strings live in i18n,
 // resolved from the id through the categories.<id> key convention. Every category has a hue, so
-// there is no null case: the primary user's original app coloured every kind of work and PLAN-32c
+// there is no null case: the user's original app coloured every kind of work and PLAN-32c
 // restores that, which is what reversed AC18 of extend-tasks.md and retired edgeSlot.
 export type Category = {
   id: CategoryId
@@ -726,15 +726,15 @@ export type Category = {
 
 ```ts
 // The nine defaults with their locked trackable flags and their designed hues, in the same order as
-// DEFAULT_CATEGORY_IDS. The hues are the primary user's own colours from the app she uses today,
-// kept verbatim wherever she named one: cyan for translation, apple green for revision, wine red for
+// DEFAULT_CATEGORY_IDS. The hues are the user's own colours from the app they use today,
+// kept verbatim wherever the user named one: cyan for translation, apple green for revision, wine red for
 // terminology, pink for meetings, navy for breaks. revision_external is the derived sibling of
 // revision_internal and sits 25 degrees off it, which is the closest pair in the palette by a ten
 // degree margin, so proximity is what says the two are the same work on different people's text.
-// admin and dtp are chosen, because she named no colour for either. proofreading is a substitution
-// rather than her colour: her pale grey cannot both clear the 4.5:1 text floor and still read as a
+// admin and dtp are chosen, because the user named no colour for either. proofreading is a substitution
+// rather than the user's colour. Their pale grey cannot both clear the 4.5:1 text floor and still read as a
 // colour rather than as the row's own muted text, so it takes the centre of the palette's widest
-// empty arc instead. That substitution is recorded in the design blueprint and is hers to overrule.
+// empty arc instead. That substitution is recorded in the design blueprint and is the user's to overrule.
 //
 // Only the hue lives here. The lightness and the chroma are fixed once per mode in main.css, so
 // every category lands at the same lightness and therefore at the same measured contrast, and any
@@ -942,12 +942,12 @@ table cell.
 
 ## Open questions this blueprint does not close
 
-- **Slate blue for `Relecture` is accepted, and what is left is telling her.** Not open in the way the
-  other two items here are. Decision 3 overrides her literal pale grey with a measured reason, the
-  owner has approved it, and it ships. What remains is that the owner tells her it changed and why,
-  and it stays hers to overrule. A one-integer edit moves it back or moves it elsewhere under the
+- **Slate blue for `Relecture` is accepted, and what is left is telling the user's.** Not open in the way the
+  other two items here are. Decision 3 overrides the user's literal pale grey with a measured reason, the
+  owner has approved it, and it ships. What remains is that the owner tells the user it changed and why,
+  and it stays the user's to overrule. A one-integer edit moves it back or moves it elsewhere under the
   whole-circle guarantee, so nothing is locked in by shipping first.
-- **Whether `admin` at 305 and `dtp` at 60 are colours she would have picked.** She named neither, so
+- **Whether `admin` at 305 and `dtp` at 60 are colours the user would have picked.** The user named neither, so
   these are chosen. Violet and ochre both sit in empty arcs and both measure clean, and either can be
   moved with a one-integer edit under the whole-circle guarantee.
 - **Whether the olive cast of `Révision externe` in light mode reads as apple green's sibling on

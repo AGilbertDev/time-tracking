@@ -80,10 +80,10 @@ gap-x-4 items-center
 | — | Category edge | 3 px border | — | Outside the grid, on the row's own left border. Costs no track and no node. |
 | 1 | Grip | `1rem` | centre | Structural. Leftmost because a drag handle that is not at the edge is not a drag handle. |
 | 2 | Identity + markers | `minmax(12rem,1fr)` | left | Who the work is for. First readable track, takes all slack (D3). Hosts both conditional markers inline (D9). |
-| 3 | Livraison | `9rem` | left | When it is due. Second because the spec's reading order is who, when, how big, how long, where it stands, and because the deadline is the fact she cannot see today. |
+| 3 | Livraison | `9rem` | left | When it is due. Second because the spec's reading order is who, when, how big, how long, where it stands, and because the deadline is the fact the user cannot see today. |
 | 4 | Mots | `7.5rem` | right | How big, and how much is left. |
 | 5 | Durée | `4.5rem` | right | How long. Sits immediately left of the status so the two numbers that explain the capacity bar are adjacent. |
-| 6 | Statut | `6rem` | left | Where it stands. Last readable track, because it is the field you check after you have identified the row, and because a status column at the right edge is the convention the original app already taught her. |
+| 6 | Statut | `6rem` | left | Where it stands. Last readable track, because it is the field you check after you have identified the row, and because a status column at the right edge is the convention the original app already taught the user's. |
 | 7 | Row actions | `3rem` | right | Reserved, empty. Hover actions land here (D10, see below). |
 
 Width derivations, so the frontend stage does not re-guess them.

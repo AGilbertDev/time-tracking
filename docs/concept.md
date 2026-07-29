@@ -6,7 +6,7 @@ Captures what the original `planning` app **did** as a product. Treat as backgro
 
 ## What it is
 
-A personal planning tool for a freelance translator. She uses it to log her translation tasks day by day, track how long each job takes, and see her productivity (words per hour) over time. The original was a single-user, browser-only app with no backend — data lived in `localStorage` and was backed up by exporting / importing a JSON file manually.
+A personal planning tool for a freelance translator. The user uses it to log their translation tasks day by day, track how long each job takes, and see the user's productivity (words per hour) over time. The original was a single-user, browser-only app with no backend — data lived in `localStorage` and was backed up by exporting / importing a JSON file manually.
 
 The UI is entirely in **French**.
 
@@ -131,5 +131,5 @@ Collapsible accordion at the top showing the three WPH numbers (week / month / y
 - **Auto-syncing actual duration from estimated** saved clicks on days that went as planned.
 - **Excluding tasks from stats** is a useful escape hatch for non-translation work (admin, training, etc.).
 - **Status cycling on click** is fast and obvious.
-- **Drag-and-drop across days** matched how she actually rearranges her week.
+- **Drag-and-drop across days** matched how the user actually rearranges their week.
 - **JSON import/export** is a simple, portable backup mechanism for a solo user.

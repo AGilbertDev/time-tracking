@@ -15,7 +15,7 @@ export default defineAppConfig({
       // emerald-800 is oklch(0.432 0.095 167). It lifts the closest trackable category to 0.0604
       // (0.0548 under protanopia) and raises the worst status contrast on the muted off-day card from
       // 5.74:1 to 6.13:1, so it is better on contrast as well as on separation. A category hue is the
-      // primary user's own colour and ships verbatim, so the reserved role is what moves. teal was
+      // user's own colour and ships verbatim, so the reserved role is what moves. teal was
       // measured too and rejected: it lands 7 degrees from `translation`'s cyan and trades one
       // collision for another. Only the palette name lives here, never a color value.
       success: 'emerald',

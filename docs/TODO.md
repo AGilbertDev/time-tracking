@@ -42,7 +42,7 @@ Owner-only (`role === 'admin'`). Lets the owner invite, deactivate, reactivate u
 
 The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart of the product.
 
-- [ ] Tasks schema in `server/db/schema.ts` (not yet created). Pull fields from `concept.md` (client, project, delivery date/time, word count, category, estimated/actual duration, status, instructions, exclude-from-stats) + ties to `users`. Confirm mandatory vs. optional fields with the primary user first (spec §11).
+- [ ] Tasks schema in `server/db/schema.ts` (not yet created). Pull fields from `concept.md` (client, project, delivery date/time, word count, category, estimated/actual duration, status, instructions, exclude-from-stats) + ties to `users`. Confirm mandatory vs. optional fields with the user first (spec §11).
 - [ ] Week view: Mon–Fri by default but **flexible working days** per user settings; days stacked vertically; today prominent (placement TBD, spec open decision #6); week switcher.
 - [ ] Task CRUD API (routes + handlers + Zod models, per backend standards).
 - [ ] Task interactions: inline expand-to-edit, status cycle on click, drag-and-drop across days, copy-paste, delete.
@@ -55,7 +55,7 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
 
 ### 4. Stats (spec §5)
 
-- [ ] Corrected WPH (group by project, max words per project) for day / week / month / year. Confirm the employer's exact formula with the primary user first (open decision #1).
+- [ ] Corrected WPH (group by project, max words per project) for day / week / month / year. Confirm the exact formula with the user first (open decision #1).
 
 ### Smaller follow-ups
 
@@ -64,6 +64,6 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
 - [ ] Set `NUXT_SITE_URL` on Vercel to the production URL (verify it's set so prod magic links don't point at localhost).
 - [ ] Wire `favicon.svg` in `nuxt.config` head if we want the adaptive favicon over the `.ico`.
 
-## Open questions for the primary user (spec §11)
+## Open questions for the user (spec §11)
 
-Employer's exact WPH formula · task categories (which are excluded from stats) · mandatory vs. optional task fields · how split-across-days tasks should attribute word counts · day-length variability · whether to log non-work events (vacation/sick/training).
+The exact WPH formula · task categories (which are excluded from stats) · mandatory vs. optional task fields · how split-across-days tasks should attribute word counts · day-length variability · whether to log non-work events (vacation/sick/training).

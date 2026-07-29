@@ -2,7 +2,7 @@
 
 Two things at once.
 
-**The product** is a time and productivity tracker for professional translators. It has a real user (a working translator), a real deploy at `time-tracker.agilbert.dev`, and a real domain problem: translators are paid against a words-per-hour quota, and the app surfaces the same numbers their employer uses at review time. The product spec lives in [docs/spec.md](docs/spec.md); the original app it rebuilds is captured in [docs/concept.md](docs/concept.md).
+**The product** is a time and productivity tracker for freelance translators. It has a real user, a real deploy at `time-tracker.agilbert.dev`, and a real domain problem. Translators work to a words-per-hour target that differs by kind of work, and the app surfaces the same throughput numbers the work is reviewed and priced against. The product spec lives in [docs/spec.md](docs/spec.md); the original app it rebuilds is captured in [docs/concept.md](docs/concept.md).
 
 **The method** is why the repo exists as a portfolio piece. This project is the proof of concept for the AGilbertDev multi-agent pipeline. Every feature is built one at a time through the full pipeline, and the commit and pull-request history is left as a visible trail of that process. The methodology is documented in [docs/pipeline.md](docs/pipeline.md), and the portfolio project page tells the same story to visitors.
 
@@ -32,7 +32,7 @@ The always-loaded core conventions (git identity, writing voice, security, confi
 
 ## Product non-negotiables
 
-- **Copy quality**: the primary user is a translator, so every visible string must be researched and correct, never LLM-guessed. French first, English second. French uses a space before `? ! : ;`.
+- **Copy quality**: the user is a translator, so every visible string must be researched and correct, never LLM-guessed. French first, English second. French uses a space before `? ! : ;`.
 - **i18n-first**: FR default, EN supported, locale persisted per user. Not a retrofit.
 - **Do not police the user**: the app may signal (over target, a non-work day) but never blocks. It records reality, not what the schedule says reality should be.
 

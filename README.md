@@ -1,6 +1,6 @@
 # Planificateur de traduction
 
-A planning and productivity tool for professional translators. Track daily tasks, monitor words-per-hour performance, and compare against employer benchmarks.
+A planning and productivity tool for freelance translators. Track daily tasks, monitor words-per-hour throughput, and compare against your own targets.
 
 ## Stack
 

@@ -4,11 +4,11 @@
 
 ## Intent
 
-The category set that shipped in `PLAN-02` has six members and it is wrong. The primary user gave
-her employer's real category set on 2026-07-29 and it has nine, so this feature replaces the six
-with the nine, confirms every French and English name against what she actually said, and stops
+The category set that shipped in `PLAN-02` has six members and it is wrong. The user gave
+the real category set in use on 2026-07-29 and it has nine, so this feature replaces the six
+with the nine, confirms every French and English name against what the user actually said, and stops
 there. `proofreading` and `dtp` are new, and the single `revision` is replaced by the pair
-`revision_internal` and `revision_external`, because her two revision quotas are different numbers
+`revision_internal` and `revision_external`, because the user's two revision quotas are different numbers
 and two rates cannot share one category.
 
 This feature changes the _set_ and its _names_. It changes nothing about what a category _holds_.
@@ -32,7 +32,7 @@ implements and the shipped code it amends.
 
 1. **The nine categories, their ids, their trackable flags, and their confirmed FR and EN copy.**
    From [the category set](overview.md#the-category-set-and-the-real-quotas-from-the-primary-user),
-   given by the primary user on 2026-07-29 and confirmed the same day. Reproduced in full below.
+   given by the user on 2026-07-29 and confirmed the same day. Reproduced in full below.
 2. **The shipped contract this amends.** `shared/categories.ts`, the only declaration site for a
    category id in the repo.
 3. **The `PLAN-02` spec this amends**, [`task-categories.md`](task-categories.md), whose `AC1`
@@ -46,17 +46,17 @@ implements and the shipped code it amends.
 
 ## The nine categories
 
-Every string in this table is confirmed with the primary user and is **locked**. It is reproduced
+Every string in this table is confirmed with the user and is **locked**. It is reproduced
 exactly, no synonym is substituted, no term is improved, and `DTP` is not translated to match
 `Mise en page`. Two of those need saying out loud because both look like mistakes and neither is.
 
 **`Relecture` is deliberate.** It was checked against `Correction d'épreuves`, which is the stricter
-term the Canadian industry uses for proofreading as a separate billable service, and she chose the
+term the Canadian industry uses for proofreading as a separate billable service, and the user chose the
 shorter word. A later stage that "corrects" it is undoing a decision.
 
 **FR and EN diverge on `dtp` on purpose.** French reads `Mise en page` and English reads `DTP`,
 because each side is the term its own reader uses. `Layout` was the English name for part of
-2026-07-29 and she rejected it the same day as generic. The set therefore carries one industry
+2026-07-29 and the user rejected it the same day as generic. The set therefore carries one industry
 acronym, knowingly.
 
 | Id                  | FR               | EN                | Trackable |
@@ -94,7 +94,7 @@ entirely, not to this one.
 `categoryEdgeHue`. `edgeSlot` values change only as far as is mechanically required to keep the
 contract total and type-correct for nine ids, which is `AC7`. The five non-trackable categories keep
 `edgeSlot: null` in this feature. Whether they get a colour is `PLAN-32c`'s decision and
-[her original colours say they should](overview.md#the-original-category-colours-implemented-in-plan-32c).
+[the user's original colours say they should](overview.md#the-original-category-colours-implemented-in-plan-32c).
 
 **No write path.** `PLAN-09` is not built and this feature does not build any part of it. No Zod
 schema for a category, no POST, no PATCH.
@@ -210,7 +210,7 @@ a number, and an object to `'admin'`.
 **The fail-closed reasoning in the existing comments must survive the edit rather than be paraphrased
 away.** The comment at L73 to L78 explains why the fallback has to be non-trackable, which is that an
 unknown id treated as trackable would push its task's words into the quota numerator and pollute the
-headline number the employer reads at review time, while a non-trackable fallback contributes no
+headline number read at review time, while a non-trackable fallback contributes no
 words and correctly removes its duration from effective hours. That argument is unchanged by this
 feature and is load-bearing, so it stays intact. The only sentence in that block that this feature
 touches is any count of the defaults.
@@ -298,13 +298,13 @@ category without a redesign.
 decision.** The clearest evidence that they are placeholders is that `revision_internal` resolves to
 magenta 300 and `revision_external` to green 115, which read as two unrelated categories, while
 `PLAN-32c` is required by `AC3` of its own bullet to make the two revision greens read as related but
-distinct. Proofreading resolving to pink 345 is likewise nothing to do with her pale grey, which the
+distinct. Proofreading resolving to pink 345 is likewise nothing to do with the user's pale grey, which the
 contract cannot even express today because `categoryEdgeHue` returns a hue angle and grey means
 chroma zero. That widening is `PLAN-32c`'s.
 
 The five non-trackable ids keep `edgeSlot: null`, including the new `dtp`. That is the shipped `AC18`
 behaviour and it is preserved here unchanged, even though
-[her original colours overrule it](overview.md#the-original-category-colours-implemented-in-plan-32c),
+[the user's original colours overrule it](overview.md#the-original-category-colours-implemented-in-plan-32c),
 because colouring them is `PLAN-32c`'s decision and doing it here would be the palette pass arriving
 early.
 
@@ -407,7 +407,7 @@ still reaches the client and the client still coerces for display.
 - **A `revision` row on a period stat.** Coerced to `admin`, its words leave the quota numerator and
   its duration is subtracted from effective hours, so the period reads lower rather than wrong in an
   unbounded way. This is the fail-closed direction `AC4` protects, and it never inflates the number
-  the employer reads.
+  the review reads.
 - **`dtp` reading as `DTP` in English and `Mise en page` in French, as a row's primary name.** A
   non-trackable row's name _is_ its category name (`TaskRow.vue` L94), so `dtp` rows render as the two
   divergent strings on the two locales. That is intended rather than a bug, and it is worth looking at
@@ -417,9 +417,9 @@ still reaches the client and the client still coerces for display.
   which owns how a custom id is validated against the user's own set. This feature only keeps
   `CategoryId` as `DefaultCategoryId | (string & {})` so that seam does not have to be reopened.
 - **Two categories that read as near-synonyms to a user.** `Révision interne`, `Révision externe`, and
-  `Relecture` sit close together in ordinary French and the distinctions are her employer's. The names
-  are hers and confirmed, so this is not a copy problem to solve. It is a reason no later stage should
-  merge or rename any of them without asking her.
+  `Relecture` sit close together in ordinary French and the distinctions are the ones in actual professional use. The names
+  are the user's and confirmed, so this is not a copy problem to solve. It is a reason no later stage should
+  merge or rename any of them without asking the user's.
 
 ## Open questions
 
@@ -439,10 +439,10 @@ None block the build.
    them, so the app keeps using the single wrong 450 default until `32b` lands. That is a known-wrong
    number left in place on purpose, per the non-goals, and it is the reason `32b` follows immediately
    rather than later.
-4. **Whether `terminology` should have stayed trackable.** It produces no words in her employer's
+4. **Whether `terminology` should have stayed trackable.** It produces no words in the user's
    model and it shipped non-trackable, and the nine-category list confirms that, so nothing here
    changes. Recorded only because terminology work does produce something and a future conversation
-   with her might revisit it. Not this feature's to raise.
+   with the user's might revisit it. Not this feature's to raise.
 
 ## Stages
 
