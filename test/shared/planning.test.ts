@@ -4,12 +4,12 @@ import type { WorkScheduleRecord } from '#shared/planning'
 
 import {
   addDays,
-  chipVariant,
   computeCapacity,
   DEFAULT_SCHEDULE,
   effectiveDuration,
   formatCount,
   formatDayLabel,
+  formatDeliveryDate,
   formatDuration,
   formatWeekLabel,
   getWeekDays,
@@ -62,6 +62,43 @@ const EN_MONTHS_FULL = [
   'October',
   'November',
   'December'
+] as const
+
+// The abbreviated French month names the i18n `planning.monthsShort` array supplies to
+// formatDeliveryDate, listed verbatim in the progressive-disclosure spec
+// (docs/specs/planning/extend-tasks.md, "Copy / i18n changes"). `mars`, `mai`, `juin`, and `août`
+// carry no trailing period because they are already short enough to print whole, which is a copy
+// decision the spec researched rather than a formatting rule this module could derive.
+const FR_MONTHS_SHORT = [
+  'janv.',
+  'févr.',
+  'mars',
+  'avr.',
+  'mai',
+  'juin',
+  'juill.',
+  'août',
+  'sept.',
+  'oct.',
+  'nov.',
+  'déc.'
+] as const
+
+// The abbreviated English month names from the same spec section. `May` is the one that carries no
+// period in English, for the same reason the four French ones do not.
+const EN_MONTHS_SHORT = [
+  'Jan.',
+  'Feb.',
+  'Mar.',
+  'Apr.',
+  'May',
+  'Jun.',
+  'Jul.',
+  'Aug.',
+  'Sep.',
+  'Oct.',
+  'Nov.',
+  'Dec.'
 ] as const
 
 // The French connectives the spec locks: prefix `Semaine du`, separator `au`.
@@ -400,6 +437,110 @@ describe('formatWeekLabel', () => {
   })
 })
 
+// The progressive-disclosure spec (docs/specs/planning/extend-tasks.md) adds formatDeliveryDate and
+// locks it in AC28, with AC19 carrying the rest of the deadline contract. The two worked examples
+// there are `16 juill.` for a same-year delivery and `4 janv. 2027` for a cross-year one, and the
+// month names come from the caller's localized array exactly as formatDayLabel and formatWeekLabel
+// take one. Every expected value below is derived from those criteria, not from the implementation.
+
+describe('formatDeliveryDate', () => {
+  // AC28's same-year example, verbatim. The task and the delivery are the same day, which is the
+  // common case for a task due the day it is planned.
+  it('formats the spec example as the day number and the abbreviated month', () => {
+    expect(formatDeliveryDate('2026-07-16', '2026-07-16', FR_MONTHS_SHORT)).toBe('16 juill.')
+  })
+
+  // Still the same year, so still no year suffix, even though the delivery is months away from the
+  // task. The year is about ambiguity, not about distance.
+  it('omits the year for a delivery months later in the same year', () => {
+    expect(formatDeliveryDate('2026-09-03', '2026-07-20', FR_MONTHS_SHORT)).toBe('3 sept.')
+  })
+
+  // A delivery that already passed is the `En retard` case, and it reads the same way. Nothing about
+  // lateness belongs to this helper, since the status carries it.
+  it('omits the year for a delivery earlier in the same year than the task', () => {
+    expect(formatDeliveryDate('2026-03-02', '2026-07-20', FR_MONTHS_SHORT)).toBe('2 mars')
+  })
+
+  // AC28: the day number carries no leading zero, matching how formatDayLabel prints it.
+  it('prints a single-digit day with no leading zero', () => {
+    expect(formatDeliveryDate('2026-07-04', '2026-07-20', FR_MONTHS_SHORT)).toBe('4 juill.')
+  })
+
+  // AC28's reason for the whole year suffix: a December task with a January deadline. Without the
+  // year, `4 janv.` on a December row reads as a date eleven months in the past.
+  it('appends the year for a December task with a January deadline', () => {
+    expect(formatDeliveryDate('2027-01-04', '2026-12-28', FR_MONTHS_SHORT)).toBe('4 janv. 2027')
+  })
+
+  // The same boundary crossed the other way. A task planned in early January can carry a deadline
+  // left over from December, and that one is ambiguous too.
+  it('appends the year for a January task with a December deadline in the previous year', () => {
+    expect(formatDeliveryDate('2026-12-31', '2027-01-04', FR_MONTHS_SHORT)).toBe('31 déc. 2026')
+  })
+
+  // The comparison is on the calendar year, not on how far apart the two dates are, so a delivery
+  // more than a year out still gets exactly one year suffix.
+  it('appends the year for a delivery more than a full year after the task', () => {
+    expect(formatDeliveryDate('2028-05-10', '2026-07-20', FR_MONTHS_SHORT)).toBe('10 mai 2028')
+  })
+
+  // AC28: the year is appended only when it says something. A same-year delivery must not carry the
+  // digits at all, or every row in a normal week would print a year that adds nothing.
+  it('never prints the year digits for a same-year delivery', () => {
+    expect(formatDeliveryDate('2026-12-31', '2026-01-01', FR_MONTHS_SHORT)).not.toContain('2026')
+  })
+
+  // The four French months the spec keeps unabbreviated because they are already short. They are the
+  // cases most likely to grow a wrong trailing period, so each one is asserted whole.
+  it.each([
+    ['2026-03-15', '15 mars'],
+    ['2026-05-15', '15 mai'],
+    ['2026-06-15', '15 juin'],
+    ['2026-08-15', '15 août']
+  ])('prints %s with its unabbreviated French month as %s', (deliveryDate, expected) => {
+    expect(formatDeliveryDate(deliveryDate, '2026-07-20', FR_MONTHS_SHORT)).toBe(expected)
+  })
+
+  // The same four months keep their unabbreviated form when the year is appended too, so the year
+  // branch reads the array the same way the same-year branch does.
+  it('keeps an unabbreviated French month in the cross-year form', () => {
+    expect(formatDeliveryDate('2027-08-15', '2026-07-20', FR_MONTHS_SHORT)).toBe('15 août 2027')
+  })
+
+  // Index 0 is January and index 11 is December, which is the contract formatDayLabel and
+  // formatWeekLabel already hold the caller to.
+  it('reads the month array with January at index 0 and December at index 11', () => {
+    expect(formatDeliveryDate('2026-01-09', '2026-07-20', FR_MONTHS_SHORT)).toBe('9 janv.')
+    expect(formatDeliveryDate('2026-12-09', '2026-07-20', FR_MONTHS_SHORT)).toBe('9 déc.')
+  })
+
+  // English is the same shape with the caller's own array, since the helper holds no month copy.
+  it('formats an English delivery from the English month array', () => {
+    expect(formatDeliveryDate('2026-07-16', '2026-07-16', EN_MONTHS_SHORT)).toBe('16 Jul.')
+  })
+
+  it('appends the year in English for a cross-year delivery', () => {
+    expect(formatDeliveryDate('2027-01-04', '2026-12-28', EN_MONTHS_SHORT)).toBe('4 Jan. 2027')
+  })
+
+  // AC19 gives a task with no delivery date the em dash, and that guard is the row's rather than
+  // this helper's, because AC28 types the parameter as a plain string. This case exists so the
+  // helper is known to stay total if that guard is ever lost: it must not throw, and it must not
+  // invent a date that would read as a real deadline.
+  it('does not throw and produces no readable date when a null delivery slips past the row guard', () => {
+    const nullDelivery = null as unknown as string
+    expect(() => formatDeliveryDate(nullDelivery, '2026-07-20', FR_MONTHS_SHORT)).not.toThrow()
+    expect(formatDeliveryDate(nullDelivery, '2026-07-20', FR_MONTHS_SHORT)).not.toMatch(/\d/)
+  })
+
+  // The delivery time never reaches this helper. AC19 makes the date and the time one field on
+  // screen, but the row composes them, so nothing here may print a clock.
+  it('returns the date alone with no time joined to it', () => {
+    expect(formatDeliveryDate('2026-07-16', '2026-07-16', FR_MONTHS_SHORT)).not.toContain(':')
+  })
+})
+
 describe('statusKey', () => {
   // Spec: for a trackable task the three confirmed status names map to their keys.
   it.each([
@@ -461,33 +602,6 @@ describe('statusKey', () => {
       expect(statusKey(status, false, true)).toBe('na')
     }
   )
-})
-
-describe('chipVariant', () => {
-  // Spec: trad for translation, rev for revision, neutral for every other id.
-  it('returns trad for translation', () => {
-    expect(chipVariant('translation')).toBe('trad')
-  })
-
-  it('returns rev for revision', () => {
-    expect(chipVariant('revision')).toBe('rev')
-  })
-
-  it.each([['terminology'], ['meetings'], ['breaks'], ['admin']])(
-    'returns neutral for the non-trackable category %s',
-    (id) => {
-      expect(chipVariant(id)).toBe('neutral')
-    }
-  )
-
-  // A coerced/unknown or empty id is neutral, since the chip colour is derived from the raw id here.
-  it('returns neutral for an unknown or stale category id', () => {
-    expect(chipVariant('proofreading')).toBe('neutral')
-  })
-
-  it('returns neutral for the empty string', () => {
-    expect(chipVariant('')).toBe('neutral')
-  })
 })
 
 // The read-only week capacity spec (docs/specs/planning/read-only-week-capacity-and-nav.md) locks

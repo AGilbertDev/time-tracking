@@ -72,7 +72,7 @@ export async function listTasks(event: H3Event, query: TaskListQuery): Promise<T
       estimatedMinutes: tasks.estimatedMinutes,
       actualMinutes: tasks.actualMinutes,
       status: tasks.status,
-      instructions: tasks.instructions,
+      excludeFromStats: tasks.excludeFromStats,
       splitGroupId: tasks.splitGroupId,
       sortOrder: tasks.sortOrder,
       isOverdue
@@ -85,8 +85,16 @@ export async function listTasks(event: H3Event, query: TaskListQuery): Promise<T
   // Name the database's verdict, using the same pure mapper the contract documents. The flag is only
   // ever set on a row the query already proved late, and the mapper re-checks the finished and
   // non-trackable guards anyway, so a stale or odd stored value cannot produce a late row.
-  return rows.map(({ isOverdue: overdue, ...task }) => ({
-    ...task,
-    statusKey: statusKey(task.status, isTrackableCategory(task.category), overdue === 1)
-  }))
+  //
+  // `trackable` is resolved here from the same lookup, so the row carries the answer and the page
+  // never reads the category contract itself. Resolving it once per row also means the value the
+  // client draws and the value statusKey was decided from can never disagree.
+  return rows.map(({ isOverdue: overdue, ...task }) => {
+    const trackable = isTrackableCategory(task.category)
+    return {
+      ...task,
+      statusKey: statusKey(task.status, trackable, overdue === 1),
+      trackable
+    }
+  })
 }

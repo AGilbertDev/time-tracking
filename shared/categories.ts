@@ -26,25 +26,42 @@ export type DefaultCategoryId = (typeof DEFAULT_CATEGORY_IDS)[number]
 // categories on top; PLAN-02 ships and validates only the frozen six.
 export type CategoryId = DefaultCategoryId | (string & {})
 
-// A category descriptor. It carries only the id and the trackable flag and deliberately no
-// display name, because per project convention all visible strings live in i18n, resolved from
-// the id through the categories.<id> key convention.
+// The category edge hue ring. A task row carries its category as a coloured left edge rather than
+// as a printed word, and the whole colour contract is one hue angle per category: lightness and
+// chroma are fixed once in main.css, so every category lands at the same visual weight and the
+// same contrast in each mode and a new one needs a single integer rather than a hand-tuned ramp.
+// Slot order is the assignment order, and the earliest slots sit furthest from the four reserved
+// status hues (error ~27, warning ~78, success ~148, info ~258) so a category edge is never
+// mistaken for a status. PLAN-30 assigns a user-created category the next unused slot, wrapping
+// modulo the ring length, which is why this is a ring rather than a list sized to the six defaults.
+export const CATEGORY_HUE_SLOTS = [195, 300, 115, 345, 240, 170, 275, 320] as const
+
+// A category descriptor. It carries the id, the trackable flag, and the edge hue slot, and
+// deliberately no display name, because per project convention all visible strings live in i18n,
+// resolved from the id through the categories.<id> key convention. A null edgeSlot means neutral,
+// which with an edge treatment means no edge is drawn at all.
 export type Category = {
   id: CategoryId
   trackable: boolean
+  edgeSlot: number | null
 }
 
 // The six defaults with their locked trackable flags, in the same order as DEFAULT_CATEGORY_IDS.
 // translation and revision produce words and count toward the quota numerator. terminology,
 // meetings, breaks, and admin produce no words and instead remove their duration from effective
 // hours, so they are non-trackable.
+//
+// Only the two trackable categories take an edge hue. The distinction the colour exists to make is
+// translation against revision, and a non-trackable row already prints its category as its own
+// name, so a hue there would repeat a word the row already carries. Drawing no edge on those rows
+// also leaves trackable work visually distinct from breaks and meetings at no extra cost.
 export const DEFAULT_CATEGORIES: readonly Category[] = [
-  { id: 'translation', trackable: true },
-  { id: 'revision', trackable: true },
-  { id: 'terminology', trackable: false },
-  { id: 'meetings', trackable: false },
-  { id: 'breaks', trackable: false },
-  { id: 'admin', trackable: false }
+  { id: 'translation', trackable: true, edgeSlot: 0 },
+  { id: 'revision', trackable: true, edgeSlot: 1 },
+  { id: 'terminology', trackable: false, edgeSlot: null },
+  { id: 'meetings', trackable: false, edgeSlot: null },
+  { id: 'breaks', trackable: false, edgeSlot: null },
+  { id: 'admin', trackable: false, edgeSlot: null }
 ] as const
 
 // A descriptor lookup keyed by id so the trackable flag is read from one place rather than
@@ -79,4 +96,17 @@ export function coerceCategory(value: unknown): CategoryId {
 // hardcoding which categories are trackable.
 export function isTrackableCategory(id: unknown): boolean {
   return CATEGORY_BY_ID[coerceCategory(id) as DefaultCategoryId].trackable
+}
+
+// The hue angle a category's row edge is drawn at, or null when the category reads as neutral and
+// no edge is drawn. It coerces the id first, so an unknown or stale value resolves to the
+// non-trackable default and draws nothing rather than borrowing another category's colour. This is
+// the single source of truth for the mapping: the task row and, later, PLAN-11's category selector
+// both read it from here, which is what makes the association between a colour and a category
+// learnable rather than two copies that can drift. A slot outside the ring resolves to null rather
+// than undefined, so the function is total.
+export function categoryEdgeHue(id: unknown): number | null {
+  const slot = CATEGORY_BY_ID[coerceCategory(id) as DefaultCategoryId].edgeSlot
+  if (slot === null) return null
+  return CATEGORY_HUE_SLOTS[slot % CATEGORY_HUE_SLOTS.length] ?? null
 }

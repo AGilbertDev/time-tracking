@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  CATEGORY_HUE_SLOTS,
+  categoryEdgeHue,
   coerceCategory,
   DEFAULT_CATEGORIES,
   DEFAULT_CATEGORY_ID,
@@ -140,5 +142,114 @@ describe('isTrackableCategory', () => {
   // one source of truth for the flag.
   it.each(DEFAULT_CATEGORIES)('agrees with the descriptor for $id', (descriptor) => {
     expect(isTrackableCategory(descriptor.id)).toBe(descriptor.trackable)
+  })
+})
+
+// The progressive-disclosure spec (docs/specs/planning/extend-tasks.md) turns the category from a
+// printed word into a colour on the row edge and says the mapping is one shared contract living
+// beside this one. AC18 fixes what a non-trackable category resolves to, D8 fixes that each
+// trackable category gets a distinct hue and that the palette must extend to categories PLAN-30
+// has not created yet, and the design stage (extend-tasks-design.md, "The palette rule") settled
+// the ring and the two assignments. Expected values below come from those documents.
+
+// The hue the design stage assigned each trackable category, and the neutral the other four take.
+// A null means no edge is drawn at all, which is how an edge treatment renders AC18's neutral.
+const EDGE_HUE_TABLE: Array<[string, number | null]> = [
+  ['translation', 195],
+  ['revision', 300],
+  ['terminology', null],
+  ['meetings', null],
+  ['breaks', null],
+  ['admin', null]
+]
+
+describe('CATEGORY_HUE_SLOTS', () => {
+  // D8: the palette must be able to extend, because PLAN-30 lets the user create categories that
+  // each need a colour. A ring sized to exactly the six defaults would have to be redone, so it has
+  // to carry more slots than the defaults consume.
+  it('carries more slots than the default categories consume', () => {
+    const used = DEFAULT_CATEGORIES.filter((category) => category.edgeSlot !== null)
+    expect(CATEGORY_HUE_SLOTS.length).toBeGreaterThan(used.length)
+  })
+
+  // Two categories sharing a hue would defeat the whole point, which is telling one kind of work
+  // from another at a glance.
+  it('has no duplicate hue angles', () => {
+    expect(new Set(CATEGORY_HUE_SLOTS).size).toBe(CATEGORY_HUE_SLOTS.length)
+  })
+
+  // Every slot is a hue angle in degrees, since main.css feeds it straight into oklch(). A value
+  // outside the circle would render as an unpredictable colour rather than fail loudly.
+  it.each(CATEGORY_HUE_SLOTS)('exposes %i as a hue angle within the colour circle', (hue) => {
+    expect(Number.isInteger(hue)).toBe(true)
+    expect(hue).toBeGreaterThanOrEqual(0)
+    expect(hue).toBeLessThan(360)
+  })
+})
+
+describe('Category descriptors carry an edge slot', () => {
+  // The mapping lives on the descriptor rather than in a second map, which is what keeps the colour
+  // and the trackable flag from drifting apart.
+  it.each(DEFAULT_CATEGORIES)('declares an edgeSlot for $id', (descriptor) => {
+    expect(descriptor).toHaveProperty('edgeSlot')
+  })
+
+  // AC18: a non-trackable category reads as neutral, so it holds no slot. D8: a trackable one does.
+  it.each(DEFAULT_CATEGORIES)('gives $id a slot only when it is trackable', (descriptor) => {
+    expect(descriptor.edgeSlot !== null).toBe(descriptor.trackable)
+  })
+
+  // Two trackable categories pointing at the same slot would resolve to the same hue.
+  it('gives each trackable category its own slot', () => {
+    const slots = DEFAULT_CATEGORIES.map((category) => category.edgeSlot).filter(
+      (slot) => slot !== null
+    )
+    expect(new Set(slots).size).toBe(slots.length)
+  })
+})
+
+describe('categoryEdgeHue', () => {
+  // The design stage's assignments, and AC18's neutral for the four that produce no words.
+  it.each(EDGE_HUE_TABLE)('resolves %s to %s', (id, expected) => {
+    expect(categoryEdgeHue(id)).toBe(expected)
+  })
+
+  // D8: the distinction the colour exists to make is Traduction against Révision, so those two can
+  // never land on the same hue.
+  it('gives translation and revision different hues', () => {
+    expect(categoryEdgeHue('translation')).not.toBe(categoryEdgeHue('revision'))
+  })
+
+  // Every trackable hue has to be one the ring actually declares, or main.css would be handed a
+  // number the palette never vetted for contrast.
+  it.each(DEFAULT_CATEGORY_IDS)('resolves %s to a hue the ring declares, or to null', (id) => {
+    const hue = categoryEdgeHue(id)
+    if (hue !== null) expect(CATEGORY_HUE_SLOTS as readonly number[]).toContain(hue)
+  })
+
+  // AC18 restated through the public function: neutral and trackable are the same split, so the
+  // colour can never say a break is translation work.
+  it.each(DEFAULT_CATEGORY_IDS)('gives %s a hue only when it is trackable', (id) => {
+    expect(categoryEdgeHue(id) !== null).toBe(isTrackableCategory(id))
+  })
+
+  // D8 asks for a palette that extends to categories that do not exist yet, so an id this contract
+  // has never seen has to resolve rather than throw. It resolves to neutral, which draws no edge,
+  // because borrowing another category's hue would make the row lie about what kind of work it is.
+  it.each(INVALID_INPUTS)('resolves %s to neutral rather than throwing', (_label, input) => {
+    expect(() => categoryEdgeHue(input)).not.toThrow()
+    expect(categoryEdgeHue(input)).toBeNull()
+  })
+
+  // A user-created id from PLAN-30 is the same case as a stale one until PLAN-30 extends the
+  // validated set, and it must not take a default category's colour on the way through.
+  it('resolves a user-created category id to neutral rather than to a default hue', () => {
+    expect(categoryEdgeHue('ma-categorie')).toBeNull()
+  })
+
+  // It agrees with the coercion, so an unknown id and the default it folds to read the same. This is
+  // the same fail-closed discipline isTrackableCategory follows.
+  it('agrees with coerceCategory for an unknown id', () => {
+    expect(categoryEdgeHue('does-not-exist')).toBe(categoryEdgeHue(DEFAULT_CATEGORY_ID))
   })
 })

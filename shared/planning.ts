@@ -22,7 +22,10 @@ export type PlanningTask = {
   estimatedMinutes: number | null
   actualMinutes: number | null
   status: string | null
-  instructions: string | null
+  // The stored exclude-from-stats flag. A real boolean, because the column is read through Drizzle's
+  // mode 'boolean' rather than as the raw SQLite 0 or 1. It takes the task out of the quota numerator
+  // and moves its duration into the denominator's subtraction (PLAN-22); the row only marks it.
+  excludeFromStats: boolean
   splitGroupId: string | null
   sortOrder: number
   // The resolved presentation key for the row's status, decided by the server rather than here. It is
@@ -30,16 +33,17 @@ export type PlanningTask = {
   // timezone, which only the server can answer, so the row is handed the answer instead of working it
   // out. The raw `status` above stays on the contract as the stored fact.
   statusKey: StatusKey
+  // Whether the task's category produces words that count toward the quota, resolved by the server
+  // from the PLAN-02 contract. Not a stored column. The row draws the trackable-ness it is handed
+  // rather than reading the category contract itself, which is the same reason statusKey arrives
+  // resolved. The raw `category` above stays on the contract uncoerced for PLAN-11 to round-trip.
+  trackable: boolean
 }
 
 // The colour and CSS key a status maps to. A non-trackable task is always 'na'. 'retard' is the
 // pseudo-status for a task that is not finished and whose delivery deadline has passed; no task ever
 // stores it, and it outranks whatever the stored status says.
 export type StatusKey = 'accepte' | 'encours' | 'termine' | 'na' | 'retard'
-
-// The category chip colour role. Translation and revision get their own washes; everything else is
-// the neutral chip.
-export type ChipVariant = 'trad' | 'rev' | 'neutral'
 
 // The inclusive week range as calendar-day strings.
 export type WeekRange = { from: string; to: string }
@@ -209,6 +213,36 @@ export function formatWeekLabel(from: string, to: string, parts: WeekLabelParts)
   return `${prefix} ${d1} ${separator} ${d2} ${m2} ${y2}`
 }
 
+// The delivery deadline's date as the row prints it: the day number and the abbreviated month, so
+// 2026-07-16 reads `16 juill.`. The year is appended only when the delivery falls in a different
+// calendar year than the task itself (`4 janv. 2027`), because a December task with a January
+// deadline is otherwise ambiguous and every other row would carry a year that says nothing. The
+// month names come from the caller's localized array (index 0 is January) for the same reason
+// formatDayLabel and formatWeekLabel take one: the month copy stays in the i18n layer and this
+// module never reaches into vue-i18n. The delivery time is not joined here, because a delivery can
+// carry a date with no time and the row composes the two with its own tone contrast. Pure and
+// DB-free, and both dates are read as UTC calendar days so no zone can shift the year comparison.
+export function formatDeliveryDate(
+  deliveryDate: string,
+  taskDate: string,
+  months: readonly string[]
+): string {
+  const delivery = toUtcDate(deliveryDate)
+  const day = delivery.getUTCDate()
+
+  // Total by construction rather than by luck. The row guards the null case before calling, because
+  // the em dash it shows instead is i18n copy and this module stays free of copy, so this branch is
+  // only reached if that guard is ever lost. Without it an unparseable date returns the literal
+  // 'NaN  NaN', which reads as a real value on screen. An empty string cannot be mistaken for one.
+  if (Number.isNaN(day)) return ''
+
+  const month = months[delivery.getUTCMonth()] ?? ''
+  const year = delivery.getUTCFullYear()
+
+  if (year === toUtcDate(taskDate).getUTCFullYear()) return `${day} ${month}`
+  return `${day} ${month} ${year}`
+}
+
 // The colour and CSS key for a stored status. A trackable task maps the three confirmed status names
 // to their keys and an unknown value to `na`. A non-trackable task is always `na`, so a stray status
 // left on a meeting or a break never colours the row.
@@ -237,13 +271,6 @@ export function statusKey(
     default:
       return 'na'
   }
-}
-
-// The chip colour role for a category id, derived once here rather than at each call site.
-export function chipVariant(categoryId: string): ChipVariant {
-  if (categoryId === 'translation') return 'trad'
-  if (categoryId === 'revision') return 'rev'
-  return 'neutral'
 }
 
 // --- work-schedule resolver (PLAN-03) ------------------------------------------------------------
