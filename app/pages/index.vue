@@ -187,7 +187,14 @@ const days = computed<PlanningDayView[]>(() => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-5xl px-6 py-[clamp(1.25rem,3vh,2rem)] sm:px-6 lg:px-8">
+  <!-- The planning week is a data-dense dashboard, so the container takes the wide step the styling
+       conventions prescribe for that shape. The extra width at xl goes to the two tracks that benefit
+       from slack, the task name and the capacity bar; every fixed track is untouched. This is a
+       container max-width step, not a second arrangement, so the week keeps one layout at every
+       width. -->
+  <div
+    class="mx-auto w-full max-w-5xl px-6 py-[clamp(1.25rem,3vh,2rem)] sm:px-6 lg:px-8 xl:max-w-6xl"
+  >
     <header class="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div class="min-w-0">
         <h1

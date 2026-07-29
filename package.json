@@ -14,6 +14,7 @@
     "format:fix": "prettier --write .",
     "prepare": "husky",
     "recipes:update": "git submodule update --remote --recursive && git add .recipes",
+    "apply-migrations": "bun run --env-file=.env scripts/apply-migrations.ts",
     "seed": "bun run --env-file=.env scripts/seed.ts",
     "test": "vitest run",
     "setup": "bash .devcontainer/setup.sh"

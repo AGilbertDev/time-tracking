@@ -1,52 +1,57 @@
 <script setup lang="ts">
 import type { StatusKey } from '#shared/planning'
 
-// The text status badge. A trackable task shows its status coloured by the reserved semantic role
-// (Accepté info, En cours warning, En retard error, Terminé success) through a subtle UBadge. A
-// non-trackable task shows an N/A badge with a dashed faint border, rendered as a raw span because a
-// UBadge cannot draw a dashed border. The label always comes through i18n.
+// The task row's single status carrier. It used to sit beside a coloured dot that encoded the same
+// fact; the dot is gone, so this is the only thing on the row that says where a task stands, and it
+// stays labelled rather than becoming a colour, because a status read only by hue is not readable
+// at all (WCAG 1.4.1).
+//
+// It also lost its pill. Five filled boxes stacked down one column were the heaviest texture on a
+// day card, and the label and its colour are what carried the meaning, never the rectangle around
+// them. What is left is coloured semibold text on the plain card surface.
+//
+// A non-trackable task shows the em dash instead of the N/A label. A break or a meeting has no
+// status rather than having a status called "not applicable", and the em dash is what the same
+// row's Mots cell already prints, so the two read as one statement that neither figure applies.
+// This is presentational only: `statusKey` still resolves to `na` and the shared contract, the
+// server resolution, and the planning.status.na key are untouched. The key is in fact still read,
+// as the accessible name behind the glyph, because a bare em dash announces as nothing.
 const { statusKey } = defineProps<{ statusKey: StatusKey }>()
 
 const { t } = useI18n()
 
-const color = computed<'info' | 'warning' | 'error' | 'success'>(() => {
-  if (statusKey === 'accepte') return 'info'
-  if (statusKey === 'encours') return 'warning'
-  // A missed delivery is a problem rather than a stage, so it takes the error role and reads red in
-  // every theme, matching the overbooked capacity reading and the late dot.
-  if (statusKey === 'retard') return 'error'
-  return 'success'
-})
-
-// Nuxt UI's subtle variant paints the label with the semantic 500 shade in light mode, which fails
-// AA on the pale 10% wash (amber ~2:1, green ~2:1, blue ~3.3:1, red ~3.4:1). Darken the label to the
-// 700 shade in light so every status reads at 4.5:1 while keeping the wash and the theme-agnostic
-// status colour. Dark mode already clears AA at 400, so it is left untouched.
-const textClass = computed(() => {
-  if (color.value === 'info') return 'text-info-700 dark:text-info-400'
-  if (color.value === 'warning') return 'text-warning-700 dark:text-warning-400'
-  if (color.value === 'error') return 'text-error-700 dark:text-error-400'
-  return 'text-success-700 dark:text-success-400'
-})
+// The status hues are the reserved semantic roles, so they read the same in every theme rather than
+// being recoloured by the active atmosphere. A missed delivery is a problem rather than a stage, so
+// it takes the error role and reads red, matching the overbooked capacity reading.
+//
+// The light shade is 800 rather than the 700 the blueprint carried over from the badge. Losing the
+// pale wash was assumed to improve the ratio, and on a work-day card it does. An off day that holds
+// recorded weekend work is a card on the muted surface, and there the 700 shades measure 3.98:1 to
+// 4.31:1 for the success and warning roles across the five themes, under the 4.5:1 this 14 px text
+// needs. At 800 every role clears 5.7:1 on that surface and 7:1 on the work-day card. Dark stays at
+// 400, which measures 5.2:1 or better everywhere.
+const toneClass: Record<StatusKey, string> = {
+  accepte: 'font-semibold text-info-800 dark:text-info-400',
+  encours: 'font-semibold text-warning-800 dark:text-warning-400',
+  retard: 'font-semibold text-error-800 dark:text-error-400',
+  termine: 'font-semibold text-success-800 dark:text-success-400',
+  na: 'font-normal text-muted'
+}
 
 const label = computed(() => t(`planning.status.${statusKey}`))
 </script>
 
 <template>
-  <!-- Both forms fill the width of the fixed grid track they sit in, so every status on a card is the
-       same size and its edges line up down the column whatever the label's length. -->
-  <UBadge
-    v-if="statusKey !== 'na'"
-    :class="['w-full justify-center', textClass]"
-    :color="color"
-    :label="label"
-    size="sm"
-    variant="subtle"
-  />
-  <span
-    v-else
-    class="inline-flex w-full items-center justify-center rounded-md border border-dashed border-accented px-3 py-1 text-xs font-semibold text-muted"
-  >
-    {{ label }}
+  <!-- One root, so the `role="cell"` the row hands down always lands on it. A status that does not
+       apply prints the em dash and says `N/A`. The glyph alone is punctuation a screen reader either
+       skips or reads as "dash", so the cell would announce as empty under a header that says
+       `Statut` and a listener could not tell a status the row cannot have from a real one. The
+       visible mark is unchanged. -->
+  <span class="text-sm" :class="toneClass[statusKey]">
+    <template v-if="statusKey === 'na'">
+      <span aria-hidden="true">{{ t('planning.emDash') }}</span>
+      <span class="sr-only">{{ label }}</span>
+    </template>
+    <template v-else>{{ label }}</template>
   </span>
 </template>

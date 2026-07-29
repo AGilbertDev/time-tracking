@@ -190,15 +190,24 @@
     "weekPrefix": "Semaine du",
     "weekSeparator": "au",
     "today": "aujourd'hui",
-    "words": "Mots",
-    "duration": "Durée",
     "emDash": "—",
-    "deliveryMeta": "Livraison {time}",
+    "notApplicable": "Sans objet",
+    "notSet": "Non précisé",
+    "taskCount": "{count} tâche | {count} tâches",
     "splitTag": "⇄ suite",
     "splitTagLabel": "Suite d'une tâche répartie sur plusieurs jours",
-    "splitMeta": "{count} mots ce jour · reste du projet porté d'hier",
+    "excluded": "hors stats",
+    "excludedLabel": "Exclue du calcul du quota",
     "loadError": "La semaine n'a pas pu être chargée.",
     "retry": "Réessayer",
+    "columns": {
+      "task": "Tâche",
+      "delivery": "Livraison",
+      "words": "Mots",
+      "duration": "Durée",
+      "status": "Statut",
+      "category": "Catégorie"
+    },
     "capacity": {
       "planned": "{value} planifié",
       "remaining": "{value} restant",
@@ -232,6 +241,20 @@
       "octobre",
       "novembre",
       "décembre"
+    ],
+    "monthsShort": [
+      "janv.",
+      "févr.",
+      "mars",
+      "avr.",
+      "mai",
+      "juin",
+      "juill.",
+      "août",
+      "sept.",
+      "oct.",
+      "nov.",
+      "déc."
     ]
   },
   "header": {

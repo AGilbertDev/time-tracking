@@ -36,7 +36,8 @@ A new `tasks` table in `server/db/schema.ts`, following the exact style of the t
 | `estimatedMinutes` | `estimated_minutes` | `integer` | yes | Frozen computed duration in minutes (`PLAN-12`). Just an integer here. |
 | `actualMinutes` | `actual_minutes` | `integer` | yes | Real duration in minutes. Mirrors estimated until edited (`PLAN-12`). |
 | `status` | `status` | `text` | yes | Free text. Trackable only (`Accepté` / `En cours` / `Terminé`); `NULL` reads as `N/A` for non-trackable. |
-| `instructions` | `instructions` | `text` | yes | Free-text notes for the task. |
+| ~~`instructions`~~ | ~~`instructions`~~ | ~~`text`~~ | ~~yes~~ | **Superseded.** Dropped in migration `0007`, see [extend-tasks.md](extend-tasks.md). No write path ever populated it. It was free-text notes for the task, and the owner dropped the `Consignes` field it backed. |
+| `exclude_from_stats` | `excludeFromStats` | `integer` (boolean) | no, defaults false | **Added later**, in migration `0006`, see [extend-tasks.md](extend-tasks.md). Marks a trackable task whose words leave the quota numerator and whose time leaves the effective-hours denominator. |
 | `splitGroupId` | `split_group_id` | `text` | yes | Plain grouping key (a uuid). `NULL` for a single-day task. No self-FK (see decisions). |
 | `sortOrder` | `sort_order` | `integer` | no | Within-day ordering, default `0`. The write API assigns it; drag reorder (`PLAN-15`) mutates it. |
 | `createdAt` | `created_at` | `integer` (`mode: 'timestamp'`) | matches `users` | `$defaultFn(() => new Date())`, Unix-seconds instant. |

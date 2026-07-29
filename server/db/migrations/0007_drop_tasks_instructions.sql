@@ -1,0 +1,40 @@
+-- Drop the instructions column from tasks.
+--
+-- The Consignes field is dropped from the product. The column was added by 0004
+-- as free-text notes, no write path ever populated it, and the only thing that
+-- ever wrote to it was the dev seed, which this same change rewrites. So nothing
+-- real is lost. The planning row used to fall back to it for a non-trackable
+-- task's name; that name now comes from the localized category, so the column is
+-- not load-bearing for anything either.
+--
+-- SQLite has supported ALTER TABLE DROP COLUMN since 3.35, and instructions is
+-- not a primary key, not unique, not indexed, and not referenced by a constraint
+-- or a generated column, so the drop is permitted rather than needing the
+-- create-copy-swap dance.
+--
+-- Expand-then-contract note. This is the contract half and it is applied after
+-- 0006 and after the deploy that stops selecting the column. New code with
+-- instructions still present is fine, because it never selects it, so the window
+-- between the two is safe in both directions.
+--
+-- Undo. If this is applied before the deploy lands, the old build breaks because
+-- it still selects the column. One statement restores a working old build:
+--   ALTER TABLE `tasks` ADD `instructions` text;
+-- The contents are gone, which costs nothing here because nothing real was in
+-- them, and a dev database recovers fully with `bun run seed`.
+--
+-- This drop matches how 0000 through 0006 are authored in this project, as plain
+-- statement-broken SQL applied by hand rather than by a snapshot-diffing runner,
+-- because the project keeps no drizzle-kit meta snapshot directory.
+--
+-- Idempotency note. SQLite does not support IF EXISTS on ALTER TABLE DROP COLUMN,
+-- so this statement is applied through a runner that tolerates the benign no such
+-- column error and continues, which makes a re-run safe.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso
+-- database, matching 0000 through 0006. It must not be pointed at a live database
+-- by CI, a deploy hook, or a dev-boot migration runner. There are no database
+-- credentials in this environment.
+
+ALTER TABLE `tasks` DROP COLUMN `instructions`;

@@ -85,7 +85,7 @@ export type TaskListItem = {
   estimatedMinutes: number | null
   actualMinutes: number | null
   status: string | null
-  instructions: string | null
+  excludeFromStats: boolean
   splitGroupId: string | null
   sortOrder: number
   // Derived, not stored. The resolved status the row draws, including the 'retard' pseudo-status the
@@ -93,4 +93,10 @@ export type TaskListItem = {
   // computed server-side because it depends on the current instant in the user's timezone, so the
   // client is handed the verdict instead of recomputing it. Mirrors PlanningTask in shared/planning.ts.
   statusKey: StatusKey
+  // Derived, not stored. Whether this task's category produces words that count toward the quota,
+  // resolved from the PLAN-02 contract server-side so the row is handed the verdict rather than the
+  // raw category plus the rule for reading it. The raw `category` above stays on the contract
+  // uncoerced, because PLAN-11 round-trips it on save and a coerced value would silently rewrite a
+  // stale category the user never touched.
+  trackable: boolean
 }

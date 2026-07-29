@@ -1,9 +1,9 @@
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 
 /* Match the portfolio font. @nuxt/fonts auto-provisions and self-hosts it. */
 @theme static {
-  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
 }
 
 /* Brand palette anchored on the logo orange (#F2682C at 500). */
@@ -92,7 +92,6 @@
   --color-foret-950: #08130c;
 }
 
-
 /* Larger base text across the app, matching the portfolio. */
 @layer base {
   body {
@@ -103,7 +102,7 @@
 /* Tailwind v4 removed the default pointer cursor on buttons. Restore it. */
 @layer base {
   button:not(:disabled),
-  [role="button"]:not(:disabled) {
+  [role='button']:not(:disabled) {
     cursor: pointer;
   }
 }
@@ -200,6 +199,37 @@ input:-webkit-autofill:active {
   border-left: 1px dashed var(--ui-border-accented);
 }
 
+/* The category colour on a task row's left edge. Only the hue varies per category, and it arrives */
+/* as --planning-cat-hue set inline from the shared category contract; lightness and chroma are */
+/* fixed here so every category, including one a user creates later, has the same weight and the */
+/* same contrast in each mode. A new category needs one number, never a new colour ramp. */
+/* These are deliberately not semantic tokens. primary and secondary are redefined by all five */
+/* themes and success/info/warning/error are reserved for status, so a category would either shift */
+/* identity when the user changes atmosphere or read as a status. The category hue is a sixth fixed */
+/* role, declared once here exactly as the brand and surface ramps are, so no component ever holds */
+/* a colour value of its own. */
+/* The light lightness is 0.55 rather than the 0.58 the blueprint proposed. The edge is a supplement */
+/* and never the only carrier of the category, so WCAG 1.4.11 does not bind it, but the design set */
+/* itself a 3:1 floor on every surface the edge is drawn on and 0.58 missed it on an off-day card, */
+/* whose muted surface is where recorded weekend work is read: 2.98:1 to 3.17:1 for the cyan slot */
+/* across the five themes. At 0.55 the same edge measures 3.37:1 or better there and 4.18:1 on a */
+/* work-day card, and the contract is unchanged, since it is still one number for the whole palette. */
+@layer base {
+  :root {
+    --planning-cat-l: 0.55;
+    --planning-cat-c: 0.15;
+  }
+
+  .dark {
+    --planning-cat-l: 0.74;
+    --planning-cat-c: 0.14;
+  }
+}
+
+.planning-cat-edge {
+  border-left-color: oklch(var(--planning-cat-l) var(--planning-cat-c) var(--planning-cat-hue));
+}
+
 /* Five deliberate, subject-grounded themes. Each block overrides the primary and */
 /* neutral PALETTE scales; Nuxt UI derives every surface, border (muted < default */
 /* < accented), text and hover shade from these, for both light and dark under one */
@@ -249,7 +279,7 @@ input:-webkit-autofill:active {
   --ui-color-neutral-950: var(--color-pastel-950);
 }
 
-[data-theme="encre"] {
+[data-theme='encre'] {
   --glint-hue: 25;
   --ui-color-primary-50: #e8f7ff;
   --ui-color-primary-100: #d2ecff;
@@ -287,7 +317,7 @@ input:-webkit-autofill:active {
   --ui-color-neutral-950: var(--color-encre-950);
 }
 
-[data-theme="cafe"] {
+[data-theme='cafe'] {
   --glint-hue: 25;
   /* Primary rebuilt from caramel to espresso this revision; the former caramel is */
   /* now the accent (secondary) ramp below. */
@@ -327,7 +357,7 @@ input:-webkit-autofill:active {
   --ui-color-neutral-950: var(--color-cafe-950);
 }
 
-[data-theme="automne"] {
+[data-theme='automne'] {
   --glint-hue: 25;
   --ui-color-primary-50: #ffefe3;
   --ui-color-primary-100: #ffddc9;
@@ -365,7 +395,7 @@ input:-webkit-autofill:active {
   --ui-color-neutral-950: var(--color-automne-950);
 }
 
-[data-theme="foret"] {
+[data-theme='foret'] {
   --glint-hue: 25;
   --ui-color-primary-50: #e8fbef;
   --ui-color-primary-100: #d2f4df;

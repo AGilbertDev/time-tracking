@@ -20,19 +20,30 @@ const excessLabel = computed(() => formatDuration(capacity.excess, locale.value)
 </script>
 
 <template>
-  <div class="whitespace-nowrap text-sm tabular-nums text-toned">
-    <i18n-t keypath="planning.capacity.planned" tag="span">
+  <!-- Each reading is unbreakable on its own, but the two may fall onto separate lines. The pair
+       fits its track at every width the week is designed for, and below that a single nowrap line
+       is wider than the track, which the day card clips rather than scrolls: the reading would be
+       cut in half at 200% zoom on a small laptop and there would be no way to reach the rest of it
+       (WCAG 1.4.10). Wrapping between the two phrases costs nothing at normal widths, since the
+       break opportunity is simply never taken. -->
+  <div class="text-sm tabular-nums text-toned">
+    <i18n-t class="whitespace-nowrap" keypath="planning.capacity.planned" tag="span">
       <template #value>
         <b class="font-bold text-highlighted">{{ bookedLabel }}</b>
       </template>
     </i18n-t>
     <span aria-hidden="true"> · </span>
-    <i18n-t v-if="!overbooked" keypath="planning.capacity.remaining" tag="span">
+    <i18n-t
+      v-if="!overbooked"
+      class="whitespace-nowrap"
+      keypath="planning.capacity.remaining"
+      tag="span"
+    >
       <template #value>{{ remainingLabel }}</template>
     </i18n-t>
     <i18n-t
       v-else
-      class="text-error-700 dark:text-error-400"
+      class="whitespace-nowrap text-error-700 dark:text-error-400"
       keypath="planning.capacity.excess"
       tag="span"
     >
