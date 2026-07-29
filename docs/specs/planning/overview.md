@@ -122,6 +122,22 @@ The middle route looks strongest, because it keeps the property the first reason
 
 **A fourth thing to consider alongside them, and the one the primary user was reaching for.** An estimated-against-actual statistic, per category and per period, sitting beside the availability quota in `PLAN-23`. It answers "am I faster or slower than my quota says I should be", which is a different and more actionable question than "what does my employer see", and it is the CAT-style throughput reading this project deliberately set aside as the headline. Both inputs are already stored, so it costs an aggregation rather than a schema change. If that stat exists, the case for putting the pair back on every row weakens considerably, because the question it answers is a period question rather than a row question.
 
+### The edge loses to a coloured name
+
+Decided 2026-07-29, by the owner, looking at the seeded week on screen rather than at a mockup. "dont like color chips. restore category column theres enough space left", then "remove color chip. show colored category names instead".
+
+The shipped row carries its category as a coloured left edge and prints no category word. That was `extend-tasks.md`'s call, on the reasoning that a colour reads faster than a word and costs no width. Seeing it with real data reversed it. The edge is out, the category column is back, and **the name itself is coloured**.
+
+That second message matters as much as the first, because it resolves what would otherwise have been a conflict with the primary user. She asked for colour on every category, from the app she uses today, and a bare text column would have quietly dropped it. Colouring the name keeps her association between a colour and a kind of work while removing the chip the owner objected to. Nobody's decision gets overridden here, so do not later "restore" the edge on her behalf.
+
+**The width argument did not survive contact with the screen.** The edge existed partly because a category column was thought too expensive. With five columns rendered there is visible room left, so the premise was wrong rather than the tradeoff being close.
+
+**A colour that was decorative is now load-bearing, and that is the real work.** A 3 px edge only had to be distinguishable. A coloured word has to be readable, so every category colour now faces a WCAG 2.2 AA contrast floor against the row background, in both modes. Three consequences follow, and none of them are reasons to reopen the decision.
+
+- **Proofreading's pale grey is the first casualty.** Grey text on a near-white row is the classic contrast failure, and "pale" was chosen when it only had to tint an edge. It either darkens enough to pass and stops being pale, or it becomes a documented exception. It cannot stay as given.
+- **Fixed lightness was tuned for edges and has to be retuned for text.** The one-number-per-category rule is still worth keeping, but the number it fixes must now sit where text passes rather than where an edge looked even, and light and dark mode pull it in opposite directions.
+- **The collision with status hues gets worse, not better.** The old defence was that a category is a coloured edge while a status is a word, so shape told them apart. Both are now coloured words in adjacent columns, and that defence is gone. Wine red beside error red, or apple green beside success green, will now read as the same kind of signal. This is the problem `PLAN-32c` most has to solve.
+
 ### The original category colours, deferred to a later feature
 
 Given 2026-07-29, from the app she uses today. **Not implemented.** The shipped palette in `shared/categories.ts` is the design stage's invented one and stays until a feature picks this up. Recorded here so that feature inherits a decision rather than re-deriving one.
@@ -281,11 +297,15 @@ Depends on `PLAN-32a`. Shared, backend, a migration, and the settings and onboar
 - AC1. Each trackable category resolves its own quota and each non-trackable one has none. AC2. The quota is effective-dated, so editing it never restates a past period (`PLAN-30` AC6 covers the same ground for user-created categories). AC3. `settings.quota_wph` is gone from the schema, onboarding, the settings page, and `work-settings`, with no reader left behind. AC4. The research note that justified 450 is demoted to context rather than left reading as evidence.
 - Open, and to settle in this feature or defer explicitly: what a per-category quota does to the availability metric, since idle time sits in one pool and belongs to no category. Normalised attainment is the preferred route and the three options are in [the original category colours](#the-original-category-colours-deferred-to-a-later-feature).
 
-**PLAN-32c — The nine-edge palette**
+**PLAN-32c — The category column, with coloured names**
 Depends on `PLAN-32a`. Design pass, then shared and frontend.
 
-- Every category carries a colour, including the non-trackable ones, which amends `AC18` of [extend-tasks.md](extend-tasks.md) and the `edgeSlot: null` those four ship with. Her original colours and the four problems the palette has to solve are in [the original category colours](#the-original-category-colours-deferred-to-a-later-feature).
-- AC1. All nine categories draw an edge. AC2. The contract can express a chroma-zero slot, because proofreading is grey rather than a hue and `categoryEdgeHue` returns a hue angle today. AC3. The two revision greens read as related but distinct. AC4. Fixed lightness holds for the set, and any per-category exception is documented with its reason rather than quietly applied. AC5. No category edge is mistakable for one of the four reserved status hues, checked on screen in both modes rather than argued from hue angles.
+**Rewritten 2026-07-29 after the owner saw the seeded week on screen.** It was "the nine-edge palette", carrying every category as a coloured left edge. See [the edge loses to a coloured name](#the-edge-loses-to-a-coloured-name).
+
+- The coloured row edge goes. The category returns as its own column, printing its name, and **the name is coloured with the category's colour**. So the colour association survives and the chip does not.
+- This reverses the edge decision in [extend-tasks.md](extend-tasks.md), which removed the category as a printed word and moved it to the row edge. `AC18`'s neutral non-trackable rule goes with it, since all nine now print a coloured name.
+- The palette work does not go away, it gets harder. Her original colours and the problems they already had are in [the original category colours](#the-original-category-colours-deferred-to-a-later-feature), and colouring text rather than a 3 px edge adds a contrast floor on top. See the decision section for why that is the real work here.
+- AC1. The category column is back, showing every row's category as a name, and no row draws a coloured edge. AC2. Each name is coloured from the one shared category-to-colour mapping, never a second copy. AC3. Every name meets WCAG 2.2 AA contrast against its row background in both light and dark mode, measured rather than eyeballed, which is a stricter bar than an edge had to clear. AC4. Proofreading's pale grey either passes as text or is documented as the exception it has to become. AC5. The two revision greens read as related but distinct. AC6. No category name is mistakable for a status word, which now matters more because status is also coloured text in a neighbouring column. AC7. The non-trackable rows stop printing their category as the task name, since the column would otherwise say it twice.
 
 **PLAN-33 — Row simplification: words total and the progress signal**
 Depends on `PLAN-32`. Frontend, plus a design pass.
