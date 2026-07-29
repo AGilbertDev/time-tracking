@@ -48,19 +48,21 @@ The trackable set grows past the two we shipped. The direction is translation, i
 
 Given 2026-07-29. These are her employer's categories and her employer's numbers, so they replace every researched estimate below.
 
-**The default set is seven.** Translation, revision, proofreading, terminology, meetings, breaks, administration. She can add more on top, which is `PLAN-30`.
+**The default set is nine**, after the revision split and `layout` joining. She can add more on top, which is `PLAN-30`. The shipped set is six, so `PLAN-02` grows by three and loses one.
 
-| Category           | Trackable | Quota (words per hour) |
-| ------------------ | --------- | ---------------------- |
-| Translation        | yes       | 240                    |
-| Revision, internal | yes       | 1000                   |
-| Revision, external | yes       | 1300                   |
-| Proofreading       | yes       | 2000                   |
-| Terminology        | no        | none                   |
-| Meetings           | no        | none                   |
-| Breaks             | no        | none                   |
-| Administration     | no        | none                   |
-| DTP                | no        | none, see below        |
+| Id                  | FR               | EN                | Trackable | Quota (wph) |
+| ------------------- | ---------------- | ----------------- | --------- | ----------- |
+| `translation`       | Traduction       | Translation       | yes       | 240         |
+| `revision_internal` | Révision interne | Internal revision | yes       | 1000        |
+| `revision_external` | Révision externe | External revision | yes       | 1300        |
+| `proofreading`      | Relecture        | Proofreading      | yes       | 2000        |
+| `terminology`       | Terminologie     | Terminology       | no        | none        |
+| `meetings`          | Réunions         | Meetings          | no        | none        |
+| `breaks`            | Pauses           | Breaks            | no        | none        |
+| `admin`             | Administration   | Admin             | no        | none        |
+| `layout`            | Mise en page     | Layout            | no        | none        |
+
+Against the six that shipped: `proofreading` and `layout` are new, `revision` becomes two, and every French string above except the four already shipped needs her confirmation before it is built. `Relecture` in particular is the standard Canadian term for proofreading as distinct from revision, but it is proposed rather than given.
 
 **Proofreading is new.** The six defaults that shipped in `PLAN-02` do not include it, so the contract grows by one trackable category.
 
@@ -76,7 +78,9 @@ That is only simple because there is no history to protect. `PLAN-09`, the write
 
 Proposed copy: `Révision interne` and `Révision externe` in French, `Internal revision` and `External revision` in English. These are the direct renderings of the terms she used and read correctly in Canadian French, but they are her employer's vocabulary, so confirm them before they ship.
 
-**DTP is desktop publishing**, the layout pass after translation that makes the translated text fit the original design, which is the PowerPoint work she described. The industry bills it per page or per hour and never per word, so it produces no words and is non-trackable here: its time comes out of effective hours exactly as a meeting's does. Whether it joins the defaults or she adds it herself is open.
+**DTP joins the defaults as `layout`, reading `Mise en page` in French and `Layout` in English.** Named by her on 2026-07-29. It is desktop publishing, the pass after translation that refits the translated text into the original design, which is the PowerPoint work she described. `Layout` is the English counterpart rather than `Desktop publishing` or `DTP` because it renders `Mise en page` directly and keeps the register of the rest of the set, which is plain words rather than industry acronyms.
+
+It is non-trackable. The industry bills DTP per page or per hour and never per word, so it produces no words and its time comes out of effective hours exactly as a meeting's does.
 
 ### Words are a total, not a progress pair, deferred to a later feature
 
@@ -120,16 +124,17 @@ The middle route looks strongest, because it keeps the property the first reason
 
 Given 2026-07-29, from the app she uses today. **Not implemented.** The shipped palette in `shared/categories.ts` is the design stage's invented one and stays until a feature picks this up. Recorded here so that feature inherits a decision rather than re-deriving one.
 
-| Category       | Her colour  | Proposed hue   | Note                                         |
-| -------------- | ----------- | -------------- | -------------------------------------------- |
-| Translation    | cyan        | 195            | Already what shipped, by coincidence         |
-| Revision       | apple green | 140            | Splits into internal and external, see above |
-| Proofreading   | pale gray   | none, chroma 0 | Not a hue, see below                         |
-| Terminology    | wine red    | 20             |                                              |
-| Meetings       | pink        | 340            |                                              |
-| Breaks         | navy        | 265            |                                              |
-| Administration | invented    | 305            | She did not specify one                      |
-| DTP            | invented    | open           | Only if it joins the defaults                |
+| Category           | Her colour  | Proposed hue   | Note                                   |
+| ------------------ | ----------- | -------------- | -------------------------------------- |
+| Translation        | cyan        | 195            | Already what shipped, by coincidence   |
+| Revision, internal | apple green | 140            | She gave one green for both, see below |
+| Revision, external | apple green | needs its own  | See below                              |
+| Proofreading       | pale gray   | none, chroma 0 | Not a hue, see below                   |
+| Terminology        | wine red    | 20             |                                        |
+| Meetings           | pink        | 340            |                                        |
+| Breaks             | navy        | 265            |                                        |
+| Administration     | invented    | 305            | She did not specify one                |
+| Layout             | invented    | 60             | She did not specify one                |
 
 Two decisions she made alongside them.
 
@@ -137,7 +142,9 @@ Two decisions she made alongside them.
 
 **Lightness stays fixed for every category.** She chose the simple rule over literal fidelity, so navy renders as a medium blue, wine red as a medium red, and pale gray as a light neutral. One number per category survives, and a category `PLAN-30` has not created yet still inherits its contrast for free.
 
-Three problems the implementing feature has to solve. None are reasons to change the decision, they are the work.
+Four problems the implementing feature has to solve. None are reasons to change the decision, they are the work.
+
+- **The palette is now crowded past what fixed lightness can carry.** Nine categories need distinct edges, four status hues are reserved, one category is grey rather than a hue, and revision needs two greens that read as related but distinct. Apple green at 140 with its sibling anywhere within about 30 degrees will be hard to tell apart at identical lightness, and moving the sibling further lands it on cyan or on success green. That is three constraints competing for the same arc. The likely answer is that revision's two members are the honest second case for a lightness or chroma exception, alongside wine red and pink below, so the shared rule holds for the set and two pairs opt out with a documented reason. Worth designing rather than assuming.
 
 - **Wine red and pink are adjacent hues, and her original told them apart by lightness.** Fixed lightness drops exactly that difference, so 20 and 340 sit 40 degrees apart at identical lightness and will read as similar reds. Pink is proposed at 340 rather than 350 to buy what spacing there is. If it still reads wrong on screen, those two are the honest case for a per-category lightness exception, and it is better to make that exception for two categories than to abandon the shared rule for all of them.
 - **Pale gray is not a hue and the current contract cannot express it.** `categoryEdgeHue` returns a hue angle, and grey means chroma 0. Proofreading does not exist as a category yet, so nothing is broken today, but whoever adds proofreading must widen the contract to allow a chroma-zero slot rather than squeezing grey out of a hue number.
