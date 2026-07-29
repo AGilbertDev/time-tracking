@@ -9,6 +9,7 @@ import {
   effectiveDuration,
   formatCount,
   formatDayLabel,
+  formatDeadline,
   formatDeliveryDate,
   formatDuration,
   formatWeekLabel,
@@ -538,6 +539,150 @@ describe('formatDeliveryDate', () => {
   // screen, but the row composes them, so nothing here may print a clock.
   it('returns the date alone with no time joined to it', () => {
     expect(formatDeliveryDate('2026-07-16', '2026-07-16', FR_MONTHS_SHORT)).not.toContain(':')
+  })
+})
+
+// The coloured-names spec (docs/specs/planning/category-column-coloured-names.md) AC9 adds
+// formatDeadline, and Decision 7 of its design blueprint fixes the behaviour asserted below. The row
+// printed `29 Jul. 202612:00`, the year running into the hour, because Vue's condenseWhitespace drops
+// a whitespace-only text node that has no previous sibling, so the space written in the template
+// never reached the DOM. The separator moved into this function, where the compiler cannot reach it
+// and where a node-environment suite can assert on it. Every expected value below is the blueprint's
+// behaviour table, row for row, not the implementation's output.
+//
+// The separator is a plain space and never a glyph, because the date and the time read as one
+// deadline. The function returns the two parts rather than one string so the row keeps printing them
+// in two tones.
+
+describe('formatDeadline', () => {
+  // Blueprint row 1. A same-year French delivery with a time, which is the common case in a normal
+  // week. The date half is formatDeliveryDate's, so no year, and the time half carries the space.
+  it('composes a same-year French delivery and its time', () => {
+    expect(formatDeadline('2026-07-29', '2026-07-29', FR_MONTHS_SHORT, '12:00')).toEqual({
+      date: '29 juill.',
+      timeSuffix: ' 12:00'
+    })
+  })
+
+  // Blueprint row 2. The English case from the owner's own screen, where the failure was digit
+  // against digit.
+  it('composes a same-year English delivery and its time', () => {
+    expect(formatDeadline('2026-07-29', '2026-07-29', EN_MONTHS_SHORT, '12:00')).toEqual({
+      date: '29 Jul.',
+      timeSuffix: ' 12:00'
+    })
+  })
+
+  // Blueprint row 3. The cross-year French case, which is the one that fails the same digit-against-
+  // digit way English does, `4 janv. 202712:00`. Both cases exist in the same seeded week, so both
+  // are asserted rather than one standing in for the other.
+  it('composes a cross-year French delivery with its year and its time', () => {
+    expect(formatDeadline('2027-01-04', '2026-07-29', FR_MONTHS_SHORT, '12:00')).toEqual({
+      date: '4 janv. 2027',
+      timeSuffix: ' 12:00'
+    })
+  })
+
+  // Blueprint row 4. A delivery date with no time at all. The suffix is empty rather than a lone
+  // space, so the row's `v-if` on it renders nothing and no stray space is printed after the date.
+  it('returns an empty time suffix for a delivery with no time', () => {
+    expect(formatDeadline('2026-07-29', '2026-07-29', FR_MONTHS_SHORT, null)).toEqual({
+      date: '29 juill.',
+      timeSuffix: ''
+    })
+  })
+
+  it('returns an empty time suffix when the delivery time is undefined', () => {
+    expect(formatDeadline('2026-07-29', '2026-07-29', FR_MONTHS_SHORT, undefined)).toEqual({
+      date: '29 juill.',
+      timeSuffix: ''
+    })
+  })
+
+  // Blueprint row 5. No delivery date means there is no deadline to print, and null is what tells the
+  // row to show the em dash instead. The em dash is i18n copy, so the choice of what to print stays
+  // out of this module.
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['the empty string', '']
+  ])('returns null for %s as the delivery date', (_label, deliveryDate) => {
+    expect(formatDeadline(deliveryDate, '2026-07-29', FR_MONTHS_SHORT, '12:00')).toBeNull()
+  })
+
+  // Blueprint row 6, and the reason it is a row rather than an oversight. formatDeliveryDate returns
+  // an empty string for an unparseable date, so composing anyway would leave a lone `12:00` under a
+  // header that reads Livraison, which looks like a real deadline. Null is the only safe answer.
+  it('returns null rather than a lone time when the delivery date cannot be parsed', () => {
+    const deadline = formatDeadline('not-a-date', '2026-07-29', FR_MONTHS_SHORT, '12:00')
+    expect(deadline).toBeNull()
+    expect(deadline?.timeSuffix).toBeUndefined()
+  })
+
+  // The single most important assertion in this feature. The leading space on timeSuffix is the
+  // separator between the date and the time, and it is the whole bug being fixed. It is asserted
+  // directly rather than only as a side effect of an object comparison, because someone will
+  // eventually be tempted to trim this string and this test is what stands in the way. A trimmed
+  // suffix puts the row straight back to printing `29 Jul. 202612:00`.
+  it.each([
+    ['French, same year', '2026-07-29', FR_MONTHS_SHORT],
+    ['English, same year', '2026-07-29', EN_MONTHS_SHORT],
+    ['French, cross year', '2027-01-04', FR_MONTHS_SHORT],
+    ['English, cross year', '2027-01-04', EN_MONTHS_SHORT]
+  ] as Array<[string, string, readonly string[]]>)(
+    'begins the time suffix with the separator space (%s)',
+    (_label, deliveryDate, months) => {
+      const deadline = formatDeadline(deliveryDate, '2026-07-29', months, '12:00')
+      expect(deadline?.timeSuffix.startsWith(' ')).toBe(true)
+      expect(deadline?.timeSuffix).toBe(' 12:00')
+    }
+  )
+
+  // The same rule read from the joined string, which is what the eye actually sees in the cell. The
+  // year or the abbreviation period must never sit against the first digit of the hour. FR without a
+  // year fails as a period against a digit, `29 juill.12:00`, and EN with a year fails as digit
+  // against digit, `29 Jul. 202612:00`, so both shapes are checked.
+  it.each([
+    ['2026-07-29', FR_MONTHS_SHORT, '29 juill. 12:00'],
+    ['2026-07-29', EN_MONTHS_SHORT, '29 Jul. 12:00'],
+    ['2027-01-04', FR_MONTHS_SHORT, '4 janv. 2027 12:00'],
+    ['2027-01-04', EN_MONTHS_SHORT, '4 Jan. 2027 12:00']
+  ] as Array<[string, readonly string[], string]>)(
+    'reads as %s with a space before the hour',
+    (deliveryDate, months, expected) => {
+      const deadline = formatDeadline(deliveryDate, '2026-07-29', months, '12:00')
+      expect(`${deadline?.date}${deadline?.timeSuffix}`).toBe(expected)
+    }
+  )
+
+  // The separator is a plain space, decided in Decision 7 and not a glyph, so no comma, bullet, or
+  // middle dot may creep into the suffix. The comment on the row already argues the deadline reads as
+  // one fact, and this feature vindicates that argument rather than overriding it.
+  it('separates the date and the time with a plain space and no glyph', () => {
+    const deadline = formatDeadline('2026-07-29', '2026-07-29', FR_MONTHS_SHORT, '12:00')
+    expect(deadline?.timeSuffix).toMatch(/^ \d/)
+    expect(deadline?.timeSuffix).not.toMatch(/[,·•–—]/)
+  })
+
+  // The date half is formatDeliveryDate's output unchanged, which is what AC28 of extend-tasks.md
+  // keeps byte for byte. So the composed date and the helper's own result must never disagree, or a
+  // second copy of the date rule has appeared.
+  it.each([
+    ['2026-07-29', '2026-07-29'],
+    ['2027-01-04', '2026-07-29'],
+    ['2026-03-15', '2026-07-20']
+  ])('reuses formatDeliveryDate for the date half of %s', (deliveryDate, taskDate) => {
+    const deadline = formatDeadline(deliveryDate, taskDate, FR_MONTHS_SHORT, '12:00')
+    expect(deadline?.date).toBe(formatDeliveryDate(deliveryDate, taskDate, FR_MONTHS_SHORT))
+  })
+
+  // The clock is printed as stored and this module holds no copy, so nothing reformats `HH:MM` and
+  // nothing inserts the French space before a colon, which governs `? ! : ;` as punctuation rather
+  // than a numeric time separator.
+  it.each(['09:30', '00:00', '23:59'])('prints the stored time %s unchanged', (time) => {
+    expect(formatDeadline('2026-07-29', '2026-07-29', FR_MONTHS_SHORT, time)?.timeSuffix).toBe(
+      ` ${time}`
+    )
   })
 })
 

@@ -3,8 +3,7 @@ import frMessages from '~~/i18n/locales/fr.json'
 import { describe, expect, it } from 'vitest'
 
 import {
-  CATEGORY_HUE_SLOTS,
-  categoryEdgeHue,
+  categoryHue,
   coerceCategory,
   DEFAULT_CATEGORIES,
   DEFAULT_CATEGORY_ID,
@@ -15,11 +14,15 @@ import {
 // The nine-categories spec (docs/specs/planning/nine-task-categories.md) replaces the six ids that
 // PLAN-02 shipped with the nine the primary user's employer actually uses. It locks the membership
 // and the order (AC1), the confirmed French and English copy (AC2), the coercion of the now stale
-// revision id (AC4), a real locale key for every id in both files (AC6), and the placeholder edge
-// slots inside the unchanged hue ring (AC7). The fail-closed coercion that PLAN-02 established
-// still holds and is still asserted here, since the quota engine (PLAN-22), the task row UI
-// (PLAN-06), and the write API (PLAN-09) all rest on it. Expected values are derived from the
-// spec, not from the implementation.
+// revision id (AC4), and a real locale key for every id in both files (AC6). The fail-closed
+// coercion that PLAN-02 established still holds and is still asserted here, since the quota engine
+// (PLAN-22), the task row UI (PLAN-06), and the write API (PLAN-09) all rest on it.
+//
+// The colour half of the contract comes from the coloured-names spec
+// (docs/specs/planning/category-column-coloured-names.md) and its design blueprint. AC2 there makes
+// this module the single source of truth for which category is which colour, and the blueprint's
+// resolved palette fixes the nine hues. Expected values throughout are derived from those specs, not
+// from the implementation.
 
 // The locked order and membership from AC1 and the spec's category table.
 const EXPECTED_ORDER = [
@@ -48,14 +51,16 @@ const TRACKABLE_TABLE: Array<[string, boolean]> = [
   ['dtp', false]
 ]
 
-// The four ids this feature adds, called out separately because each of them was an invalid value
-// before PLAN-32a and has to read as valid now (AC4).
+// The four ids PLAN-32a added, called out separately because each of them was an invalid value
+// before that feature and has to read as valid now (AC4).
 const NEW_IDS = ['revision_internal', 'revision_external', 'proofreading', 'dtp']
 
 // Invalid inputs that must all fold to the safe default (AC4 and the spec's edge cases). The stale
 // id case is revision, which is the id the six-member set carried and the exact value the dev
 // database still holds, so this mirrors the theme test's removed-id intent against a real value
-// rather than a hypothetical one.
+// rather than a hypothetical one. ma-categorie stands for a category PLAN-30 lets the user create
+// but that this contract has never seen, and NaN is here because a number reaching a lookup is the
+// input most likely to produce undefined rather than a fallback.
 const INVALID_INPUTS: Array<[string, unknown]> = [
   ['an unknown string', 'does-not-exist'],
   ['the stale revision id', 'revision'],
@@ -63,7 +68,32 @@ const INVALID_INPUTS: Array<[string, unknown]> = [
   ['null', null],
   ['undefined', undefined],
   ['a number', 42],
-  ['an object', { id: 'translation' }]
+  ['NaN', Number.NaN],
+  ['an object', { id: 'translation' }],
+  ['a user-created id', 'ma-categorie']
+]
+
+// The hue each category's name is printed at, from the design blueprint's resolved palette. Seven of
+// the nine are the primary user's own colours from the app she uses today, kept verbatim: cyan 195
+// for translation, apple green 140 for revision_internal, wine red 20 for terminology, pink 340 for
+// meetings, navy 265 for breaks. revision_external at 115 is the derived sibling of 140, and admin
+// 305 and dtp 60 are chosen because she named no colour for either. proofreading at 230 is the one
+// substitution: her pale grey cannot both clear the 4.5:1 text floor and still read as a colour
+// rather than as the row's own muted text, so it takes the centre of the palette's widest empty arc.
+//
+// This is the mapping AC2 calls the single source of truth, so it is pinned literally rather than
+// derived from the descriptors. A future reader finding this table failing is looking at a palette
+// change, which is a decision that belongs to the primary user rather than to a build stage.
+const CATEGORY_HUE_TABLE: Array<[string, number]> = [
+  ['translation', 195],
+  ['revision_internal', 140],
+  ['revision_external', 115],
+  ['proofreading', 230],
+  ['terminology', 20],
+  ['meetings', 340],
+  ['breaks', 265],
+  ['admin', 305],
+  ['dtp', 60]
 ]
 
 describe('shared/categories', () => {
@@ -93,7 +123,9 @@ describe('DEFAULT_CATEGORIES', () => {
     expect(DEFAULT_CATEGORIES).toHaveLength(9)
   })
 
-  // AC1: the descriptor ids match DEFAULT_CATEGORY_IDS in the same order.
+  // AC1: the descriptor ids match DEFAULT_CATEGORY_IDS in the same order. The colour contract is read
+  // by id rather than by position, but the two lists agreeing is what lets a reader compare the
+  // palette table above against the contract in one pass.
   it('has ids matching DEFAULT_CATEGORY_IDS in the same order', () => {
     expect(DEFAULT_CATEGORIES.map((category) => category.id)).toEqual([...DEFAULT_CATEGORY_IDS])
   })
@@ -112,6 +144,18 @@ describe('DEFAULT_CATEGORIES', () => {
 
   it('has exactly five non-trackable categories', () => {
     expect(DEFAULT_CATEGORIES.filter((category) => !category.trackable)).toHaveLength(5)
+  })
+
+  // AC1 states the trackable split by membership as well as by count, and the four are the members
+  // whose words reach the quota numerator, so naming them is worth more than counting them.
+  it('marks translation, both revisions, and proofreading as the four trackable ids', () => {
+    const trackable = DEFAULT_CATEGORIES.filter((category) => category.trackable)
+    expect(trackable.map((category) => category.id)).toEqual([
+      'translation',
+      'revision_internal',
+      'revision_external',
+      'proofreading'
+    ])
   })
 })
 
@@ -143,8 +187,8 @@ describe('coerceCategory', () => {
     expect(coerceCategory(id)).toBe(id)
   })
 
-  // AC4 spells out that the four ids this feature adds all return themselves unchanged. Each of
-  // them folded to admin before PLAN-32a, so this is the criterion that proves the tuple widened
+  // AC4 spells out that the four ids PLAN-32a added all return themselves unchanged. Each of them
+  // folded to admin before that feature, so this is the criterion that proves the tuple widened
   // rather than only that the old ids still work.
   it.each(NEW_IDS)('returns the newly valid id %s unchanged', (id) => {
     expect(coerceCategory(id)).toBe(id)
@@ -154,11 +198,11 @@ describe('coerceCategory', () => {
     expect(coerceCategory(input)).toBe('admin')
   })
 
-  // AC4, and the most load-bearing behaviour in the feature. Nine seeded rows in the dev database
-  // still carry revision, and this feature retires that id. A stored revision has to resolve to a
-  // valid non-trackable id so its words can never enter the quota numerator and inflate the
-  // headline number the employer reads at review time. Reading as administration is wrong for the
-  // user and safe for the quota, which is the direction the fallback is chosen to fail in.
+  // AC4, and the most load-bearing behaviour in the nine-categories feature. Nine seeded rows in the
+  // dev database still carry revision, and that id is retired. A stored revision has to resolve to a
+  // valid non-trackable id so its words can never enter the quota numerator and inflate the headline
+  // number the employer reads at review time. Reading as administration is wrong for the user and
+  // safe for the quota, which is the direction the fallback is chosen to fail in.
   it('folds a stored revision to a non-trackable admin so its words can never reach the quota numerator', () => {
     expect(coerceCategory('revision')).toBe('admin')
     expect(isTrackableCategory('revision')).toBe(false)
@@ -191,12 +235,124 @@ describe('isTrackableCategory', () => {
   })
 })
 
-// AC2 and AC6. Every visible category name lives in the locale files under categories.<id>, never
-// in the contract module, and TaskRow.vue resolves it with a dynamic template key that nothing
-// validates. A missing key therefore prints the raw key string as the row's visible primary name
-// and reads it aloud through the sr-only span, so the shipped copy being complete is a real
-// requirement rather than a tidiness one. The two JSON files are imported directly rather than
-// mocked, because the point is that the copy that ships is the copy that is asserted.
+// The coloured-names spec (docs/specs/planning/category-column-coloured-names.md) prints the
+// category as a word in its own colour, so the contract maps an id to one hue angle and the fixed
+// lightness and chroma live once per mode in main.css. That split is what AC2 sanctions, and it is
+// why nothing here asserts a contrast ratio: the ratios are measured in the design blueprint and
+// enforced by the CSS custom properties, and this module is only ever asked which hue an id takes.
+
+describe('Category descriptors carry a hue', () => {
+  // The mapping lives on the descriptor rather than in a second map, which is what keeps the colour
+  // and the trackable flag from drifting apart.
+  it.each(DEFAULT_CATEGORIES)('declares a hue for $id', (descriptor) => {
+    expect(descriptor).toHaveProperty('hue')
+  })
+
+  // The assertion that inverts. This file used to assert that a category carried a colour exactly
+  // when it was trackable, which encoded AC18 of extend-tasks.md, where the five non-trackable
+  // categories read as neutral and drew nothing. PLAN-32c reverses that: the primary user's original
+  // app coloured every kind of work and she asked for that back, so all nine take a colour and the
+  // null case disappears from the defaults. Asserting the reversal explicitly rather than deleting
+  // the old test is deliberate, so a reader who arrives expecting the old rule finds the reason here.
+  it('gives every one of the nine categories a hue, trackable or not', () => {
+    expect(DEFAULT_CATEGORIES).toHaveLength(9)
+    for (const descriptor of DEFAULT_CATEGORIES) {
+      expect(descriptor.hue).not.toBeNull()
+      expect(descriptor.hue).not.toBeUndefined()
+      expect(typeof descriptor.hue).toBe('number')
+    }
+  })
+
+  // The same reversal stated from the non-trackable side, which is the half that changed. A meeting,
+  // a break, administration, terminology, and page layout are all kinds of work she wants to
+  // recognize by colour, so none of the five may resolve to nothing.
+  it('colours the five non-trackable categories too', () => {
+    const nonTrackable = DEFAULT_CATEGORIES.filter((category) => !category.trackable)
+    expect(nonTrackable.map((category) => category.id)).toEqual([
+      'terminology',
+      'meetings',
+      'breaks',
+      'admin',
+      'dtp'
+    ])
+    expect(nonTrackable.every((category) => typeof category.hue === 'number')).toBe(true)
+  })
+
+  // Two categories sharing a hue would defeat the whole point, which is telling one kind of work
+  // from another at a glance. With every category coloured this now covers all nine rather than the
+  // four that used to hold a slot.
+  it('gives each of the nine categories its own hue', () => {
+    const hues = DEFAULT_CATEGORIES.map((category) => category.hue)
+    expect(new Set(hues).size).toBe(hues.length)
+  })
+
+  // Every hue is an angle in degrees, since main.css feeds it straight into oklch(). A value outside
+  // the circle would render as an unpredictable colour rather than fail loudly, and the blueprint's
+  // guarantee that every hue from 0 to 359 clears 4.5:1 only holds inside that range.
+  it.each(DEFAULT_CATEGORIES)('keeps $id at a hue angle within the colour circle', (descriptor) => {
+    expect(Number.isInteger(descriptor.hue)).toBe(true)
+    expect(descriptor.hue).toBeGreaterThanOrEqual(0)
+    expect(descriptor.hue).toBeLessThan(360)
+  })
+})
+
+describe('categoryHue', () => {
+  // The blueprint's resolved palette, asserted per id. This is the assertion the palette table above
+  // exists for.
+  it.each(CATEGORY_HUE_TABLE)('resolves %s to hue %i', (id, expected) => {
+    expect(categoryHue(id)).toBe(expected)
+  })
+
+  // AC2 asks for every one of the nine to resolve through the contract to a colour, so the whole set
+  // is checked as a set rather than only row by row.
+  it('resolves all nine ids to nine distinct hues', () => {
+    const hues = DEFAULT_CATEGORY_IDS.map((id) => categoryHue(id))
+    expect(hues).toHaveLength(9)
+    expect(new Set(hues).size).toBe(9)
+  })
+
+  // The public function agrees with the descriptor for every default id, so there is one mapping
+  // rather than a function and a table that can drift.
+  it.each(DEFAULT_CATEGORIES)('agrees with the descriptor hue for $id', (descriptor) => {
+    expect(categoryHue(descriptor.id)).toBe(descriptor.hue)
+  })
+
+  // Totality, which is the fifth thing the spec's new shape had to express. The row hands this
+  // function whatever the free-text category column holds, so no input may return null or undefined
+  // and none may throw. Every invalid value coerces to admin first and therefore takes admin's hue,
+  // which is 305. It borrows the fallback's colour rather than another category's, so a stale row can
+  // never claim to be translation work.
+  it.each(INVALID_INPUTS)('resolves %s to a real hue rather than nothing', (_label, input) => {
+    expect(() => categoryHue(input)).not.toThrow()
+    const hue = categoryHue(input)
+    expect(hue).not.toBeNull()
+    expect(hue).not.toBeUndefined()
+    expect(typeof hue).toBe('number')
+    expect(hue).toBe(305)
+  })
+
+  // A PLAN-30 category the user creates is the same case as a stale id until PLAN-30 extends the
+  // validated set. It resolves rather than throwing, which is the extensibility property the retired
+  // hue ring existed for and that the blueprint now guarantees over the whole circle instead.
+  it('resolves a user-created category id to the fallback hue rather than throwing', () => {
+    expect(categoryHue('ma-categorie')).toBe(categoryHue(DEFAULT_CATEGORY_ID))
+  })
+
+  // It agrees with the coercion, so an unknown id and the default it folds to read the same. This is
+  // the same fail-closed discipline isTrackableCategory follows. It is also the one assertion the
+  // colour contract carried before PLAN-32c whose intent survives this feature unchanged.
+  it('agrees with coerceCategory for an unknown id', () => {
+    expect(categoryHue('does-not-exist')).toBe(categoryHue(DEFAULT_CATEGORY_ID))
+  })
+})
+
+// AC2 and AC6 of the nine-categories spec. Every visible category name lives in the locale files
+// under categories.<id>, never in the contract module, and TaskRow.vue resolves it with a dynamic
+// template key that nothing validates. A missing key therefore prints the raw key string in the
+// category column, which is the cell the coloured-names feature makes visible, so the shipped copy
+// being complete is a real requirement rather than a tidiness one. The two JSON files are imported
+// directly rather than mocked, because the point is that the copy that ships is the copy that is
+// asserted.
 const FR_CATEGORIES = frMessages.categories as Record<string, string>
 const EN_CATEGORIES = enMessages.categories as Record<string, string>
 
@@ -261,7 +417,9 @@ describe('i18n category names', () => {
     expect(Object.keys(messages)).toEqual([...DEFAULT_CATEGORY_IDS])
   })
 
-  // AC2: the exact confirmed strings, which are locked.
+  // AC2: the exact confirmed strings, which are locked. AC8 of the coloured-names spec restates the
+  // same lock for the column this feature makes visible, since the nine names are printed as
+  // confirmed with no synonym substituted.
   it.each(CATEGORY_NAME_TABLE)('names %s "%s" in French and "%s" in English', (id, fr, en) => {
     expect(FR_CATEGORIES[id]).toBe(fr)
     expect(EN_CATEGORIES[id]).toBe(en)
@@ -286,165 +444,4 @@ describe('i18n category names', () => {
       expect(fr).not.toMatch(/[?!:;]/)
     }
   )
-})
-
-// The progressive-disclosure spec (docs/specs/planning/extend-tasks.md) turns the category from a
-// printed word into a colour on the row edge and says the mapping is one shared contract living
-// beside this one. AC18 fixes what a non-trackable category resolves to, D8 fixes that each
-// trackable category gets a distinct hue and that the palette must extend to categories PLAN-30
-// has not created yet, and the design stage (extend-tasks-design.md, "The palette rule") settled
-// the ring. PLAN-32a AC7 then reassigns the slots for nine ids.
-
-// The hue each category resolves to today, from PLAN-32a AC7, and the neutral the other five take.
-// A null means no edge is drawn at all, which is how an edge treatment renders AC18's neutral.
-//
-// The four trackable hues are PLAN-32a placeholders and PLAN-32c replaces all of them, including
-// the hue translation has held since it shipped. AC7 says so directly and gives the evidence.
-// revision_internal resolving to magenta 300 against revision_external's green 115 reads as two
-// unrelated categories, while PLAN-32c is required to make the two revision greens read as related
-// but distinct. So a future reader who finds this table failing after PLAN-32c should update it
-// rather than treat the change as a regression.
-const EDGE_HUE_TABLE: Array<[string, number | null]> = [
-  ['translation', 195],
-  ['revision_internal', 300],
-  ['revision_external', 115],
-  ['proofreading', 345],
-  ['terminology', null],
-  ['meetings', null],
-  ['breaks', null],
-  ['admin', null],
-  ['dtp', null]
-]
-
-describe('CATEGORY_HUE_SLOTS', () => {
-  // AC7: the ring is unchanged by this feature. Only the edgeSlot numbers on the descriptors move,
-  // and only as far as nine ids mechanically require, so the eight slots are asserted literally.
-  it('is the unchanged eight-slot ring', () => {
-    expect(CATEGORY_HUE_SLOTS).toEqual([195, 300, 115, 345, 240, 170, 275, 320])
-  })
-
-  // D8 and AC7: the palette must be able to extend, because PLAN-30 lets the user create
-  // categories that each need a colour. Four of the eight slots are used, so the ring still
-  // carries more slots than the defaults consume and PLAN-30 needs no redesign.
-  it('carries more slots than the default categories consume', () => {
-    const used = DEFAULT_CATEGORIES.filter((category) => category.edgeSlot !== null)
-    expect(CATEGORY_HUE_SLOTS.length).toBeGreaterThan(used.length)
-  })
-
-  // Two categories sharing a hue would defeat the whole point, which is telling one kind of work
-  // from another at a glance.
-  it('has no duplicate hue angles', () => {
-    expect(new Set(CATEGORY_HUE_SLOTS).size).toBe(CATEGORY_HUE_SLOTS.length)
-  })
-
-  // Every slot is a hue angle in degrees, since main.css feeds it straight into oklch(). A value
-  // outside the circle would render as an unpredictable colour rather than fail loudly.
-  it.each(CATEGORY_HUE_SLOTS)('exposes %i as a hue angle within the colour circle', (hue) => {
-    expect(Number.isInteger(hue)).toBe(true)
-    expect(hue).toBeGreaterThanOrEqual(0)
-    expect(hue).toBeLessThan(360)
-  })
-})
-
-describe('Category descriptors carry an edge slot', () => {
-  // The mapping lives on the descriptor rather than in a second map, which is what keeps the colour
-  // and the trackable flag from drifting apart.
-  it.each(DEFAULT_CATEGORIES)('declares an edgeSlot for $id', (descriptor) => {
-    expect(descriptor).toHaveProperty('edgeSlot')
-  })
-
-  // AC18: a non-trackable category reads as neutral, so it holds no slot. D8: a trackable one does.
-  it.each(DEFAULT_CATEGORIES)('gives $id a slot only when it is trackable', (descriptor) => {
-    expect(descriptor.edgeSlot !== null).toBe(descriptor.trackable)
-  })
-
-  // AC7 states the split by membership rather than only by rule, so the two sides are asserted as
-  // lists. The five non-trackable ids keep edgeSlot null in this feature, dtp included, because
-  // colouring them is PLAN-32c's decision.
-  it('gives an edge slot to the four trackable ids and none to the five others', () => {
-    const withSlot = DEFAULT_CATEGORIES.filter((category) => category.edgeSlot !== null)
-    const withoutSlot = DEFAULT_CATEGORIES.filter((category) => category.edgeSlot === null)
-    expect(withSlot.map((category) => category.id)).toEqual([
-      'translation',
-      'revision_internal',
-      'revision_external',
-      'proofreading'
-    ])
-    expect(withoutSlot.map((category) => category.id)).toEqual([
-      'terminology',
-      'meetings',
-      'breaks',
-      'admin',
-      'dtp'
-    ])
-  })
-
-  // Two trackable categories pointing at the same slot would resolve to the same hue.
-  it('gives each trackable category its own slot', () => {
-    const slots = DEFAULT_CATEGORIES.map((category) => category.edgeSlot).filter(
-      (slot) => slot !== null
-    )
-    expect(new Set(slots).size).toBe(slots.length)
-  })
-
-  // AC7: every assigned slot has to index into the ring, or categoryEdgeHue would wrap and hand
-  // main.css a hue the palette never vetted for this category.
-  it.each(DEFAULT_CATEGORIES)('keeps $id inside the ring bounds', (descriptor) => {
-    if (descriptor.edgeSlot === null) return
-    expect(descriptor.edgeSlot).toBeGreaterThanOrEqual(0)
-    expect(descriptor.edgeSlot).toBeLessThan(CATEGORY_HUE_SLOTS.length)
-  })
-})
-
-describe('categoryEdgeHue', () => {
-  // The AC7 assignments, and AC18's neutral for the five that produce no words.
-  it.each(EDGE_HUE_TABLE)('resolves %s to %s', (id, expected) => {
-    expect(categoryEdgeHue(id)).toBe(expected)
-  })
-
-  // D8: the distinction the colour exists to make is one kind of work against another, so no two
-  // trackable categories can land on the same hue and none of the four may read as neutral. With
-  // four trackable members this is the assertion that carries that rule, and it replaces the old
-  // translation-against-revision check, which now compares nothing since revision is not an id.
-  it('gives the four trackable categories four distinct hues that are all drawn', () => {
-    const hues = DEFAULT_CATEGORIES.filter((category) => category.trackable).map((category) =>
-      categoryEdgeHue(category.id)
-    )
-    expect(hues).toHaveLength(4)
-    expect(hues.every((hue) => hue !== null)).toBe(true)
-    expect(new Set(hues).size).toBe(4)
-  })
-
-  // Every trackable hue has to be one the ring actually declares, or main.css would be handed a
-  // number the palette never vetted for contrast.
-  it.each(DEFAULT_CATEGORY_IDS)('resolves %s to a hue the ring declares, or to null', (id) => {
-    const hue = categoryEdgeHue(id)
-    if (hue !== null) expect(CATEGORY_HUE_SLOTS as readonly number[]).toContain(hue)
-  })
-
-  // AC18 restated through the public function: neutral and trackable are the same split, so the
-  // colour can never say a break is translation work.
-  it.each(DEFAULT_CATEGORY_IDS)('gives %s a hue only when it is trackable', (id) => {
-    expect(categoryEdgeHue(id) !== null).toBe(isTrackableCategory(id))
-  })
-
-  // D8 asks for a palette that extends to categories that do not exist yet, so an id this contract
-  // has never seen has to resolve rather than throw. It resolves to neutral, which draws no edge,
-  // because borrowing another category's hue would make the row lie about what kind of work it is.
-  it.each(INVALID_INPUTS)('resolves %s to neutral rather than throwing', (_label, input) => {
-    expect(() => categoryEdgeHue(input)).not.toThrow()
-    expect(categoryEdgeHue(input)).toBeNull()
-  })
-
-  // A user-created id from PLAN-30 is the same case as a stale one until PLAN-30 extends the
-  // validated set, and it must not take a default category's colour on the way through.
-  it('resolves a user-created category id to neutral rather than to a default hue', () => {
-    expect(categoryEdgeHue('ma-categorie')).toBeNull()
-  })
-
-  // It agrees with the coercion, so an unknown id and the default it folds to read the same. This is
-  // the same fail-closed discipline isTrackableCategory follows.
-  it('agrees with coerceCategory for an unknown id', () => {
-    expect(categoryEdgeHue('does-not-exist')).toBe(categoryEdgeHue(DEFAULT_CATEGORY_ID))
-  })
 })
