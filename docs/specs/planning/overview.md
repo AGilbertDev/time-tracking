@@ -68,6 +68,33 @@ Given 2026-07-29. These are her employer's categories and her employer's numbers
 
 **DTP is desktop publishing**, the layout pass after translation that makes the translated text fit the original design, which is the PowerPoint work she described. The industry bills it per page or per hour and never per word, so it produces no words and is non-trackable here: its time comes out of effective hours exactly as a meeting's does. Whether it joins the defaults or she adds it herself is open.
 
+### The original category colours, deferred to a later feature
+
+Given 2026-07-29, from the app she uses today. **Not implemented.** The shipped palette in `shared/categories.ts` is the design stage's invented one and stays until a feature picks this up. Recorded here so that feature inherits a decision rather than re-deriving one.
+
+| Category       | Her colour  | Proposed hue   | Note                                         |
+| -------------- | ----------- | -------------- | -------------------------------------------- |
+| Translation    | cyan        | 195            | Already what shipped, by coincidence         |
+| Revision       | apple green | 140            | Splits into internal and external, see above |
+| Proofreading   | pale gray   | none, chroma 0 | Not a hue, see below                         |
+| Terminology    | wine red    | 20             |                                              |
+| Meetings       | pink        | 340            |                                              |
+| Breaks         | navy        | 265            |                                              |
+| Administration | invented    | 305            | She did not specify one                      |
+| DTP            | invented    | open           | Only if it joins the defaults                |
+
+Two decisions she made alongside them.
+
+**Every category takes an edge, including the non-trackable ones.** This amends `AC18` of [extend-tasks.md](extend-tasks.md) and the `edgeSlot: null` on the four non-trackable defaults. The shipped reasoning was that translation against revision is the only distinction worth colour and that a non-trackable row already prints its category as its own name. Her original app coloured everything and she wants that, so the reasoning loses.
+
+**Lightness stays fixed for every category.** She chose the simple rule over literal fidelity, so navy renders as a medium blue, wine red as a medium red, and pale gray as a light neutral. One number per category survives, and a category `PLAN-30` has not created yet still inherits its contrast for free.
+
+Three problems the implementing feature has to solve. None are reasons to change the decision, they are the work.
+
+- **Wine red and pink are adjacent hues, and her original told them apart by lightness.** Fixed lightness drops exactly that difference, so 20 and 340 sit 40 degrees apart at identical lightness and will read as similar reds. Pink is proposed at 340 rather than 350 to buy what spacing there is. If it still reads wrong on screen, those two are the honest case for a per-category lightness exception, and it is better to make that exception for two categories than to abandon the shared rule for all of them.
+- **Pale gray is not a hue and the current contract cannot express it.** `categoryEdgeHue` returns a hue angle, and grey means chroma 0. Proofreading does not exist as a category yet, so nothing is broken today, but whoever adds proofreading must widen the contract to allow a chroma-zero slot rather than squeezing grey out of a hue number.
+- **Her hues collide with the reserved status hues, and the shipped palette was ordered specifically to avoid them.** Apple green 140 sits beside success 148, wine red 20 beside error 27, navy 265 beside info 258, and any warm slot for administration lands near warning 78. With six categories plus four status roles there is not enough hue space to keep them apart, so the separation has to come from position and shape instead: the category is a 3 px left edge on the row and the status is text in its own column. Worth watching once it is on screen, because it is the one place this palette could actively mislead.
+
 **The 450 default is wrong and has to change.** `settings.quota_wph` defaults to 450 and the research note below justifies that number from published norms of 400 to 600 words per hour. Her employer's translation quota is 240, well under the published range, so the note is now misleading rather than supporting. Published norms measure throughput while working; this quota divides by scheduled availability, which is a different and larger denominator, and that is most of the gap. Keep the research as context for what the CAT tools report and stop treating it as evidence for the default. Once quota is a per-category setting, the global default retires with it.
 
 **The category names are not settled and must not be guessed.** These are the terms her employer uses, and the Canadian industry draws real distinctions here. Bilingual revision checks a translation against its source, unilingual revision works on the target alone, and proofreading is the final accuracy pass, and the three are separate billable services rather than loose synonyms ([oxo innovation](https://oxoinnovation.com/fr/blog/la-difference-entre-la-revision-bilingue-la-revision-unilingue-et-la-correction-depreuves/), [ITC Traductions Canada](https://www.itctraductionscanada.ca/service-relecture-revision/), [HEC Montréal](https://www.hec.ca/biblio/services/traduction-revision.html)). Whether her employer splits internal against external, or bilingual against unilingual, is a question for her. Confirm the list and the FR copy with her before any of it is built.
