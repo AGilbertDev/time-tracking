@@ -29,7 +29,7 @@ const { t } = useI18n()
 // printed name of `revision_internal`, which is closer than the two revision categories are to each
 // other, so a completed internal revision put nearly the same green in two cells of one row. Under
 // simulated protanopia that fell to about one just-noticeable difference. emerald-800 lifts it to
-// 0.0604, and 0.0548 under protanopia. A category hue is the primary user's own colour, so the
+// 0.0604, and 0.0548 under protanopia. A category hue is the user's own colour, so the
 // reserved role is what moved. Do not put it back to green without re-measuring that pair.
 //
 // The light shade is 800 rather than the 700 the blueprint carried over from the badge. Losing the

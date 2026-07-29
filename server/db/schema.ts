@@ -51,7 +51,7 @@ export const settings = sqliteTable(
     locale: text('locale').notNull().default('fr'),
     // Owner's IANA timezone. The onboarding wizard captures it so the dashboard can render
     // day boundaries and quota windows in the user's local time. Defaults to America/Toronto,
-    // the primary user's zone.
+    // the user's zone.
     timezone: text('timezone').notNull().default('America/Toronto')
   },
   (table) => [foreignKey({ columns: [table.userId], foreignColumns: [users.id] })]

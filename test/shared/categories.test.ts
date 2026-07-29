@@ -12,7 +12,7 @@ import {
 } from '#shared/categories'
 
 // The nine-categories spec (docs/specs/planning/nine-task-categories.md) replaces the six ids that
-// PLAN-02 shipped with the nine the primary user's employer actually uses. It locks the membership
+// PLAN-02 shipped with the nine the user actually uses. It locks the membership
 // and the order (AC1), the confirmed French and English copy (AC2), the coercion of the now stale
 // revision id (AC4), and a real locale key for every id in both files (AC6). The fail-closed
 // coercion that PLAN-02 established still holds and is still asserted here, since the quota engine
@@ -74,16 +74,16 @@ const INVALID_INPUTS: Array<[string, unknown]> = [
 ]
 
 // The hue each category's name is printed at, from the design blueprint's resolved palette. Seven of
-// the nine are the primary user's own colours from the app she uses today, kept verbatim: cyan 195
+// the nine are the user's own colours from the app they use today, kept verbatim: cyan 195
 // for translation, apple green 140 for revision_internal, wine red 20 for terminology, pink 340 for
 // meetings, navy 265 for breaks. revision_external at 115 is the derived sibling of 140, and admin
-// 305 and dtp 60 are chosen because she named no colour for either. proofreading at 230 is the one
-// substitution: her pale grey cannot both clear the 4.5:1 text floor and still read as a colour
+// 305 and dtp 60 are chosen because the user named no colour for either. proofreading at 230 is the one
+// substitution: the user's pale grey cannot both clear the 4.5:1 text floor and still read as a colour
 // rather than as the row's own muted text, so it takes the centre of the palette's widest empty arc.
 //
 // This is the mapping AC2 calls the single source of truth, so it is pinned literally rather than
 // derived from the descriptors. A future reader finding this table failing is looking at a palette
-// change, which is a decision that belongs to the primary user rather than to a build stage.
+// change, which is a decision that belongs to the user rather than to a build stage.
 const CATEGORY_HUE_TABLE: Array<[string, number]> = [
   ['translation', 195],
   ['revision_internal', 140],
@@ -110,7 +110,7 @@ describe('shared/categories', () => {
     expect(new Set(DEFAULT_CATEGORY_IDS).size).toBe(DEFAULT_CATEGORY_IDS.length)
   })
 
-  // AC1: the single revision id is gone, replaced by the internal and external pair, because her
+  // AC1: the single revision id is gone, replaced by the internal and external pair, because the user's
   // two revision quotas are different numbers and two rates cannot share one category.
   it('no longer carries the retired revision id', () => {
     expect(DEFAULT_CATEGORY_IDS as readonly string[]).not.toContain('revision')
@@ -201,7 +201,7 @@ describe('coerceCategory', () => {
   // AC4, and the most load-bearing behaviour in the nine-categories feature. Nine seeded rows in the
   // dev database still carry revision, and that id is retired. A stored revision has to resolve to a
   // valid non-trackable id so its words can never enter the quota numerator and inflate the headline
-  // number the employer reads at review time. Reading as administration is wrong for the user and
+  // number read at review time. Reading as administration is wrong for the user and
   // safe for the quota, which is the direction the fallback is chosen to fail in.
   it('folds a stored revision to a non-trackable admin so its words can never reach the quota numerator', () => {
     expect(coerceCategory('revision')).toBe('admin')
@@ -250,8 +250,8 @@ describe('Category descriptors carry a hue', () => {
 
   // The assertion that inverts. This file used to assert that a category carried a colour exactly
   // when it was trackable, which encoded AC18 of extend-tasks.md, where the five non-trackable
-  // categories read as neutral and drew nothing. PLAN-32c reverses that: the primary user's original
-  // app coloured every kind of work and she asked for that back, so all nine take a colour and the
+  // categories read as neutral and drew nothing. PLAN-32c reverses that: the user's original
+  // app coloured every kind of work and the user asked for that back, so all nine take a colour and the
   // null case disappears from the defaults. Asserting the reversal explicitly rather than deleting
   // the old test is deliberate, so a reader who arrives expecting the old rule finds the reason here.
   it('gives every one of the nine categories a hue, trackable or not', () => {
@@ -264,7 +264,7 @@ describe('Category descriptors carry a hue', () => {
   })
 
   // The same reversal stated from the non-trackable side, which is the half that changed. A meeting,
-  // a break, administration, terminology, and page layout are all kinds of work she wants to
+  // a break, administration, terminology, and page layout are all kinds of work the user wants to
   // recognize by colour, so none of the five may resolve to nothing.
   it('colours the five non-trackable categories too', () => {
     const nonTrackable = DEFAULT_CATEGORIES.filter((category) => !category.trackable)
@@ -357,7 +357,7 @@ const FR_CATEGORIES = frMessages.categories as Record<string, string>
 const EN_CATEGORIES = enMessages.categories as Record<string, string>
 
 // The confirmed French and English names from the spec's category table. Every string here is
-// confirmed with the primary user and locked, so this table is the guard against a later
+// confirmed with the user and locked, so this table is the guard against a later
 // well-meaning rewording. Two rows look like mistakes and neither is. Relecture was chosen over
 // the stricter Correction d'épreuves on purpose, and dtp diverges on purpose, reading Mise en page
 // in French against DTP in English, because each side is the term its own reader uses. Nobody
@@ -426,7 +426,7 @@ describe('i18n category names', () => {
   })
 
   // AC2 calls the dtp divergence out by name because it is the one row where the two locales do
-  // not say the same thing. Layout was the English name for part of 2026-07-29 and she rejected it
+  // not say the same thing. Layout was the English name for part of 2026-07-29 and the user rejected it
   // as generic the same day, so the set carries one industry acronym knowingly. This assertion
   // exists so a later stage cannot quietly align the two sides.
   it('keeps the intended dtp divergence between Mise en page and DTP', () => {

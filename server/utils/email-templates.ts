@@ -1,7 +1,7 @@
 import { APP_NAME } from '#shared/brand'
 
 // Transactional email copy. French uses a space before ? ! : ; per the project convention.
-// The primary user is a professional translator, so every string here is a proposal pending
+// The user is a professional translator, so every string here is a proposal pending
 // owner verification, kept clear and transactional rather than marketing copy. Each message names
 // the product (APP_NAME) so a recipient knows which app it is from, since a personal sender name
 // alone does not tell them. A clear real sender identity is carried through sendEmail

@@ -16,7 +16,7 @@
 // would inherit a safe colour, and a measured guarantee over the whole circle does that better. At
 // the fixed lightness and chroma every integer hue from 0 to 359 clears 4.5:1 on all twenty card
 // surfaces, the worst reading anywhere being 5.02:1 in light and 6.07:1 in dark. So PLAN-30 can hand
-// the user a full hue wheel and every choice she makes passes by construction, which is stronger
+// the user a full hue wheel and every choice they make passes by construction, which is stronger
 // than a list of pre-approved slots. What PLAN-30 still owns is uniqueness, a product question about
 // two categories looking alike rather than a contrast question.
 
@@ -47,7 +47,7 @@ export type CategoryId = DefaultCategoryId | (string & {})
 // A category descriptor. It carries the id, the trackable flag, and the hue its name is printed at,
 // and deliberately no display name, because per project convention all visible strings live in i18n,
 // resolved from the id through the categories.<id> key convention. Every category has a hue, so
-// there is no null case: the primary user's original app coloured every kind of work and PLAN-32c
+// there is no null case: the user's original app coloured every kind of work and PLAN-32c
 // restores that, which is what reversed AC18 of extend-tasks.md and retired edgeSlot.
 export type Category = {
   id: CategoryId
@@ -56,15 +56,15 @@ export type Category = {
 }
 
 // The nine defaults with their locked trackable flags and their designed hues, in the same order as
-// DEFAULT_CATEGORY_IDS. The hues are the primary user's own colours from the app she uses today,
-// kept verbatim wherever she named one: cyan for translation, apple green for revision, wine red for
+// DEFAULT_CATEGORY_IDS. The hues are the user's own colours from the app they use today,
+// kept verbatim wherever the user named one: cyan for translation, apple green for revision, wine red for
 // terminology, pink for meetings, navy for breaks. revision_external is the derived sibling of
 // revision_internal and sits 25 degrees off it, which is the closest pair in the palette by a ten
 // degree margin, so proximity is what says the two are the same work on different people's text.
-// admin and dtp are chosen, because she named no colour for either. proofreading is a substitution
-// rather than her colour: her pale grey cannot both clear the 4.5:1 text floor and still read as a
+// admin and dtp are chosen, because the user named no colour for either. proofreading is a substitution
+// rather than the user's colour. Their pale grey cannot both clear the 4.5:1 text floor and still read as a
 // colour rather than as the row's own muted text, so it takes the centre of the palette's widest
-// empty arc instead. That substitution is recorded in the design blueprint and is hers to overrule.
+// empty arc instead. That substitution is recorded in the design blueprint and is the user's to overrule.
 //
 // Only the hue lives here. The lightness and the chroma are fixed once per mode in main.css, so
 // every category lands at the same lightness and therefore at the same measured contrast, and any
@@ -93,7 +93,7 @@ const CATEGORY_BY_ID: Record<DefaultCategoryId, Category> = Object.fromEntries(
 
 // The safe fallback id. It is admin on purpose, a non-trackable default. If an unknown or stale
 // category were treated as trackable, its task's words would wrongly enter the quota numerator
-// and pollute the headline number the employer reads at review time. A non-trackable fallback
+// and pollute the headline number read at review time. A non-trackable fallback
 // fails closed for the quota, contributing no words and correctly removing its duration from
 // effective hours. admin is the natural catch-all bucket for uncategorized work, so a coerced
 // task reads sensibly to the user as well as computing safely.

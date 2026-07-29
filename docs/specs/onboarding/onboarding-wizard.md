@@ -6,7 +6,7 @@ Today onboarding collects only a first name, last name, and password on a single
 
 The wizard is built to be open and extensible. Steps are declared as data in a single array, not as duplicated hardcoded markup, so adding a future step or field is a one-entry change rather than a rewrite. This extensibility is an explicit, testable requirement, not a nice-to-have.
 
-The owner's intent, verbatim: "Complete the user onboarding." The primary user is a professional translator paid against a words-per-hour quota, so the work settings captured here (daily work minutes, work days, base quota, timezone) are the same numbers the dashboard surfaces at review time. See `AGENTS.md` (product non-negotiables), `docs/spec.md`, `docs/specs/settings/preference-persistence.md` (the settings row and session plumbing this builds on), and `docs/specs/appearance/theme-system.md` (the five themes and swatch model).
+The owner's intent, verbatim: "Complete the user onboarding." The user is a professional translator paid against a words-per-hour quota, so the work settings captured here (daily work minutes, work days, base quota, timezone) are the same numbers the dashboard surfaces at review time. See `AGENTS.md` (product non-negotiables), `docs/spec.md`, `docs/specs/settings/preference-persistence.md` (the settings row and session plumbing this builds on), and `docs/specs/appearance/theme-system.md` (the five themes and swatch model).
 
 ## Scope
 

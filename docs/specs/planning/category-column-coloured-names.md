@@ -11,11 +11,11 @@ category names instead". So the coloured edge goes, the category comes back as i
 printing the localized category name, and **the name is printed in its category's colour**.
 
 The second half is not optional and it is the reason this feature is not a five-minute edit. The
-primary user asked for colour on every category because the app she uses today colours everything,
-and a plain text column would have satisfied the owner while quietly dropping her request.
-Colouring the name keeps her association between a colour and a kind of work and removes the chip
+user asked for colour on every category because the app the user uses today colours everything,
+and a plain text column would have satisfied the owner while quietly dropping the user's request.
+Colouring the name keeps the user's association between a colour and a kind of work and removes the chip
 the owner objected to, so neither decision is overridden. Nobody should later spec an uncoloured
-column, and nobody should restore the edge on her behalf.
+column, and nobody should restore the edge on the user's behalf.
 
 **The real work is contrast, not layout.** A 3 px edge only had to be distinguishable, and the
 shipped CSS set itself a 3:1 floor for that. A coloured word has to be readable, so every category
@@ -26,7 +26,7 @@ this feature: proofreading's pale grey, a fixed lightness tuned for edges, and t
 the reserved status hues. All three are work items below, not reasons to reopen the decision.
 
 The reasoning behind the reversal is recorded in
-[`overview.md`](overview.md#the-edge-loses-to-a-coloured-name) and her original colours are in
+[`overview.md`](overview.md#the-edge-loses-to-a-coloured-name) and the user's original colours are in
 [the original category colours](overview.md#the-original-category-colours-implemented-in-plan-32c).
 Neither is re-argued here.
 
@@ -37,13 +37,13 @@ are the decisions it implements and the shipped code it amends.
 
 1. **The reversal itself**, [the edge loses to a coloured name](overview.md#the-edge-loses-to-a-coloured-name),
    decided by the owner on 2026-07-29 against real seeded data rather than a mockup.
-2. **The primary user's own colours and the four problems they already carried**, from
+2. **The user's own colours and the four problems they already carried**, from
    [the original category colours](overview.md#the-original-category-colours-implemented-in-plan-32c).
    Reproduced below because this is the feature that implements them.
 3. **The nine category ids**, shipped in [`nine-task-categories.md`](nine-task-categories.md)
    (`PLAN-32a`). This feature colours those nine and declares no tenth.
 4. **The nine FR and EN names, already confirmed and already shipped.** They exist in
-   `i18n/locales/fr.json` and `en.json` under `categories.<id>`, confirmed with the primary user in
+   `i18n/locales/fr.json` and `en.json` under `categories.<id>`, confirmed with the user in
    `PLAN-32a`. FR reads Traduction, Révision interne, Révision externe, Relecture, Terminologie,
    Réunions, Pauses, Administration, Mise en page. This feature prints those strings. It does not
    restate them as new copy and it does not change any of them.
@@ -60,30 +60,30 @@ are the decisions it implements and the shipped code it amends.
 8. **The five themes**, `main.css` L241 onward: pastel (`:root`), encre, and three more, each
    redefining the primary and neutral scales for both modes under one id.
 
-## Her colours, and what this feature has to do with them
+## The user's colours, and what this feature has to do with them
 
-From the app she uses today, given 2026-07-29. The proposed hues are the overview's, not hers, and
+From the app the user uses today, given 2026-07-29. The proposed hues are the overview's, not the user's, and
 they are a starting point for the design stage rather than a decision.
 
-| Category           | Her colour  | Proposed hue   | What this feature owes it                     |
+| Category           | The user's colour  | Proposed hue   | What this feature owes it                     |
 | ------------------ | ----------- | -------------- | --------------------------------------------- |
 | Translation        | cyan        | 195            | Already the shipped hue, by coincidence       |
-| Revision, internal | apple green | 140            | She gave one green for both members           |
+| Revision, internal | apple green | 140            | The user gave one green for both members           |
 | Revision, external | apple green | needs its own  | A second green, related but distinct          |
 | Proofreading       | pale gray   | none, chroma 0 | Passes as text or becomes a documented case   |
 | Terminology        | wine red    | 20             | Sits 7 degrees from error 27                  |
 | Meetings           | pink        | 340            | Sits 40 degrees from wine red at equal weight |
 | Breaks             | navy        | 265            | Sits 7 degrees from info 258                  |
-| Administration     | invented    | 305            | She did not specify one                       |
-| DTP                | invented    | 60             | She did not specify one, and 78 is warning    |
+| Administration     | invented    | 305            | The user did not specify one                       |
+| DTP                | invented    | 60             | The user did not specify one, and 78 is warning    |
 
-Two decisions of hers travel with the table and both stand.
+Two decisions of the user's travel with the table and both stand.
 
 **Every category takes a colour, including the five non-trackable ones.** This is what reverses
 `AC18` of [`extend-tasks.md`](extend-tasks.md) and retires the `edgeSlot: null` the five
-non-trackables carry today. Her original app coloured everything and she wants that.
+non-trackables carry today. The user's original app coloured everything and they want that.
 
-**Lightness stays fixed for every category.** She chose the simple rule over literal fidelity, so
+**Lightness stays fixed for every category.** The user chose the simple rule over literal fidelity, so
 navy renders as a medium blue and wine red as a medium red. One number per category survives if it
 can, and a category `PLAN-30` has not created yet inherits its contrast for free. The number now
 has to sit where text passes rather than where an edge looked even, and light and dark pull it in
@@ -279,13 +279,13 @@ proofreading would say nothing, and it would sit in the same column as eight col
 like the one row whose colour failed to load. It may also collide with `text-muted` and
 `text-highlighted`, which are the tones the rest of the row already uses. So passing contrast is
 necessary and is not sufficient, and if grey cannot both pass and read as a deliberate choice, then
-departing from her literal colour for this one category is the better answer and is the kind of
-thing to put to her rather than decide silently.
+departing from the user's literal colour for this one category is the better answer and is the kind of
+thing to put to the user's rather than decide silently.
 
 **Resolved, and neither of the two outcomes above is what shipped. The colour became the exception
-rather than the contrast.** `Relecture` prints at hue 230, a slate blue, and her pale grey does not
-ship. **This is an override of a colour the primary user gave**, approved by the owner, who will tell
-her it changed and why. It stays hers to overrule.
+rather than the contrast.** `Relecture` prints at hue 230, a slate blue, and the user's pale grey does not
+ship. **This is an override of a colour the user gave**, approved by the owner, who will tell
+the user's it changed and why. It stays the user's to overrule.
 
 The reason is measured, and it sits here rather than behind a pointer because anyone finding the
 substitution has to find the reason with it. A grey dark enough to clear 4.5:1 lands at `L 0.47`, and
@@ -295,8 +295,8 @@ second problem above, confirmed by measurement rather than avoided. The obvious 
 low chroma slate that keeps the intent of "pale", is worse rather than better: encre's `neutral-500`
 is itself a blue-grey at `L 0.52 C 0.046 H 259`, so a slate at the same lightness and chroma near the
 same hue reproduces in one theme exactly the failure it was meant to avoid. Hue 230 is the centre of
-the widest empty arc in her own palette, so the substitution costs the least separation from every
-colour she did name, and at the shared `C 0.11` it resolves to more than twice any theme neutral's
+the widest empty arc in the user's own palette, so the substitution costs the least separation from every
+colour the user did name, and at the shared `C 0.11` it resolves to more than twice any theme neutral's
 chroma, so it cannot be read as a neutral anywhere.
 
 Two consequences that outlive the colour choice. **The contract keeps its simple shape**, because with
@@ -310,7 +310,7 @@ user-created category inherit its contrast from one number. The full argument is
 
 `revision_internal` and `revision_external` are the same work on different people's text and they
 carry different quotas, so they have to read as siblings rather than as two unrelated categories.
-She gave one apple green for both.
+The user gave one apple green for both.
 
 This is the hardest hue problem in the set and it is genuinely over-constrained. Apple green near
 140 with a sibling inside about 30 degrees is hard to separate at identical lightness, and moving
@@ -329,7 +329,7 @@ be a 3 px edge and a status a word, so shape told them apart and the shipped con
 so in as many words (`shared/categories.ts` L37 to L40). Both are coloured words now and that
 argument no longer exists.
 
-The collisions are close and they are hers, not invented. Wine red 20 against error 27. Apple green
+The collisions are close and they are the user's, not invented. Wine red 20 against error 27. Apple green
 near 140 against success 148. Navy 265 against info 258. Any warm slot for administration or DTP
 near warning 78. Four reserved roles and nine categories do not fit in one circle with that much
 clearance, so hue separation alone will not solve it.
@@ -579,15 +579,15 @@ None blocked the build. Each was a decision this spec deliberately did not make,
 in [`category-column-coloured-names-design.md`](category-column-coloured-names-design.md). The
 answers are recorded here so the spec stops reading as though the questions are live.
 
-1. **The nine colours themselves.** Closed. Her hues ship verbatim wherever she named one, with
-   `revision_external` 115, `admin` 305, `dtp` 60, and `proofreading` 230 filling the four she did
+1. **The nine colours themselves.** Closed. The user's hues ship verbatim wherever they named one, with
+   `revision_external` 115, `admin` 305, `dtp` 60, and `proofreading` 230 filling the four the user did
    not. Worst measured cell in the set is 5.07:1. Blueprint decision 1.
 2. **Whether the fixed-lightness rule survives at 4.5:1, whole or with exceptions.** Closed. Whole,
    with **zero exceptions**, at `0.47 0.11` in light and `0.74 0.13` in dark, and in a stronger form
    than it had, since every hue from 0 to 359 clears the floor at those values. Blueprint decision 2.
 3. **Whether proofreading stays grey.** Closed, and it does not. `Relecture` is slate blue at hue 230.
-   This is the one answer that overrides a colour the primary user gave, it is approved by the owner,
-   she will be told it changed and why, and it stays hers to overrule. The measured reason is in `AC4`
+   This is the one answer that overrides a colour the user gave, it is approved by the owner,
+   they will be told it changed and why, and it stays theirs to overrule. The measured reason is in `AC4`
    above and in blueprint decision 3.
 4. **How the status collision is solved.** Closed, then amended. Position first and weight second,
    category at track 2 in `font-normal` and status at track 7 in `font-semibold`. Blueprint
@@ -601,8 +601,8 @@ answers are recorded here so the spec stops reading as though the questions are 
    normal and 0.0548 protan.
 
    The distinction that matters, and the reason this is an addition rather than a reversal: **the
-   category hues are the primary user's and ship verbatim, while `success` is a reserved role and is
-   ours to move.** Chromatic separation was never available _on her side_, and that part still holds.
+   category hues are the user's and ship verbatim, while `success` is a reserved role and is
+   ours to move.** Chromatic separation was never available _on the user's side_, and that part still holds.
    Position and weight remain the primary defences, because the two mechanisms fail differently.
    Position survives a palette change and does nothing for a viewer who cannot separate the hues at
    all, and the hue shift survives a layout change and does nothing if the two cells end up adjacent.
@@ -650,7 +650,7 @@ Specs and code review are never skipped.
   [the original category colours](overview.md#the-original-category-colours-implemented-in-plan-32c)
   and [the edge loses to a coloured name](overview.md#the-edge-loses-to-a-coloured-name). Its
   reasoning, that a non-trackable row already prints its category as its own name, is retired twice
-  over: by her decision to colour everything, and by `AC7` here removing that very fallback.
+  over: by the user's decision to colour everything, and by `AC7` here removing that very fallback.
   - **The "Category becomes colour" section's carrier is replaced.** The row edge is out and a
     coloured word is in. That section's other claims stand, including that the mapping lives in one
     shared contract and that `PLAN-30` inherits the problem of colouring a category nobody designed.

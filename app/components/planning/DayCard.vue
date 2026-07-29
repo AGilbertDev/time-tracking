@@ -8,7 +8,7 @@ import type { DayCapacity, PlanningTask } from '#shared/planning'
 // either.
 //
 // The card is the week's only interactive element. Every day starts collapsed except today, so the
-// week reads as a short stack of headers and the user opens the day she cares about. Collapsing is
+// week reads as a short stack of headers and the user opens the day they care about. Collapsing is
 // safe because the capacity meter stays in the collapsed header unchanged: a full or overbooked day
 // is red before it is opened. On an off day, which carries no meter, the task count is the only
 // signal that recorded weekend work is there, which is the strongest single reason the count exists.

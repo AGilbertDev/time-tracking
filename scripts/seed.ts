@@ -69,7 +69,7 @@ const ownerId = owner.id
 // --- the seeded span -----------------------------------------------------------------------------
 
 // Read the owner's timezone so "today" and the target weeks match what the dashboard renders. Fall
-// back to America/Toronto, the primary user's zone and the settings column default, when no settings
+// back to America/Toronto, the user's zone and the settings column default, when no settings
 // row exists yet.
 const ownerSettings = await db
   .select({ timezone: settings.timezone })
@@ -126,14 +126,27 @@ type DayPattern = {
 
 // --- generic content pools -----------------------------------------------------------------------
 
-// Invented agency and project names. Nothing here names a real client, per the confidentiality rule.
+// Invented agency names, every one a bad translation or terminology pun. Nothing here names a real
+// client, per the confidentiality rule, and the joke is the point: dev data should be obviously fake
+// at a glance so a screenshot can never be mistaken for real work. `pick` takes the length modulo,
+// so this list can grow or shrink freely.
+//   Faux amis        false friends, the classic translation trap, here running the firm
+//   Coquille         a typo in French typography, and also a scallop, hence the dish
+//   Anglicismes      the support group Québécois copy editors keep threatening to found
+//   Traduttore       from `traduttore, traditore`, translator traitor, incorporated
+//   Idiome           home sweet home, with the home swapped for an idiom
+//   Belles infidèles the classic term for a translation that is pretty and wrong
+//   Calque           a loan translation, and also tracing paper, so Tracing & Sons
+//   Le mot juste     the exact right word, crossed with the Montréal comedy festival
 const CLIENTS = [
-  'Trad-Média',
-  'Juritrad',
-  'Groupe Lexi',
-  'Cabinet Verrier',
-  'Institut Norda',
-  'Éditions Pluriel'
+  'Faux Amis & Associés',
+  'Coquille Saint-Jacques',
+  'Anglicismes Anonymes',
+  'Traduttore Traditore inc.',
+  'Idiome Sweet Idiome',
+  'Les Belles Infidèles',
+  'Calque & Fils',
+  'Le Mot Juste Pour Rire'
 ] as const
 
 // The day patterns, grouped by the capacity band they produce. The first entry of every pattern is
