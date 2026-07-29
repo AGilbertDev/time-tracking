@@ -68,6 +68,18 @@ Given 2026-07-29. These are her employer's categories and her employer's numbers
 
 **DTP is desktop publishing**, the layout pass after translation that makes the translated text fit the original design, which is the PowerPoint work she described. The industry bills it per page or per hour and never per word, so it produces no words and is non-trackable here: its time comes out of effective hours exactly as a meeting's does. Whether it joins the defaults or she adds it herself is open.
 
+### Words are a total, not a progress pair, deferred to a later feature
+
+Given 2026-07-29. **Not implemented.** Her words: "we don't track words translated in realtime. useless to track x/y. only totals."
+
+The shipped row prints `Mots` as `words done / project total`, for example `2 800 / 12 000`. That reads as live progress through a job, and she does not work that way. She records what a task is, not how far into it she is at any moment. The row shows one figure, the project total, and the pair goes.
+
+This amends `AC20` of [extend-tasks.md](extend-tasks.md) and removes one of the two figures from the at-rest set, so it is a contract change rather than a styling one. It also matches the original app, whose column was headed `Mots (total du projet)`.
+
+**The consequence to get right is the quota numerator.** `words_translated(period)` sums `words_done`, not `project_word_count`, and that stays correct because it is the only thing that keeps a multi-day job from counting its whole total on every day it touches. What changes is where `words_done` comes from. If she only ever types a total, then for an ordinary single-day task `words_done` is that total and the app should set it rather than ask twice for the same number. `words_done` only diverges from the total on a split (`PLAN-18`), which is exactly the moment the split flow already asks for it. So the field survives in the schema and in the quota, and stops being something she fills in by hand on a normal task.
+
+Two things for the implementing feature to settle. Whether `words_done` is written at save time from the total or derived at read time, and what a task shows once it is split, since the slice's own words are then genuinely different from the project total and hiding that could make a split slice look like it did the whole job.
+
 ### The original category colours, deferred to a later feature
 
 Given 2026-07-29, from the app she uses today. **Not implemented.** The shipped palette in `shared/categories.ts` is the design stage's invented one and stays until a feature picks this up. Recorded here so that feature inherits a decision rather than re-deriving one.

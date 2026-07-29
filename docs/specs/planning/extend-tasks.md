@@ -560,6 +560,13 @@ you notice they are about two different totals.
   dash rather than `0`, so a planned task is not misread as a recorded zero. A null
   `projectWordCount` drops the second figure. Both null shows the em dash alone. An excluded task
   shows its real figures in full.
+  - **Superseded 2026-07-29, not yet implemented.** The owner does not track words as she goes, so
+    a done-over-total pair shows progress she never records. Her words: "we don't track words
+    translated in realtime. useless to track x/y. only totals." The field becomes the project total
+    alone, matching the original app's `Mots (total du projet)` column. This shipped as the pair and
+    a later feature reduces it, so the code and this criterion are correct as of the commit and
+    wrong as of that decision. The reasoning, and what it means for the quota numerator, is in
+    [overview.md](overview.md#words-are-a-total-not-a-progress-pair-deferred-to-a-later-feature).
 - **AC21. The duration field is `effectiveDuration` and nothing else.** The at-rest value is
   unchanged from what shipped, so the durations in an open card sum to the `booked` figure its
   capacity meter prints, collapsed or not. The row draws no distinction between a duration that
