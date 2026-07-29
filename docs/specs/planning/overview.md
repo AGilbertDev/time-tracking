@@ -48,7 +48,7 @@ The trackable set grows past the two we shipped. The direction is translation, i
 
 Given 2026-07-29. These are her employer's categories and her employer's numbers, so they replace every researched estimate below.
 
-**The default set is nine**, after the revision split and `layout` joining. She can add more on top, which is `PLAN-30`. The shipped set is six, so `PLAN-02` grows by three and loses one.
+**The default set is nine**, after the revision split and `dtp` joining. She can add more on top, which is `PLAN-30`. The shipped set is six, so `PLAN-02` grows by three and loses one.
 
 | Id                  | FR               | EN                | Trackable | Quota (wph) |
 | ------------------- | ---------------- | ----------------- | --------- | ----------- |
@@ -60,9 +60,9 @@ Given 2026-07-29. These are her employer's categories and her employer's numbers
 | `meetings`          | Réunions         | Meetings          | no        | none        |
 | `breaks`            | Pauses           | Breaks            | no        | none        |
 | `admin`             | Administration   | Admin             | no        | none        |
-| `layout`            | Mise en page     | Layout            | no        | none        |
+| `dtp`               | Mise en page     | DTP               | no        | none        |
 
-Against the six that shipped: `proofreading` and `layout` are new, `revision` becomes two, and every French string above except the four already shipped needs her confirmation before it is built. `Relecture` in particular is the standard Canadian term for proofreading as distinct from revision, but it is proposed rather than given.
+Against the six that shipped: `proofreading` and `dtp` are new, `revision` becomes two, and every French string above is now confirmed. `Relecture` was checked against the stricter `Correction d'épreuves` and she chose the shorter word, so it is a decision rather than a loose synonym and should not be "corrected" later.
 
 **Proofreading is new.** The six defaults that shipped in `PLAN-02` do not include it, so the contract grows by one trackable category.
 
@@ -78,7 +78,9 @@ That is only simple because there is no history to protect. `PLAN-09`, the write
 
 Proposed copy: `Révision interne` and `Révision externe` in French, `Internal revision` and `External revision` in English. These are the direct renderings of the terms she used and read correctly in Canadian French, but they are her employer's vocabulary, so confirm them before they ship.
 
-**DTP joins the defaults as `layout`, reading `Mise en page` in French and `Layout` in English.** Named by her on 2026-07-29. It is desktop publishing, the pass after translation that refits the translated text into the original design, which is the PowerPoint work she described. `Layout` is the English counterpart rather than `Desktop publishing` or `DTP` because it renders `Mise en page` directly and keeps the register of the rest of the set, which is plain words rather than industry acronyms.
+**DTP joins the defaults as `dtp`, reading `Mise en page` in French and `DTP` in English.** Named by her on 2026-07-29. It is desktop publishing, the pass after translation that refits the translated text into the original design, which is the PowerPoint work she described.
+
+The English name was `Layout` for part of that day, on the reasoning that it renders `Mise en page` directly and keeps the register of the set, which is otherwise plain words rather than industry acronyms. **Rejected the same day, by her: `Layout` is generic.** It describes arranging things on a page and says nothing about refitting translated text into someone else's slides, so it fails the one job the name has. `DTP` won over the spelled-out `Desktop publishing` because it is what she actually says, and the register argument that protected `Layout` does not apply to a single-user app whose only user is a translator. So the set carries one industry acronym on purpose. Note that French and English diverge here rather than translating each other, which is fine, because each side is the term its own reader uses.
 
 It is non-trackable. The industry bills DTP per page or per hour and never per word, so it produces no words and its time comes out of effective hours exactly as a meeting's does.
 
@@ -134,7 +136,7 @@ Given 2026-07-29, from the app she uses today. **Not implemented.** The shipped 
 | Meetings           | pink        | 340            |                                        |
 | Breaks             | navy        | 265            |                                        |
 | Administration     | invented    | 305            | She did not specify one                |
-| Layout             | invented    | 60             | She did not specify one                |
+| DTP                | invented    | 60             | She did not specify one                |
 
 Two decisions she made alongside them.
 
@@ -243,6 +245,55 @@ Concrete layout options for the mockup, to react to rather than decide in the ab
 
 Ordered for the smallest shippable increments first. Each phase leaves the app in a working, testable state. A feature is "done" when its acceptance criteria pass and it has gone through the full pipeline (specs and code review never skipped).
 
+### What to pick up next
+
+As of 2026-07-29, the read-only week is shipped through `PLAN-08` plus two refinement passes. The working session on 2026-07-28 and 2026-07-29 produced four decisions that are recorded in [Locked decisions](#locked-decisions) but **not built**. They are gathered here as `PLAN-32` and `PLAN-33` so the next feature is a thing to pick up rather than four notes to reassemble.
+
+**Do `PLAN-32` first.** Three of the four decisions land on the category contract, and the row work in `PLAN-33` reads the categories, so doing it the other way round rebuilds the row twice.
+
+**`PLAN-32` is three features, not one.** Split on 2026-07-29, because it bundled a contract change, a settings retirement, and a palette design pass, and those are separable, separately testable, and reach different parts of the app. Each one goes through the pipeline on its own and lands its own pull request, which is also what the one-feature-at-a-time rule asks for. They are ordered by dependency: `32b` reads the descriptor shape `32a` establishes, and `32c` colours the nine ids `32a` declares.
+
+| Order | Feature                            | Why now                                                             |
+| ----- | ---------------------------------- | ------------------------------------------------------------------- |
+| 1     | `PLAN-32a` — The nine categories   | Blocks everything below it, and the row work reads the ids          |
+| 2     | `PLAN-32b` — Per-category quotas   | Blocks `PLAN-22` and `PLAN-23`, and retires a wrong shipped default |
+| 3     | `PLAN-32c` — The nine-edge palette | Design-led, and independent of the two above once the ids exist     |
+| 4     | `PLAN-33` — Row simplification     | Small, and independent once `PLAN-32a` lands                        |
+| 5     | `PLAN-09` / `PLAN-10` / `PLAN-11`  | The write path, which is the next real capability                   |
+
+`PLAN-11` also inherits a settled field list from [extend-tasks.md](extend-tasks.md), so it does not need to re-decide what the editor holds.
+
+**The copy is confirmed, so no feature below has to guess at a name.** Checked with the primary user on 2026-07-29. `Relecture` for proofreading, and `Révision interne` / `Révision externe` for the pair, all three exactly as proposed. `Relecture` was confirmed over the stricter `Correction d'épreuves`, which is the term the Canadian industry uses for proofreading as a separate billable service, so the shorter word is a deliberate choice rather than an oversight and should not be "corrected" later. The internal-against-external naming was confirmed over an `employé` / `pigiste` pair that would have said whose work it is more literally. One English name changed in the same pass: `Layout` became `DTP` and the id became `dtp`, because `Layout` was generic. That closes the old `AC2` and the "must not be guessed" warning in [the original category colours](#the-original-category-colours-deferred-to-a-later-feature).
+
+**PLAN-32a — The nine default categories**
+Depends on `PLAN-02`. Amends it. Shared contract, i18n, and the dev seed. No migration is needed, because the seed carries the id change. `tasks.category` is free text with no CHECK, enum, or index, so the nine ids are already storable, and the only `revision` rows in existence came from the dev seed this feature rewrites. The reasoning is in [`AC3` of the spec](nine-task-categories.md), and the rule it follows is now written down in the backend conventions skill.
+
+- Replaces the six shipped categories with the nine in [the category set](#the-category-set-and-the-real-quotas-from-the-primary-user). `proofreading` and `dtp` are new, `revision` is replaced by `revision_internal` and `revision_external`.
+- Carries the ids, the `trackable` flags, and the FR / EN copy only. The quota field is `32b` and the colours are `32c`, so this feature changes the set without changing what a category holds beyond its name.
+- AC1. The nine defaults are present with the correct trackable flags, `translation`, `revision_internal`, `revision_external`, and `proofreading` trackable and the other five not. AC2. The FR and EN strings are the confirmed ones above, in i18n keyed by id rather than in the contract. AC3. Existing `revision` rows are handled, and the claim that no user history exists is verified rather than inherited from this document. The check is done and the finding is recorded in the spec's `AC3`, which is that no write path has ever existed and every `revision` row in the dev database came from one seed pass. The finding stops being true once `PLAN-09` ships, so a later feature has to re-check rather than reuse it. AC4. `coerceCategory` validates the nine and still falls back to `admin`, so a stored `revision` resolves to a non-trackable id rather than reaching the UI raw. AC5. The dev seed is rewritten to the new ids.
+
+**PLAN-32b — Per-category quotas, and retiring the global one**
+Depends on `PLAN-32a`. Shared, backend, a migration, and the settings and onboarding UI. The migration is real here where `32a` has none, because `32b` drops the `settings.quota_wph` column, which is a structural change, while `32a` only changed stored values the seed owns.
+
+- A trackable category carries its own quota, so `settings.quota_wph` retires as a global. See [one quota per category](#one-quota-per-category-not-one-quota-for-everything).
+- The four defaults are translation 240, internal revision 1000, external revision 1300, proofreading 2000. Note that external is the faster number; [the category set](#the-category-set-and-the-real-quotas-from-the-primary-user) explains why that is not a transposition.
+- The shipped 450 default is wrong and goes with the global setting. `quota_wph_override` on a task stays as the per-task exception.
+- AC1. Each trackable category resolves its own quota and each non-trackable one has none. AC2. The quota is effective-dated, so editing it never restates a past period (`PLAN-30` AC6 covers the same ground for user-created categories). AC3. `settings.quota_wph` is gone from the schema, onboarding, the settings page, and `work-settings`, with no reader left behind. AC4. The research note that justified 450 is demoted to context rather than left reading as evidence.
+- Open, and to settle in this feature or defer explicitly: what a per-category quota does to the availability metric, since idle time sits in one pool and belongs to no category. Normalised attainment is the preferred route and the three options are in [the original category colours](#the-original-category-colours-deferred-to-a-later-feature).
+
+**PLAN-32c — The nine-edge palette**
+Depends on `PLAN-32a`. Design pass, then shared and frontend.
+
+- Every category carries a colour, including the non-trackable ones, which amends `AC18` of [extend-tasks.md](extend-tasks.md) and the `edgeSlot: null` those four ship with. Her original colours and the four problems the palette has to solve are in [the original category colours](#the-original-category-colours-deferred-to-a-later-feature).
+- AC1. All nine categories draw an edge. AC2. The contract can express a chroma-zero slot, because proofreading is grey rather than a hue and `categoryEdgeHue` returns a hue angle today. AC3. The two revision greens read as related but distinct. AC4. Fixed lightness holds for the set, and any per-category exception is documented with its reason rather than quietly applied. AC5. No category edge is mistakable for one of the four reserved status hues, checked on screen in both modes rather than argued from hue angles.
+
+**PLAN-33 — Row simplification: words total and the progress signal**
+Depends on `PLAN-32`. Frontend, plus a design pass.
+
+- `Mots` shows the project total alone rather than a done-over-total pair, per [words are a total](#words-are-a-total-not-a-progress-pair-deferred-to-a-later-feature). Amends `AC20` of `extend-tasks.md`.
+- Decides how the row signals that a task ran over or under its estimate, now that removing the words pair leaves it with no performance signal at all. The four routes and the reasoning are in [the duration pair is the progress signal](#the-duration-pair-is-the-progress-signal-and-that-reopens-a-shipped-decision). The variance marker is the current favourite and the estimated-against-actual stat may make it unnecessary.
+- AC1. The words field is one figure. AC2. `words_done` is still the quota numerator and is set rather than asked for twice on an unsplit task. AC3. A split slice does not read as having done the whole job. AC4. Whatever signals over or under, it adds no coloured element per row, per the simplifying pass.
+
 ### Phase 0 — Data foundation
 
 **PLAN-01 — Tasks schema and migration**
@@ -255,6 +306,8 @@ Depends on nothing. Backend only.
 
 **PLAN-02 — Task categories contract**
 Depends on nothing. Shared contract.
+
+**Shipped, and superseded by `PLAN-32`.** The six defaults below are live, but the real set is nine, each trackable one carries its own quota, and every category carries a colour. Build from `PLAN-32`, not from this.
 
 - A `shared/` module defines the six default category ids, each with a `trackable` boolean and verified FR / EN names, plus a `coerceCategory` fallback mirroring `coerceThemeId`. The shape allows user-created categories on top (`PLAN-30`).
 - AC1. The six defaults are present with the correct flags (translation and revision trackable, the rest not).
@@ -288,6 +341,7 @@ Depends on PLAN-04, PLAN-02. Frontend.
 
 - The redesigned compact row shows the essential fields only, PM excluded, one line at rest, with the status badge coloured per status (or `N/A` for non-trackable).
 - **The field set is settled in [extend-tasks.md](extend-tasks.md), which supersedes the "finalized on the mockup" line this bullet used to carry.** That spec also gives the week a second layer of disclosure, since day cards now start collapsed except today, and it moves the category from a printed word to a colour on the row edge.
+- **Two of its criteria are already superseded by `PLAN-33`.** `AC20`'s words pair becomes a single total, and the single duration needs a signal for running over or under estimate. Read `PLAN-33` before touching the row.
 - AC1. Only the agreed compact fields render. AC2. Status colour is correct per status, `N/A` for non-trackable. AC3. All copy is i18n, FR verified.
 
 **PLAN-07 — Week view stack**

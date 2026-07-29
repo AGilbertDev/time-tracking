@@ -6,24 +6,28 @@
 // That single fact is the trackable flag, and the quota engine and the task row UI both read
 // it from here so the two can never disagree.
 
-// The six default category ids, in the locked contract order from the planning overview. These
-// are plain lowercase English words used as stable storage keys, never shown to the user. The
-// display names live in the i18n layer keyed by id (categories.<id>), so a label can be renamed
-// with a locale-file edit that never touches stored data or this union.
+// The nine default category ids, in the locked contract order from the planning overview. These
+// are plain lowercase English storage keys, snake_case when the name runs to more than one word,
+// and never shown to the user. The display names live in the i18n layer keyed by id
+// (categories.<id>), so a label can be renamed with a locale-file edit that never touches stored
+// data or this union.
 export const DEFAULT_CATEGORY_IDS = [
   'translation',
-  'revision',
+  'revision_internal',
+  'revision_external',
+  'proofreading',
   'terminology',
   'meetings',
   'breaks',
-  'admin'
+  'admin',
+  'dtp'
 ] as const
 
 export type DefaultCategoryId = (typeof DEFAULT_CATEGORY_IDS)[number]
 
 // The broader id type. It permits a user-created id string while keeping editor autocomplete on
-// the six defaults. This is the extensibility seam for PLAN-30, which will layer custom
-// categories on top; PLAN-02 ships and validates only the frozen six.
+// the nine defaults. This is the extensibility seam for PLAN-30, which will layer custom
+// categories on top. PLAN-32a ships and validates only the frozen nine.
 export type CategoryId = DefaultCategoryId | (string & {})
 
 // The category edge hue ring. A task row carries its category as a coloured left edge rather than
@@ -33,7 +37,7 @@ export type CategoryId = DefaultCategoryId | (string & {})
 // Slot order is the assignment order, and the earliest slots sit furthest from the four reserved
 // status hues (error ~27, warning ~78, success ~148, info ~258) so a category edge is never
 // mistaken for a status. PLAN-30 assigns a user-created category the next unused slot, wrapping
-// modulo the ring length, which is why this is a ring rather than a list sized to the six defaults.
+// modulo the ring length, which is why this is a ring rather than a list sized to the default set.
 export const CATEGORY_HUE_SLOTS = [195, 300, 115, 345, 240, 170, 275, 320] as const
 
 // A category descriptor. It carries the id, the trackable flag, and the edge hue slot, and
@@ -46,22 +50,28 @@ export type Category = {
   edgeSlot: number | null
 }
 
-// The six defaults with their locked trackable flags, in the same order as DEFAULT_CATEGORY_IDS.
-// translation and revision produce words and count toward the quota numerator. terminology,
-// meetings, breaks, and admin produce no words and instead remove their duration from effective
-// hours, so they are non-trackable.
+// The nine defaults with their locked trackable flags, in the same order as DEFAULT_CATEGORY_IDS.
+// translation, revision_internal, revision_external, and proofreading produce words and count
+// toward the quota numerator. terminology, meetings, breaks, admin, and dtp produce no words and
+// instead remove their duration from effective hours, so they are non-trackable.
 //
-// Only the two trackable categories take an edge hue. The distinction the colour exists to make is
-// translation against revision, and a non-trackable row already prints its category as its own
-// name, so a hue there would repeat a word the row already carries. Drawing no edge on those rows
-// also leaves trackable work visually distinct from breaks and meetings at no extra cost.
+// The four trackable members take a placeholder edge slot each, the first four slots of the ring in
+// order, and the five non-trackable ones draw no edge in this feature. Those four numbers are
+// PLAN-32a placeholders and nothing else, so nobody should read them as a design decision. Two of
+// them are visibly arbitrary on purpose. The two revision members land on unrelated hues even
+// though they are the closest pair in the set. PLAN-32c owns the real palette, decides every hue
+// against the primary user's own colours, and is expected to give every category an edge rather
+// than only the trackable ones.
 export const DEFAULT_CATEGORIES: readonly Category[] = [
   { id: 'translation', trackable: true, edgeSlot: 0 },
-  { id: 'revision', trackable: true, edgeSlot: 1 },
+  { id: 'revision_internal', trackable: true, edgeSlot: 1 },
+  { id: 'revision_external', trackable: true, edgeSlot: 2 },
+  { id: 'proofreading', trackable: true, edgeSlot: 3 },
   { id: 'terminology', trackable: false, edgeSlot: null },
   { id: 'meetings', trackable: false, edgeSlot: null },
   { id: 'breaks', trackable: false, edgeSlot: null },
-  { id: 'admin', trackable: false, edgeSlot: null }
+  { id: 'admin', trackable: false, edgeSlot: null },
+  { id: 'dtp', trackable: false, edgeSlot: null }
 ] as const
 
 // A descriptor lookup keyed by id so the trackable flag is read from one place rather than
@@ -83,7 +93,8 @@ export const DEFAULT_CATEGORY_ID: CategoryId = 'admin'
 // level, so a value left over from a renamed or retired category must resolve to a valid id
 // rather than reach the UI raw, the same discipline coerceThemeId gives theme ids. Pure and
 // DB-free so it is unit-testable. PLAN-30 will extend the validated set to a user's own
-// categories; for PLAN-02 coercion checks the six defaults only.
+// categories. For PLAN-32a coercion checks the nine defaults only, so revision, the id the earlier
+// six-member set carried, is now a stale value that folds to the default like any other.
 export function coerceCategory(value: unknown): CategoryId {
   return (DEFAULT_CATEGORY_IDS as readonly string[]).includes(value as string)
     ? (value as CategoryId)
