@@ -199,35 +199,37 @@ input:-webkit-autofill:active {
   border-left: 1px dashed var(--ui-border-accented);
 }
 
-/* The category colour on a task row's left edge. Only the hue varies per category, and it arrives */
-/* as --planning-cat-hue set inline from the shared category contract; lightness and chroma are */
-/* fixed here so every category, including one a user creates later, has the same weight and the */
-/* same contrast in each mode. A new category needs one number, never a new colour ramp. */
-/* These are deliberately not semantic tokens. primary and secondary are redefined by all five */
-/* themes and success/info/warning/error are reserved for status, so a category would either shift */
-/* identity when the user changes atmosphere or read as a status. The category hue is a sixth fixed */
-/* role, declared once here exactly as the brand and surface ramps are, so no component ever holds */
-/* a colour value of its own. */
-/* The light lightness is 0.55 rather than the 0.58 the blueprint proposed. The edge is a supplement */
-/* and never the only carrier of the category, so WCAG 1.4.11 does not bind it, but the design set */
-/* itself a 3:1 floor on every surface the edge is drawn on and 0.58 missed it on an off-day card, */
-/* whose muted surface is where recorded weekend work is read: 2.98:1 to 3.17:1 for the cyan slot */
-/* across the five themes. At 0.55 the same edge measures 3.37:1 or better there and 4.18:1 on a */
-/* work-day card, and the contract is unchanged, since it is still one number for the whole palette. */
+/* The category colour, now carried by the printed category name rather than by a row edge. Only */
+/* the hue varies per category and it arrives as --planning-cat-hue set inline from the shared */
+/* category contract; lightness and chroma are fixed here so every category, including one a user */
+/* creates in PLAN-30, lands at the same lightness and therefore at the same measured contrast. A */
+/* new category needs one number, never a new colour ramp. */
+/* The floor is WCAG 2.2 AA 1.4.3 at 4.5:1, because the name is 14 px regular text. That is */
+/* stricter than the 3:1 the edge was tuned against under 1.4.11, and the shipped 0.55 / 0.15 fails */
+/* it for all nine categories, between 3.59:1 and 4.24:1 on an automne off-day card. At 0.47 / 0.11 */
+/* the worst cell in the whole set is 5.07:1, translation's cyan on that same card, and every one */
+/* of the 180 readings in the design blueprint clears the floor. Every hue from 0 to 359 clears it */
+/* too, at 5.02:1 or better, which is what gives a user-created category its contrast for free. */
+/* Dark does not move from 0.74, because it was already clearing 6.08:1 at its worst. Its chroma */
+/* drops to 0.13 only so that navy stays inside sRGB and cyan is the one hue gamut mapping touches. */
+/* Note which surface binds, because it inverts between modes and both shipped comments only record */
+/* the light half. In light, bg-elevated is neutral-100 and the off-day card is the harder one. In */
+/* dark, bg-elevated is neutral-800 while bg-default is neutral-900, so the work-day card is the */
+/* lighter surface and the harder one. */
 @layer base {
   :root {
-    --planning-cat-l: 0.55;
-    --planning-cat-c: 0.15;
+    --planning-cat-l: 0.47;
+    --planning-cat-c: 0.11;
   }
 
   .dark {
     --planning-cat-l: 0.74;
-    --planning-cat-c: 0.14;
+    --planning-cat-c: 0.13;
   }
 }
 
-.planning-cat-edge {
-  border-left-color: oklch(var(--planning-cat-l) var(--planning-cat-c) var(--planning-cat-hue));
+.planning-cat-name {
+  color: oklch(var(--planning-cat-l) var(--planning-cat-c) var(--planning-cat-hue));
 }
 
 /* Five deliberate, subject-grounded themes. Each block overrides the primary and */

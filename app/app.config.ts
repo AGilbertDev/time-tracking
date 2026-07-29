@@ -4,7 +4,21 @@ export default defineAppConfig({
       primary: 'brand',
       // Reserved semantic colors. Fixed across every theme so status always
       // reads the same, never recolored by the active atmosphere.
-      success: 'green',
+      //
+      // success is emerald rather than green, moved by the PLAN-32c accessibility read against
+      // rendered pixels. green-800 resolves to oklch(0.448 0.119 151) and `revision_internal`'s
+      // printed name to oklch(0.47 0.11 140), an Oklab chord of 0.0336, which is closer than the two
+      // revision categories are to each other (0.0461). A completed internal revision therefore put
+      // the same green in the Catégorie cell and the Statut cell of one row, and the pair a user must
+      // never confuse read as more alike than the pair that is meant to look related. Under
+      // simulated protanopia it collapsed to 0.0201, about one just-noticeable difference.
+      // emerald-800 is oklch(0.432 0.095 167). It lifts the closest trackable category to 0.0604
+      // (0.0548 under protanopia) and raises the worst status contrast on the muted off-day card from
+      // 5.74:1 to 6.13:1, so it is better on contrast as well as on separation. A category hue is the
+      // primary user's own colour and ships verbatim, so the reserved role is what moves. teal was
+      // measured too and rejected: it lands 7 degrees from `translation`'s cyan and trades one
+      // collision for another. Only the palette name lives here, never a color value.
+      success: 'emerald',
       info: 'blue',
       warning: 'amber',
       error: 'red',

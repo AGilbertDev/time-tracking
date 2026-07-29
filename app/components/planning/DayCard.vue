@@ -70,9 +70,10 @@ const containerClass = computed(() => {
 // for the chevron, the longest day name, and either the today pill or the task count, so the count
 // appearing and disappearing can never move the bar.
 //
-// The transparent 3 px left border matches the task row's category edge, so the header content and
-// the row content start at the same x with no per-element padding arithmetic. The focus ring is on
-// the band rather than on the button, because the stretched click target is the whole band.
+// The task row no longer draws a category edge, so the transparent 3 px left border that existed
+// only to match it is gone, and the band, the column header line and the rows all start at the same
+// x on `px-5` alone. The focus ring is on the band rather than on the button, because the stretched
+// click target is the whole band.
 // The two outer tracks are `minmax(0,…)` rather than bare lengths. At every width the card is
 // actually used at they resolve to their maximum, so the bar starts and ends at the same x on every
 // card exactly as fixed tracks would. Below that, a bare `20rem` would overflow the card, and the
@@ -86,7 +87,7 @@ const containerClass = computed(() => {
 // needs either a second arrangement, which AC25 forbids, or the band getting its own scroller.
 const headerClass = computed(() => {
   const classes = [
-    'relative grid grid-cols-[minmax(0,20rem)_minmax(0,1fr)_minmax(0,15rem)] items-center gap-x-5 border-l-[3px] border-l-transparent px-5 py-[clamp(0.75rem,1.6vh,1rem)]',
+    'relative grid grid-cols-[minmax(0,20rem)_minmax(0,1fr)_minmax(0,15rem)] items-center gap-x-5 px-5 py-[clamp(0.75rem,1.6vh,1rem)]',
     'has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-[-2px] has-[button:focus-visible]:outline-primary'
   ]
   if (props.isWorkDay) classes.push('bg-accented dark:bg-default')
@@ -217,29 +218,33 @@ const dayNameClass = computed(() =>
           role="group"
           tabindex="0"
         >
-          <div class="min-w-[52rem]" role="table">
+          <div class="min-w-[62rem]" role="table">
             <!-- One column header line per open card, instead of a label above every value on every
-                 row. A five-row card printed ten tiny labels before and would have printed
-                 twenty-five with the fields this feature adds; this prints five, once, and none at
-                 all while the card is closed. Giving the region real table semantics makes the
-                 visible header the accessible header too, so there is no second copy of the labels
-                 to drift out of step. The category header is the one that does not print, because
-                 the edge colour replaced the word; the cell under it carries the localized category
-                 name for assistive technology.
+                 row. A five-row card printed ten tiny labels before and would have printed thirty
+                 with the fields this feature adds; this prints six, once, and none at all while the
+                 card is closed. Giving the region real table semantics makes the visible header the
+                 accessible header too, so there is no second copy of the labels to drift out of
+                 step. All six headers print, the category included: the coloured edge became a
+                 printed word, so the colour is redundant reinforcement on a name the row states
+                 outright rather than the carrier of anything, and the cell below needs no accessible
+                 name of its own.
 
-                 The category header is an in-flow grid item wrapping an sr-only span rather than
-                 being sr-only itself. `sr-only` is `position: absolute`, so an sr-only grid item is
-                 out of flow and takes no track, which slid every visible label one column left of
-                 the values it labels. The tone is `text-toned` rather than the `text-dimmed` the
-                 blueprint asks for, because dimmed measures 2.0:1 to 2.6:1 against the card surface
-                 and these five words are the only field labels the feature has left. -->
+                 The leading grid item is an in-flow placeholder for the grip track. Grid
+                 auto-placement fills from track 1, so a headerless leading track slides every
+                 visible label one column left of the values it labels, and `sr-only` is
+                 `position: absolute`, so an sr-only grid item is out of flow and takes no track
+                 either. It carries `role="presentation"`, which keeps it in flow for the grid and
+                 out of the accessibility tree, matching the row's own decorative grip and reserved
+                 action cells, so six headers sit above six cells. The tone is `text-toned` rather
+                 than the `text-dimmed` the blueprint asks for, because dimmed measures 2.0:1 to
+                 2.6:1 against the card surface and these six words are the only field labels the
+                 feature has left. -->
             <div
-              class="grid grid-cols-[1rem_minmax(12rem,1fr)_9rem_7.5rem_4.5rem_6rem_3rem] gap-x-4 border-b border-l-[3px] border-default border-l-transparent px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-toned"
+              class="grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_7.5rem_4.5rem_6rem_3rem] gap-x-4 border-b border-default px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-toned"
               role="row"
             >
-              <span role="columnheader">
-                <span class="sr-only">{{ t('planning.columns.category') }}</span>
-              </span>
+              <span role="presentation" />
+              <span role="columnheader">{{ t('planning.columns.category') }}</span>
               <span role="columnheader">{{ t('planning.columns.task') }}</span>
               <span role="columnheader">{{ t('planning.columns.delivery') }}</span>
               <span class="text-right" role="columnheader">{{ t('planning.columns.words') }}</span>

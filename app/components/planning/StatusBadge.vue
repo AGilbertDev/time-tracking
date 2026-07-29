@@ -24,12 +24,28 @@ const { t } = useI18n()
 // being recoloured by the active atmosphere. A missed delivery is a problem rather than a stage, so
 // it takes the error role and reads red, matching the overbooked capacity reading.
 //
+// `success` is emerald rather than green, and the reason belongs here as well as in app.config.ts,
+// because this is the component that renders it. green-800 sat an Oklab chord of 0.0336 from the
+// printed name of `revision_internal`, which is closer than the two revision categories are to each
+// other, so a completed internal revision put nearly the same green in two cells of one row. Under
+// simulated protanopia that fell to about one just-noticeable difference. emerald-800 lifts it to
+// 0.0604, and 0.0548 under protanopia. A category hue is the primary user's own colour, so the
+// reserved role is what moved. Do not put it back to green without re-measuring that pair.
+//
 // The light shade is 800 rather than the 700 the blueprint carried over from the badge. Losing the
 // pale wash was assumed to improve the ratio, and on a work-day card it does. An off day that holds
 // recorded weekend work is a card on the muted surface, and there the 700 shades measure 3.98:1 to
 // 4.31:1 for the success and warning roles across the five themes, under the 4.5:1 this 14 px text
 // needs. At 800 every role clears 5.7:1 on that surface and 7:1 on the work-day card. Dark stays at
 // 400, which measures 5.2:1 or better everywhere.
+//
+// Re-measured on the rendered page after the emerald move, sampling the drawn pixels rather than the
+// token definitions. Every one of the four coloured roles still clears 4.5:1 on all twenty card
+// surfaces. The worst readings are `En retard` at 5.16:1 on a pastel dark work-day card, `En cours` at
+// 5.71:1 on an automne light off-day card, `Accepté` at 5.64:1 on a pastel dark work-day card, and
+// `Terminé` at 6.13:1 on an automne light off-day card. `Terminé` improved from 5.74:1, because
+// emerald-800 is slightly darker than green-800, so the hue move helped contrast as well as
+// separation.
 const toneClass: Record<StatusKey, string> = {
   accepte: 'font-semibold text-info-800 dark:text-info-400',
   encours: 'font-semibold text-warning-800 dark:text-warning-400',

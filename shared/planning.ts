@@ -243,6 +243,31 @@ export function formatDeliveryDate(
   return `${day} ${month} ${year}`
 }
 
+// The composed delivery deadline, as the two parts the row prints in two tones. The date and the
+// time read as one deadline, so the separator is a plain space and never a glyph, and it lives here
+// rather than in the template because Vue's condenseWhitespace drops a whitespace-only text node
+// that has no previous sibling and no amount of template whitespace survives that. The leading space
+// on timeSuffix is load-bearing. Do not trim it.
+//
+// Null means there is no deadline to print and the row shows the em dash instead, which also covers
+// an unparseable delivery date, since formatDeliveryDate returns an empty string there and a lone
+// time under a header that says Livraison would read as a real value.
+export type Deadline = { date: string; timeSuffix: string }
+
+export function formatDeadline(
+  deliveryDate: string | null | undefined,
+  taskDate: string,
+  months: readonly string[],
+  deliveryTime: string | null | undefined
+): Deadline | null {
+  if (!deliveryDate) return null
+
+  const date = formatDeliveryDate(deliveryDate, taskDate, months)
+  if (!date) return null
+
+  return { date, timeSuffix: deliveryTime ? ` ${deliveryTime}` : '' }
+}
+
 // The colour and CSS key for a stored status. A trackable task maps the three confirmed status names
 // to their keys and an unknown value to `na`. A non-trackable task is always `na`, so a stray status
 // left on a meeting or a break never colours the row.

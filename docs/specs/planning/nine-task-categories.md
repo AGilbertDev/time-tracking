@@ -86,7 +86,7 @@ Each of these is a following feature, and each is stated here so a build stage c
 
 **Per-category quotas are `PLAN-32b`.** No quota field is added to the `Category` descriptor. Nothing
 touches `settings.quota_wph` or its 450 default, and the global quota is left exactly as it is even
-though [the overview records it as wrong](overview.md#the-original-category-colours-deferred-to-a-later-feature).
+though [the overview records it as wrong](overview.md#the-original-category-colours-implemented-in-plan-32c).
 Fixing a known-wrong default is tempting and it belongs to the feature that retires the setting
 entirely, not to this one.
 
@@ -94,7 +94,7 @@ entirely, not to this one.
 `categoryEdgeHue`. `edgeSlot` values change only as far as is mechanically required to keep the
 contract total and type-correct for nine ids, which is `AC7`. The five non-trackable categories keep
 `edgeSlot: null` in this feature. Whether they get a colour is `PLAN-32c`'s decision and
-[her original colours say they should](overview.md#the-original-category-colours-deferred-to-a-later-feature).
+[her original colours say they should](overview.md#the-original-category-colours-implemented-in-plan-32c).
 
 **No write path.** `PLAN-09` is not built and this feature does not build any part of it. No Zod
 schema for a category, no POST, no PATCH.
@@ -304,7 +304,7 @@ chroma zero. That widening is `PLAN-32c`'s.
 
 The five non-trackable ids keep `edgeSlot: null`, including the new `dtp`. That is the shipped `AC18`
 behaviour and it is preserved here unchanged, even though
-[her original colours overrule it](overview.md#the-original-category-colours-deferred-to-a-later-feature),
+[her original colours overrule it](overview.md#the-original-category-colours-implemented-in-plan-32c),
 because colouring them is `PLAN-32c`'s decision and doing it here would be the palette pass arriving
 early.
 
@@ -434,7 +434,7 @@ None block the build.
    inherits two problems this feature does not touch, which are that the contract cannot express
    proofreading's chroma-zero grey and that nine categories plus four reserved status hues is a crowded
    ring. Both are named in
-   [the original category colours](overview.md#the-original-category-colours-deferred-to-a-later-feature).
+   [the original category colours](overview.md#the-original-category-colours-implemented-in-plan-32c).
 3. **`PLAN-32b` inherits the quota field.** Four trackable categories now exist with no quota between
    them, so the app keeps using the single wrong 450 default until `32b` lands. That is a known-wrong
    number left in place on purpose, per the non-goals, and it is the reason `32b` follows immediately
