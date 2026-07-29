@@ -1,5 +1,7 @@
 # Task categories contract
 
+**Superseded in part.** The six-category set below is replaced by the nine of `PLAN-32a`, specified in [nine-task-categories.md](nine-task-categories.md), so build the set from there rather than from this spec.
+
 ## Intent
 
 `PLAN-02` defines the shared contract for the small set of task categories the planning dashboard uses. A category answers one load-bearing question about a task: does it produce billable words that count toward the quota, or does it consume scheduled time without producing words. That single fact is the `trackable` flag, and it is the one thing every other planning feature needs to agree on. The availability-quota engine (`PLAN-22`) sums `words_done` only across trackable tasks and subtracts non-trackable durations from effective hours, and the task row UI (`PLAN-06`) shows a real status on trackable tasks and `N/A` on the rest. Both read the same flag from here so the two can never disagree.
