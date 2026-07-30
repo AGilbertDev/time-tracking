@@ -20,6 +20,8 @@ import {
   resolveSchedule,
   statusKey,
   sumEffectiveDuration,
+  TASK_STATUS_DONE,
+  TASK_STATUSES,
   todayInZone
 } from '#shared/planning'
 
@@ -938,5 +940,82 @@ describe('computeCapacity', () => {
     expect(capacity.excess).toBe(0)
     expect(capacity.state).toBe('good')
     expect(capacity.fillPct).toBe(0)
+  })
+})
+
+// --- the stored status vocabulary (PLAN-09) ------------------------------------------------------
+
+// TASK_STATUSES is the export PLAN-09 added, and docs/specs/planning/task-write-api.md AC44 is what
+// these cases come from. The three values used to be written out in three places in executable code,
+// the statusKey switch, the done comparison in list.ts, and STATUS_BY_PHASE in the dev seed, and the
+// write boundary needed them a fourth time. Four copies of a domain vocabulary drift, and the seed's
+// copy is the dangerous one because it is the one that writes these values into the database.
+//
+// Every expectation here is a literal string rather than a read of the constant. AC44 asks for
+// exactly that and explains why, which is that a test reading the same constant as the code under
+// test proves the wiring and never the value. These assertions are the only thing in the suite that
+// pins what the vocabulary actually is.
+describe('TASK_STATUSES', () => {
+  // The accents are load-bearing rather than cosmetic. The late comparison in the list query matches
+  // the finished value as a literal string, so a row storing a de-accented Termine would never match
+  // and would read as late forever with nothing on screen to explain why.
+  it('holds the three stored status values with their exact accents', () => {
+    expect(TASK_STATUSES).toEqual(['Accepté', 'En cours', 'Terminé'])
+  })
+
+  // The order is not incidental. AC44 fixes it as the cycle order so PLAN-14 reads the sequence from
+  // the contract instead of hardcoding the three values a fourth time. A reordering here would
+  // silently change what the status cycle does on click.
+  it('is ordered as the status cycle runs, accepted then in progress then finished', () => {
+    expect(TASK_STATUSES[0]).toBe('Accepté')
+    expect(TASK_STATUSES[1]).toBe('En cours')
+    expect(TASK_STATUSES[2]).toBe('Terminé')
+  })
+
+  it('carries exactly three values, since N/A is derived at read time and never stored', () => {
+    expect(TASK_STATUSES).toHaveLength(3)
+    expect(TASK_STATUSES as readonly string[]).not.toContain('N/A')
+  })
+
+  // statusKey is the first of the four readers, so its switch and the tuple must still agree. This is
+  // the wiring half of AC44 and it is worth having only because the case above pins the values.
+  it('maps each of its own values through statusKey, so the switch and the tuple agree', () => {
+    const [accepted, inProgress, done] = TASK_STATUSES
+
+    expect(statusKey(accepted, true)).toBe('accepte')
+    expect(statusKey(inProgress, true)).toBe('encours')
+    expect(statusKey(done, true)).toBe('termine')
+  })
+})
+
+// TASK_STATUS_DONE is read out of the tuple by index, which is the one thing about it worth testing.
+// The overdue expression in server/api/tasks/handlers/projection.ts compares against it, so if a
+// reorder of the cycle rebinds it the late rule keeps compiling and every finished task reports as
+// overdue forever, with nothing on screen to say why. That failure is silent by nature, so these
+// cases are what makes it loud: the value is pinned as a literal, exactly as AC44 pins the tuple,
+// because a test that reads the same export as the code under test proves the wiring and never the
+// value.
+describe('TASK_STATUS_DONE', () => {
+  it('is the finished status, spelled with its accent', () => {
+    expect(TASK_STATUS_DONE).toBe('Terminé')
+  })
+
+  it('is not either of the two unfinished statuses', () => {
+    expect(TASK_STATUS_DONE).not.toBe('Accepté')
+    expect(TASK_STATUS_DONE).not.toBe('En cours')
+  })
+
+  // The reason the constant exists at all. statusKey and the overdue comparison both have to agree
+  // about which value means finished, and this is the one that says they do.
+  it('is the value statusKey resolves to termine', () => {
+    expect(statusKey(TASK_STATUS_DONE, true)).toBe('termine')
+  })
+
+  // A finished task is never late, however long ago its delivery was, so the late flag is ignored
+  // for this value and only for this value.
+  it('outranks the overdue flag, which no other status does', () => {
+    expect(statusKey(TASK_STATUS_DONE, true, true)).toBe('termine')
+    expect(statusKey('Accepté', true, true)).toBe('retard')
+    expect(statusKey('En cours', true, true)).toBe('retard')
   })
 })

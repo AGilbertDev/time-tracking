@@ -45,6 +45,38 @@ export type PlanningTask = {
 // stores it, and it outranks whatever the stored status says.
 export type StatusKey = 'accepte' | 'encours' | 'termine' | 'na' | 'retard'
 
+// The three status values a trackable task can hold in the database, in cycle order. This is the
+// stored vocabulary and it is not display copy, so it is never translated and its accents are
+// load-bearing: the late comparison matches the finished value as a literal string, and a row
+// holding a de-accented spelling would read as late forever with nothing to explain why. It lives in
+// shared/ because both sides need it, the write boundary to validate against and the client to walk
+// the cycle, and the order is the cycle order so the sequence is read from here rather than
+// hardcoded again. Every other copy of these three values derives from this tuple.
+//
+// The i18n `planning.status` entries are a different vocabulary and must not be reused for this.
+// They are keyed by StatusKey, the derived presentation key, and their English values are English
+// while the stored values stay French.
+export const TASK_STATUSES = ['Accepté', 'En cours', 'Terminé'] as const
+
+// One stored status value. Narrower than the free-text column, which stays permissive on purpose.
+export type TaskStatus = (typeof TASK_STATUSES)[number]
+
+// The stored status that means the work is finished. A task carrying it is never late, however long
+// ago its delivery was, so it is the one value the overdue rule has to name on its own.
+//
+// It is named here rather than picked out of the tuple wherever it is needed. An index is a position
+// in the cycle and not a name for a value, so a reader doing `TASK_STATUSES[2]` in a server file
+// keeps compiling after the cycle is reordered and silently starts comparing against a different
+// status, which would report every finished task as overdue forever with nothing to explain it. One
+// declaration means one place to get wrong, and it sits directly under the tuple so the index and
+// the spelling it stands for are readable in a single glance. Reading it from the tuple rather than
+// writing 'Terminé' again also keeps one copy of the spelling, which is what AC44 asks for.
+//
+// A reorder of the tuple would still change what this resolves to, which is the honest limit of any
+// index. That is why it is pinned by its own unit test in test/shared/planning.test.ts: the failure
+// mode is now a red test rather than a silent rebinding.
+export const TASK_STATUS_DONE = TASK_STATUSES[2]
+
 // The inclusive week range as calendar-day strings.
 export type WeekRange = { from: string; to: string }
 
@@ -284,14 +316,16 @@ export function statusKey(
   trackable: boolean,
   isOverdue = false
 ): StatusKey {
+  const [accepted, inProgress] = TASK_STATUSES
+
   if (!trackable) return 'na'
-  if (isOverdue && status !== 'Terminé') return 'retard'
+  if (isOverdue && status !== TASK_STATUS_DONE) return 'retard'
   switch (status) {
-    case 'Accepté':
+    case accepted:
       return 'accepte'
-    case 'En cours':
+    case inProgress:
       return 'encours'
-    case 'Terminé':
+    case TASK_STATUS_DONE:
       return 'termine'
     default:
       return 'na'

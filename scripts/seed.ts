@@ -4,7 +4,13 @@ import { drizzle } from 'drizzle-orm/libsql'
 
 import { allowedEmails, settings, tasks, users, workSchedule } from '../server/db/schema'
 import { type DefaultCategoryId, isTrackableCategory } from '../shared/categories'
-import { addDays, DEFAULT_SCHEDULE, getWeekDays, todayInZone } from '../shared/planning'
+import {
+  addDays,
+  DEFAULT_SCHEDULE,
+  getWeekDays,
+  TASK_STATUSES,
+  todayInZone
+} from '../shared/planning'
 
 // The one dev seed. It sets up the owner account, then wipes the owner's task and work-schedule rows
 // and repopulates seven weeks, the current week plus the three before and the three after, so
@@ -281,11 +287,18 @@ function phaseOf(date: string): Phase {
   return 'future'
 }
 
-// The status a trackable task carries in each phase.
+// The status a trackable task carries in each phase. The values are read from the shared tuple
+// rather than written out again, because the seed is the one copy of this vocabulary that writes
+// into the database. A seed that drifted from the contract would produce rows whose status the late
+// comparison can never match, and those rows would then read as late forever with nothing on screen
+// to explain why. The tuple is in cycle order, so a past day takes the last of it and a future day
+// the first.
+const [STATUS_ACCEPTED, STATUS_IN_PROGRESS, STATUS_DONE] = TASK_STATUSES
+
 const STATUS_BY_PHASE: Record<Phase, string> = {
-  past: 'Terminé',
-  today: 'En cours',
-  future: 'Accepté'
+  past: STATUS_DONE,
+  today: STATUS_IN_PROGRESS,
+  future: STATUS_ACCEPTED
 }
 
 // --- row construction ----------------------------------------------------------------------------
@@ -420,7 +433,7 @@ weeks.forEach((weekDays, weekIndex) => {
     if (lateTrackable) {
       // Only the status and the delivery move. The durations are left exactly as the pattern set them,
       // so making a day late never shifts the capacity band that day was chosen to demonstrate.
-      lateTrackable.status = 'En cours'
+      lateTrackable.status = STATUS_IN_PROGRESS
       lateTrackable.deliveryDate = lateDay
       lateTrackable.deliveryTime = '11:00'
       // A late task is partly done rather than untouched, which is the realistic case and keeps the
