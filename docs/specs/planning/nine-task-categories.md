@@ -186,10 +186,23 @@ A stale `revision` row folding to `admin` through `coerceCategory` is safe, but 
 reclassifies revision work as administration, which is a wrong reading rather than a broken one, and
 the reseed removes the row rather than relabelling it.
 
-**What would change this.** Once `PLAN-09` ships, real rows can carry `revision` and the same change
-stops being simple. It would then need a real data migration, and the split would have to be resolved
-with the user rather than chosen. That is why this criterion is a verification and not an assumption,
-and a future reader who finds no `0008` should read this section rather than assume one was forgotten.
+**This has now changed, as of `PLAN-09`.** This paragraph used to read "what would change this" and
+described a future condition. That condition has fired. The task write API shipped, so the `tasks`
+table now accumulates rows the user created, and the evidence above holds only for the period before
+it did.
+
+The consequence is the one this paragraph always predicted. Real rows can carry `revision`, or any
+other stale id, so the same change is no longer simple. It needs a real data migration, and the
+split between `revision_internal` and `revision_external` has to be resolved with the user rather
+than chosen. The reasoning above is still sound and the four arguments still stand for seed-owned
+rows, but the premise that every row is seed-owned is no longer true and must not be inherited.
+
+**So re-run the check rather than citing this section for it.** Any later feature reasoning about
+what the `tasks` table contains, `PLAN-33`'s `words_done` drop in particular, needs a fresh count of
+rows the seed did not write, run against the production database rather than against a fresh
+development one, since a development database can still be seed-only while production is not. A
+future reader who finds no `0008` should read this section for why one was never written, and should
+not read it as evidence that one is still unnecessary today.
 
 **The overview used to say this feature carries "a migration".** That line was written before the
 check and it was wrong, so the `PLAN-32a` bullet in [`overview.md`](overview.md) now names the shared

@@ -355,6 +355,8 @@ As of 2026-07-29, the read-only week is shipped through `PLAN-08` plus two refin
 **PLAN-32a — The nine default categories**
 Depends on `PLAN-02`. Amends it. Shared contract, i18n, and the dev seed. No migration is needed, because the seed carries the id change. `tasks.category` is free text with no CHECK, enum, or index, so the nine ids are already storable, and the only `revision` rows in existence came from the dev seed this feature rewrites. The reasoning is in [`AC3` of the spec](nine-task-categories.md), and the rule it follows is now written down in the backend conventions skill.
 
+**`AC3`'s no-history finding expired on 2026-07-29, when `PLAN-09` shipped.** It held only while no task write path existed, and the write API is that path, so the re-check it names has fallen due rather than sitting in the future. Every feature that touches `tasks` from here counts the rows the seed did not write, against production, rather than reusing the finding below. The evidence carries its own expiry note in [nine-task-categories.md](nine-task-categories.md) and the reasoning is in [task-write-api.md](task-write-api.md). The bullets are kept as written, because they record what was true and how it was checked at the time.
+
 - Replaces the six shipped categories with the nine in [the category set](#the-category-set-and-the-real-quotas-from-the-primary-user). `proofreading` and `dtp` are new, `revision` is replaced by `revision_internal` and `revision_external`.
 - Carries the ids, the `trackable` flags, and the FR / EN copy only. The quota field is `32b` and the colours are `32c`, so this feature changes the set without changing what a category holds beyond its name.
 - AC1. The nine defaults are present with the correct trackable flags, `translation`, `revision_internal`, `revision_external`, and `proofreading` trackable and the other five not. AC2. The FR and EN strings are the confirmed ones above, in i18n keyed by id rather than in the contract. AC3. Existing `revision` rows are handled, and the claim that no user history exists is verified rather than inherited from this document. The check is done and the finding is recorded in the spec's `AC3`, which is that no write path has ever existed and every `revision` row in the dev database came from one seed pass. The finding stops being true once `PLAN-09` ships, so a later feature has to re-check rather than reuse it. AC4. `coerceCategory` validates the nine and still falls back to `admin`, so a stored `revision` resolves to a non-trackable id rather than reaching the UI raw. AC5. The dev seed is rewritten to the new ids.
@@ -380,6 +382,8 @@ Depends on `PLAN-32a`. Design pass, then shared and frontend.
 
 **PLAN-33 — Row simplification: words total and the progress signal**
 Depends on `PLAN-32`. Frontend, plus a design pass.
+
+**The `PLAN-32a` no-history finding expired when `PLAN-09` shipped on 2026-07-29, so this migration is not the free one `32a` got.** That finding said no real user task history existed, and it rested on there being no task write path. `PLAN-09` is that write path, so from the day it shipped the `tasks` table holds rows the user created. Dropping `words_done` is now a migration against a table with real user rows in it rather than against one only the seed has ever written. Re-run the row check rather than inheriting it from this document or from [nine-task-categories.md](nine-task-categories.md), and run it against production rather than against a fresh dev database, since a dev database can be seed-only while production is not. The reasoning is in [task-write-api.md](task-write-api.md).
 
 - `Mots` shows the project total alone rather than a done-over-total pair, per [words are a total](#words-are-a-total-not-a-progress-pair-deferred-to-a-later-feature). Amends `AC20` of `extend-tasks.md`.
 - **Scope settled 2026-07-29, and it grew.** The owner's instruction was "enlève le restant `-- /` de la colonne mots. seulement le total, pas de `-- /`", then "only keep total words in this column. remove the rest. clean the db. create the proper migration apply it too". So this is no longer a display change. `words_done` leaves the schema, with a real migration that is written and applied, and the column stops existing rather than being hidden.
@@ -476,6 +480,8 @@ Depends on PLAN-07. Frontend.
 
 **PLAN-09 — Task CRUD write API**
 Depends on PLAN-01. Backend.
+
+**`AC1`'s status code is superseded on 2026-07-29 by [task-write-api.md](task-write-api.md), which returns 404 and not 403.** The guarantee is unchanged, and a user still cannot mutate another user's task. Only the reported status differs. A 403 on someone else's task id confirms that the id exists, so a 404 for the missing case and the not-yours case alike leaks nothing and meets the same guarantee more safely. The shipped behaviour is 404, so do not implement the 403 the bullet below still names.
 
 - Create, update, and delete, each validated with Zod, logic in `handlers/`, ownership enforced.
 - AC1. A user can only mutate their own tasks (403 otherwise). AC2. Invalid bodies return a structured 422 via `sendZodError`. AC3. Thin route files, handlers extracted.

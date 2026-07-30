@@ -112,8 +112,23 @@ export const tasks = sqliteTable(
   (table) => [
     // Deleting a user deletes their tasks. A user's tasks are their own personal
     // data with no reason to outlive the account, so cascade leaves no orphans
-    // and gives a future erasure path (PLAN-29) a clean sweep. Fires only with
-    // PRAGMA foreign_keys = ON, which the libSQL/Turso client must enable.
+    // and gives a future erasure path (PLAN-29) a clean sweep.
+    //
+    // Cascade needs PRAGMA foreign_keys = ON, and nothing in this repo sets it
+    // because nothing here has to. Turso enforces foreign keys by default at the
+    // server, so enforcement comes from the platform rather than from any client
+    // configuration, and the libSQL client needs no pragma of its own. The
+    // pipeline orchestrator checked this on 2026-07-29 with a read-only probe
+    // against the development database, running SELECT 1 as a positive control
+    // first and then PRAGMA foreign_keys, which answered 1. Production was never
+    // probed, so read this as verified in development only.
+    //
+    // The suite cannot catch a regression here. test/helpers/taskTestDb.ts
+    // declares this same foreign key on an in-memory libSQL client and never
+    // issues the pragma, and SQLite leaves foreign_keys off per connection until
+    // something turns it on, so cascades are not enforced under test. A cascade
+    // that stopped working would keep the suite green, which is worth knowing
+    // before reading a passing run as cover for anything in this area.
     foreignKey({ columns: [table.userId], foreignColumns: [users.id] }).onDelete('cascade'),
     // userId first for the equality match, date second for the range, so every
     // period stat is a single indexed range scan over (userId, date).
@@ -153,8 +168,10 @@ export const workSchedule = sqliteTable(
   (table) => [
     // Deleting a user deletes their schedule history. It is the user's own
     // personal preference data with no reason to outlive the account, so cascade
-    // leaves no orphans and gives the future erasure path a clean sweep. Fires
-    // only with PRAGMA foreign_keys = ON, which the libSQL/Turso client enables.
+    // leaves no orphans and gives the future erasure path a clean sweep. It
+    // fires for the same reason the tasks foreign key above does, Turso's server
+    // default rather than anything the libSQL client sets, and the check behind
+    // that statement and the limits on it are recorded there rather than twice.
     foreignKey({ columns: [table.userId], foreignColumns: [users.id] }).onDelete('cascade'),
     // A unique index on (user_id, effective_from) forbids two records for the
     // same user on the same effective date (which would make resolution
