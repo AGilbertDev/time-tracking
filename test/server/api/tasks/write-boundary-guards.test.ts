@@ -211,11 +211,24 @@ describe('the comment strip every guard below searches through', () => {
     expect(stripped).not.toContain('set a')
   })
 
-  // The known limit, written as a case so it is visible rather than assumed away. No file this suite
-  // scans contains a regex holding a bare `//`, and if one ever does, this is the case that names
-  // what happens.
-  it('cannot tell a regex literal from division, so a // inside one still reads as a comment', () => {
-    expect(stripComments('const r = /a\\/\\/b/\nconst after = 1\n')).toContain('after')
+  // The known limit, written as a case so it is visible rather than assumed away. A regex literal
+  // cannot be told from division without really parsing, so a bare `//` inside one reads as the
+  // start of a comment and everything after it on that line is dropped. A character class is the
+  // only place the pair can sit, because anywhere else the first slash would close the literal, so
+  // the fixture is `/[//]/` and the code it eats is on the same line.
+  //
+  // Both halves are asserted, and the survivor on the next line is the reason why. The strip runs to
+  // the newline and stops, so anything below comes through no matter what, and a fixture that put
+  // the code there would pass while demonstrating nothing. It also rules out the other false pass,
+  // where a strip returning nothing at all satisfies the negative on its own.
+  //
+  // No file this suite scans holds such a regex, so the limit is still theoretical. If one ever
+  // lands, this is the case that names what it costs.
+  it('reads a bare // inside a regex as a comment start, so the rest of that line is lost', () => {
+    const stripped = stripComments('const r = /[//]/; const sameLine = 1\nconst nextLine = 2\n')
+
+    expect(stripped).not.toContain('sameLine')
+    expect(stripped).toContain('nextLine')
   })
 })
 
