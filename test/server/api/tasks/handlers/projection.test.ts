@@ -47,10 +47,6 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.useRealTimers()
-  // createTaskTestDb opens a libSQL client per test, so the harness is released here rather than
-  // left for the process to reap. Nothing closed them before and the handles accumulated across the
-  // run.
-  harness?.close()
 })
 
 // The database's late verdict for one seeded row, read through the real selection expression.

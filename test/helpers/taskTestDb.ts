@@ -2,6 +2,7 @@ import type { Client } from '@libsql/client'
 
 import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
+import { onTestFinished } from 'vitest'
 
 // A real in-memory SQLite database for the PLAN-09 write handlers, not a mocked query builder.
 //
@@ -83,18 +84,28 @@ const TASKS_DDL = `
 export type TaskTestDb = {
   client: Client
   db: ReturnType<typeof drizzle>
-  // Releases the underlying libSQL client. Call it from an afterEach in every suite that builds a
-  // harness, because createTaskTestDb is called per test and each call opens a client of its own.
-  // Nothing closed them before, so the handles accumulated for the whole run and the cost grew with
-  // every case added. An in-memory database is discarded with its client, so closing also drops the
-  // data rather than leaving it reachable.
-  close: () => void
 }
 
 // A fresh database with the two fixture users already present. Called per test so no state leaks
-// between cases. The caller owns the lifetime: pair it with `harness.close()` in an afterEach.
+// between cases.
+//
+// The harness owns the lifetime of its own client. createTaskTestDb is called per test and each
+// call opens a client, nothing closed them before, and the handles accumulated for the whole run so
+// the cost grew with every case added. Every suite then carried an identical afterEach to close it,
+// which is five copies of one rule, so the rule now lives here once. An in-memory database is
+// discarded with its client, so closing also drops the data rather than leaving it reachable.
+//
+// vitest's onTestFinished runs after the suite's own afterEach hooks, and it is registered below
+// before the first await, so the client is released even when the DDL that follows throws partway.
+// It can only be registered from inside a running test, which for these suites means a beforeEach.
+// A harness built in a beforeAll or at module scope throws here rather than quietly leaking a
+// client, and that is the right way round.
+//
+// Closing twice is a no-op on the libSQL client, so a suite that wants to close early can still do
+// it through `client` without turning a test failure into a second error that hides it.
 export async function createTaskTestDb(): Promise<TaskTestDb> {
   const client = createClient({ url: ':memory:' })
+  onTestFinished(() => client.close())
 
   for (const statement of [USERS_DDL, SETTINGS_DDL, TASKS_DDL]) {
     await client.execute(statement)
@@ -107,10 +118,7 @@ export async function createTaskTestDb(): Promise<TaskTestDb> {
     await client.execute({ sql: 'INSERT INTO users (id, email) VALUES (?, ?)', args: [id, email] })
   }
 
-  // Closing twice is a no-op on the libSQL client, so an afterEach that runs after a failed
-  // beforeEach, or a suite that closes defensively, cannot turn a test failure into a second error
-  // that hides it.
-  return { client, db: drizzle(client), close: () => client.close() }
+  return { client, db: drizzle(client) }
 }
 
 // A stored task row as the fixtures describe one. Every column is optional but id, userId, date, and
