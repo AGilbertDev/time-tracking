@@ -34,15 +34,15 @@ Each body arrives as JSON and is read with `readValidatedBody` against a Zod sch
 
 The authority on every individual field is [the writable field contract](#the-writable-field-contract), which gives the create column, the update column, and the validation rule for each one. It is not repeated here, because two copies of a field list drift and the copy further from the schema is the one that goes stale. The grouping below is the shape of the request at a glance.
 
-| Field group                                                                    | Create       | Update   |
-| ------------------------------------------------------------------------------ | ------------ | -------- |
-| `date` and `category`, the day and the kind of work                             | **required** | optional |
-| `client` and `project`, free text                                               | optional     | optional |
-| `deliveryDate` and `deliveryTime`                                               | optional     | optional |
-| `projectWordCount`, `quotaWphOverride`, `estimatedMinutes`, `actualMinutes`     | optional     | optional |
-| `status` and `excludeFromStats`                                                 | optional     | optional |
-| `id`, `userId`, `createdAt`, `updatedAt`, all server-owned                      | refused      | refused  |
-| `wordsDone`, `sortOrder`, `splitGroupId`, each owned by another feature         | refused      | refused  |
+| Field group                                                                 | Create       | Update   |
+| --------------------------------------------------------------------------- | ------------ | -------- |
+| `date` and `category`, the day and the kind of work                         | **required** | optional |
+| `client` and `project`, free text                                           | optional     | optional |
+| `deliveryDate` and `deliveryTime`                                           | optional     | optional |
+| `projectWordCount`, `quotaWphOverride`, `estimatedMinutes`, `actualMinutes` | optional     | optional |
+| `status` and `excludeFromStats`                                             | optional     | optional |
+| `id`, `userId`, `createdAt`, `updatedAt`, all server-owned                  | refused      | refused  |
+| `wordsDone`, `sortOrder`, `splitGroupId`, each owned by another feature     | refused      | refused  |
 
 **Refused means a 422, not a silent drop.** Both object schemas are `.strict()`, so an unknown key and a server-owned key are both errors. A client that sends `userId` and gets a 200 has been told its write succeeded as sent, which is false, and the owning user always comes from the session regardless of what the body claims.
 
@@ -131,27 +131,27 @@ Every body is parsed with Zod at the route, and a failure returns a structured 4
 
 Field by field over the live schema. "Create" and "Update" say whether a client may send the field on that endpoint.
 
-| Column             | Create             | Update             | Rule                                                                                                   |
-| ------------------ | ------------------ | ------------------ | ------------------------------------------------------------------------------------------------------ |
-| `id`               | never              | never              | Server-owned, `$defaultFn` uuid.                                                                         |
-| `userId`           | never              | never              | Server-owned, from the session.                                                                          |
-| `date`             | **required**       | optional           | `isValidCalendarDay`. Column is `NOT NULL`.                                                              |
-| `client`           | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                                           |
-| `project`          | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                                           |
-| `category`         | **required**       | optional           | Must be one of `DEFAULT_CATEGORY_IDS`. Column is `NOT NULL`.                                             |
-| `deliveryDate`     | optional, nullable | optional, nullable | `isValidCalendarDay`.                                                                                    |
-| `deliveryTime`     | optional, nullable | optional, nullable | `HH:MM`, 24-hour.                                                                                        |
-| `projectWordCount` | optional, nullable | optional, nullable | Integer, `0` to `10000000`.                                                                              |
-| `wordsDone`        | never              | never              | Never written at all. See [below](#the-words_done-question-and-how-it-was-settled).                      |
-| `quotaWphOverride` | optional, nullable | optional, nullable | Integer, `1` to `10000`. Never zero.                                                                     |
-| `estimatedMinutes` | optional, nullable | optional, nullable | Integer, `0` to `100000`. Stored verbatim, never computed here.                                          |
-| `actualMinutes`    | optional, nullable | optional, nullable | Integer, `0` to `100000`. **Never auto-filled.**                                                         |
-| `status`           | optional, nullable | optional, nullable | One of the shared status tuple, cross-checked against trackability.                                      |
-| `excludeFromStats` | optional           | optional           | Boolean. Defaults to `false` through the column default.                                                 |
-| `splitGroupId`     | never              | never              | `PLAN-18` owns it.                                                                                       |
-| `sortOrder`        | never              | never              | Server-assigned. `PLAN-15` owns reordering.                                                              |
-| `createdAt`        | never              | never              | Server-owned.                                                                                            |
-| `updatedAt`        | never              | never              | Server-owned, set by hand on update.                                                                     |
+| Column             | Create             | Update             | Rule                                                                                |
+| ------------------ | ------------------ | ------------------ | ----------------------------------------------------------------------------------- |
+| `id`               | never              | never              | Server-owned, `$defaultFn` uuid.                                                    |
+| `userId`           | never              | never              | Server-owned, from the session.                                                     |
+| `date`             | **required**       | optional           | `isValidCalendarDay`. Column is `NOT NULL`.                                         |
+| `client`           | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                      |
+| `project`          | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                      |
+| `category`         | **required**       | optional           | Must be one of `DEFAULT_CATEGORY_IDS`. Column is `NOT NULL`.                        |
+| `deliveryDate`     | optional, nullable | optional, nullable | `isValidCalendarDay`.                                                               |
+| `deliveryTime`     | optional, nullable | optional, nullable | `HH:MM`, 24-hour.                                                                   |
+| `projectWordCount` | optional, nullable | optional, nullable | Integer, `0` to `10000000`.                                                         |
+| `wordsDone`        | never              | never              | Never written at all. See [below](#the-words_done-question-and-how-it-was-settled). |
+| `quotaWphOverride` | optional, nullable | optional, nullable | Integer, `1` to `10000`. Never zero.                                                |
+| `estimatedMinutes` | optional, nullable | optional, nullable | Integer, `0` to `100000`. Stored verbatim, never computed here.                     |
+| `actualMinutes`    | optional, nullable | optional, nullable | Integer, `0` to `100000`. **Never auto-filled.**                                    |
+| `status`           | optional, nullable | optional, nullable | One of the shared status tuple, cross-checked against trackability.                 |
+| `excludeFromStats` | optional           | optional           | Boolean. Defaults to `false` through the column default.                            |
+| `splitGroupId`     | never              | never              | `PLAN-18` owns it.                                                                  |
+| `sortOrder`        | never              | never              | Server-assigned. `PLAN-15` owns reordering.                                         |
+| `createdAt`        | never              | never              | Server-owned.                                                                       |
+| `updatedAt`        | never              | never              | Server-owned, set by hand on update.                                                |
 
 **Only `date` and `category` are required on create**, because they are the only two columns that are `NOT NULL` without a default. Everything else the table needs is either nullable or defaulted, so the smallest legal task is a day and a kind of work. That matches the product and not only the schema: the user adds a break or a meeting with nothing but those two, and `PLAN-10`'s `AC3` says adding is never blocked.
 
@@ -272,9 +272,11 @@ Not writing it also honours the owner's reason for killing the field, which is a
 
 **The cost of Route C, stated plainly, because it is real.** Until `PLAN-33` lands, every task created through this API renders as `— / 12 000` in the words column. That em dash is the `-- /` the owner asked to have removed. `PLAN-09` ships no UI so nothing is visible from this feature alone, and the artefact first appears when `PLAN-10` lets a user create a task through the interface. [The overview](overview.md#what-to-pick-up-next) already recommends slotting `PLAN-33` in early and calls it "a recommendation rather than a dependency". This finding sharpens it for one step: **`PLAN-33` should land before `PLAN-10`, or `PLAN-10` ships a known-rejected artefact on every row the user creates.** It remains no dependency of `PLAN-09`.
 
-- **AC29.** `wordsDone` in a request body is a 422 on both endpoints.
-- **AC30.** No code path in `create.ts` or `update.ts` writes `words_done`. A create with `projectWordCount: 12000` stores `12000` in `project_word_count` and leaves `words_done` `NULL`. A grep for `wordsDone` under `server/api/tasks/handlers/` returns only the list handler's existing passthrough.
-- **AC31.** The regression this protects against is the mirror, so the test asserts `SELECT words_done` is `NULL` on a row created with a project word count, and carries a comment naming this decision. A later implementer reading the "the app should set it" line in `overview.md` should hit this test before they ship the mirror.
+**`AC29` through `AC31` are retired, not current contract.** They were met when they were written and they went with the column on 2026-07-30, so nothing below this line describes a check that exists or a query that can run. `SELECT words_done` fails outright now. They are kept as the record of what was guaranteed while the column lived, and the guard that replaced all three is a repo-wide assertion that no source file mentions the field, in [row-simplification-words-total.md](row-simplification-words-total.md).
+
+- **AC29, retired.** `wordsDone` in a request body is a 422 on both endpoints.
+- **AC30, retired.** No code path in `create.ts` or `update.ts` writes `words_done`. A create with `projectWordCount: 12000` stores `12000` in `project_word_count` and leaves `words_done` `NULL`. A grep for `wordsDone` under `server/api/tasks/handlers/` returns only the list handler's existing passthrough.
+- **AC31, retired.** The regression this protects against is the mirror, so the test asserts `SELECT words_done` is `NULL` on a row created with a project word count, and carries a comment naming this decision. A later implementer reading the "the app should set it" line in `overview.md` should hit this test before they ship the mirror.
 
 ### The `PLAN-32a` finding goes stale the moment this ships
 

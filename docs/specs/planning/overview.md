@@ -206,17 +206,17 @@ That second message matters as much as the first, because it resolves what would
 
 Given 2026-07-29, from the app the user uses today. **Implemented by `PLAN-32c`**, specced in [category-column-coloured-names.md](category-column-coloured-names.md) and designed in [category-column-coloured-names-design.md](category-column-coloured-names-design.md). The user's hues ship verbatim wherever they named one, with a single exception recorded under the table. The invented palette that shipped in `PLAN-02` is gone.
 
-| Category           | The user's colour    | Shipped hue | Note                                                          |
-| ------------------ | ------------- | ----------- | ------------------------------------------------------------- |
-| Translation        | cyan          | 195         | The user's, kept                                                    |
-| Revision, internal | apple green   | 140         | The user's, kept. The user gave one green for both                       |
-| Revision, external | apple green   | 115         | Derived sibling, 25 degrees off internal, the closest pair    |
-| Proofreading       | pale gray     | 230         | **Overridden.** Slate blue rather than the user's grey, reason below |
-| Terminology        | wine red      | 20          | The user's, kept                                                    |
-| Meetings           | pink          | 340         | The user's, kept                                                    |
-| Breaks             | navy          | 265         | The user's, kept                                                    |
-| Administration     | not specified | 305         | Chosen, violet. The user named no colour for it                    |
-| DTP                | not specified | 60          | Chosen, ochre. The user named no colour for it                     |
+| Category           | The user's colour | Shipped hue | Note                                                                 |
+| ------------------ | ----------------- | ----------- | -------------------------------------------------------------------- |
+| Translation        | cyan              | 195         | The user's, kept                                                     |
+| Revision, internal | apple green       | 140         | The user's, kept. The user gave one green for both                   |
+| Revision, external | apple green       | 115         | Derived sibling, 25 degrees off internal, the closest pair           |
+| Proofreading       | pale gray         | 230         | **Overridden.** Slate blue rather than the user's grey, reason below |
+| Terminology        | wine red          | 20          | The user's, kept                                                     |
+| Meetings           | pink              | 340         | The user's, kept                                                     |
+| Breaks             | navy              | 265         | The user's, kept                                                     |
+| Administration     | not specified     | 305         | Chosen, violet. The user named no colour for it                      |
+| DTP                | not specified     | 60          | Chosen, ochre. The user named no colour for it                       |
 
 **Proofreading does not ship the user's pale grey, and this is an override of a colour the user gave rather than a gap they left.** `Relecture` prints at hue 230, a slate blue. The reason is measured. A grey dark enough to clear the 4.5:1 text floor lands at `L 0.47`, and all five themes put their light `text-muted` in the `L 0.47` to `L 0.53` band, so a chroma-zero category name would sit inside the tone the row already uses for its own dimmed text. `Relecture` would read as the one row whose colour failed to load rather than as one of the user's nine colours. The obvious compromise, a very low chroma slate, is worse rather than better, because encre's `neutral-500` is itself a blue-grey at `L 0.52 C 0.046 H 259`, so a slate at the same lightness and chroma near the same hue reproduces exactly the failure it was meant to avoid. Hue 230 is the centre of the widest empty arc in the user's own palette, so the substitution costs the least separation from everything else the user named. Approved by the owner, who will tell the user it changed and why. It stays the user's to overrule.
 
@@ -336,19 +336,21 @@ Ordered for the smallest shippable increments first. Each phase leaves the app i
 
 ### What to pick up next
 
-As of 2026-07-29, the read-only week is shipped through `PLAN-08` plus two refinement passes, and `PLAN-32a` and `PLAN-32c` have landed. Everything below is recorded in [Locked decisions](#locked-decisions) and **not built**.
+As of 2026-07-30, the read-only week is shipped through `PLAN-08` plus two refinement passes, and `PLAN-32a`, `PLAN-32c`, `PLAN-09`, and `PLAN-33` have landed. Everything still listed in the order table below is recorded in [Locked decisions](#locked-decisions) and **not built**. A shipped feature keeps its own section further down, marked implemented there, so this list is the pending work rather than the whole map.
 
 **The write path is next, decided by the owner on 2026-07-29.** "i think first we need expanding tasks with all the fields, and crud operations. timer is a luxury feature that adds to manual time tracking." So `PLAN-09`, `PLAN-10`, and `PLAN-11` come before the remaining contract work, and the timer sits at the end.
 
 **`PLAN-32` was three features, not one.** Split on 2026-07-29, because it bundled a contract change, a settings retirement, and a palette design pass, and those are separable, separately testable, and reach different parts of the app. `32a` (the nine categories) and `32c` (the coloured category column) have shipped. `32b` is the one still outstanding.
 
-| Order | Feature                           | Why now                                                                       |
-| ----- | --------------------------------- | ----------------------------------------------------------------------------- |
-| 1     | `PLAN-09` / `PLAN-10` / `PLAN-11` | The write path and the full field editor. The app cannot record anything yet  |
-| 2     | `PLAN-33` — Row simplification    | Small, and it removes a field, so it is cheaper before the editor than after  |
-| 3     | `PLAN-32b` — Per-category quotas  | Blocks `PLAN-22` and `PLAN-23`, and retires a wrong shipped default           |
-| 4     | `PLAN-22` / `PLAN-23` — The stats | The quota engine and the stats bar, which is what the numbers were all for    |
-| 5     | `PLAN-34` — The timer             | Writes to a task, so it needs the write path. A luxury on top of manual entry |
+Two rows left this table on 2026-07-30 because they shipped. `PLAN-09`, the write API, landed as Feature 16, and `PLAN-33`, the row simplification, landed as Feature 17 in the position the old row 2 recommended for it. Their sections below carry the detail and are marked implemented, so nothing here should schedule either of them again.
+
+| Order | Feature                           | Why now                                                                         |
+| ----- | --------------------------------- | ------------------------------------------------------------------------------- |
+| 1     | `PLAN-10` / `PLAN-11`             | Adding a task and the full field editor. The write API exists, the UI does not  |
+| 2     | `PLAN-32b` — Per-category quotas  | Blocks `PLAN-22` and `PLAN-23`, and retires a wrong shipped default             |
+| 3     | `PLAN-18` — Split across days     | Now load-bearing, since it is what keeps a multi-day job out of the quota twice |
+| 4     | `PLAN-22` / `PLAN-23` — The stats | The quota engine and the stats bar, which is what the numbers were all for      |
+| 5     | `PLAN-34` — The timer             | Writes to a task, so it needs the write path. A luxury on top of manual entry   |
 
 **One cost of putting the write path first, stated rather than hidden.** `PLAN-33` and `PLAN-32b` each remove a field, `words_done` and `settings.quota_wph`, and the editor in `PLAN-11` renders whatever the schema holds. Building the editor before those two means touching it again afterwards. There is a second, sharper version of the same point: `PLAN-32a` verified that no user history exists, which is what made its category change free, and that finding stops being true the moment `PLAN-09` ships. After that, `PLAN-33`'s migration is dropping a column from a table with real rows in it rather than from one only the seed has ever written. Neither is a reason to reorder, and both get cheaper if `PLAN-33` slots in first, since it only takes a field away. That is a recommendation rather than a dependency.
 
@@ -584,7 +586,7 @@ Depends on PLAN-20. Frontend plus backend.
 Depends on PLAN-02, PLAN-03, PLAN-18. Shared plus backend, pure functions.
 
 - Implements the availability quota for day, week, month, and year, history-safe, reading versioned scheduled minutes and each row's own word total from `project_word_count`.
-**Amended 2026-07-30 by `PLAN-33`, and this entry is the one that most needed it.** The bullet above and `AC3` used to tell this engine to read per-day `words_done`, and that column no longer exists. It was dropped in migration `0008`, specced in [row-simplification-words-total.md](row-simplification-words-total.md). Both are corrected outright rather than annotated, because they are instructions this engine will be built from and an implementer would have followed them into a column that is not there.
+  **Amended 2026-07-30 by `PLAN-33`, and this entry is the one that most needed it.** The bullet above and `AC3` used to tell this engine to read per-day `words_done`, and that column no longer exists. It was dropped in migration `0008`, specced in [row-simplification-words-total.md](row-simplification-words-total.md). Both are corrected outright rather than annotated, because they are instructions this engine will be built from and an implementer would have followed them into a column that is not there.
 
 **The numerator is one column now, which makes this engine simpler and gives it one thing to get right.** It sums `project_word_count` over the trackable rows in the period, and there is no second word column to choose between. The protection that the dropped column used to provide, which was stopping a multi-day job counting its whole total on every day it touched, now comes from the rows themselves, because splitting stores such a job as one row per day with each row carrying only that day's words. **So this engine must sum row totals and must never treat a row's total as a whole project's.** The definition it implements is under [the quota is the reason the app exists](#the-quota-is-the-reason-the-app-exists).
 

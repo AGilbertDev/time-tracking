@@ -6,6 +6,8 @@ Append-only ledger of every feature built through the spec-driven multi-agent pi
 
 Add one row to the bottom of the ledger when a feature lands. Do not rewrite existing rows and do not hand-maintain a total, since the total is the row count and rewriting invites conflicts when more than one container appends. Fill every column from what actually happened, not from what was planned.
 
+**Prettier realigning the whole table is not a rewrite, and a review flagging it as one is declined.** Appending a row wider than the current column padding makes Prettier repad every line in the table, so the diff touches rows it did not change in substance. That is formatting, and this repo gates on `prettier --check .`, so the alternative is a file that fails the format gate. The rule above protects the recorded facts, which are the number, the date, the feature, the two classifications, and the links, and none of those may change once written. Whitespace inside the table is Prettier's. If a diff on this file ever changes a fact in an existing row, that is the violation, and the check is to read the row content rather than the line count.
+
 ## Columns
 
 - **Agent-driven** is `yes` when every applicable stage ran through an agent with no hand-written implementation code, from spec to commit.

@@ -111,7 +111,7 @@ What the user types, and what the row shows, for the common case.
 | Non-trackable, a break or a meeting  | nothing        | `—`                 | `—`, with `Sans objet` behind  |
 | A seeded row carrying both figures   | not applicable | `2 800 / 12 000`    | `12 000`                       |
 
-So the visible change on every row a user can create is that the leading `— / ` disappears, which is precisely the artefact the owner asked to have removed, and the only rows that lose a real number are seeded ones that the same feature rewrites anyway. The common case stays the simple one and it gets simpler.
+So the visible change on every row a user can create is that the leading `— /` disappears, which is precisely the artefact the owner asked to have removed, and the only rows that lose a real number are seeded ones that the same feature rewrites anyway. The common case stays the simple one and it gets simpler.
 
 One consequence for the row's null handling. Today a trackable task with no figures prints the em dash because `wordsDone` is null, and the comment at `TaskRow.vue` line 73 explains that an em dash rather than `0` keeps a planned task from being misread as a recorded zero. **That reasoning survives the drop and transfers to `projectWordCount`**, so the cell still prints the em dash rather than `0` for a null total, and the comment moves rather than going.
 

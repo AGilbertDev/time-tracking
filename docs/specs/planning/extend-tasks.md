@@ -149,7 +149,7 @@ structural affordances.
 | **Statut**                                                             | Where it stands.                                                                                                                                                                                                                  |
 | **Catégorie, carried by colour on the row edge rather than by a word** | Traduction and Révision are different work at different speeds, so which one a row is changes how its numbers read. The owner's call is that a colour answers this faster than a word and costs no width. See the decision below. |
 | **Exclusion marker** (only on an excluded trackable task)              | Without it the day's visible words cannot be reconciled with the quota, and a number you cannot explain is worse than a number you cannot see.                                                                                    |
-| **Split continuation marker** (only on a later slice)                  | Tells the user's this row is one slice of a multi-day task, so its partial word count reads as intended rather than as a shortfall.                                                                                                      |
+| **Split continuation marker** (only on a later slice)                  | Tells the user's this row is one slice of a multi-day task, so its partial word count reads as intended rather than as a shortfall.                                                                                               |
 | **Drag affordance** (structural)                                       | The only signal that rows reorder. `PLAN-15` needs the slot in place.                                                                                                                                                             |
 | **Row action slot** (structural)                                       | Copy and delete appear here on hover in `PLAN-17` and `PLAN-13`. Reserved and empty now.                                                                                                                                          |
 
@@ -568,7 +568,7 @@ you notice they are about two different totals.
     still shows its real figure in full. The em-dash-rather-than-zero reasoning transferred from
     `wordsDone` to `projectWordCount` rather than being dropped. The note below is kept as the record
     of the decision and is no longer pending.
-  - **Superseded 2026-07-29, not yet implemented.** The owner does not track words as the user goes, so
+  - **Superseded 2026-07-29, and implemented on 2026-07-30 by `PLAN-33`. History, not pending work.** The owner does not track words as the user goes, so
     a done-over-total pair shows progress the user never records. The user's words: "we don't track words
     translated in realtime. useless to track x/y. only totals." The field becomes the project total
     alone, matching the original app's `Mots (total du projet)` column. This shipped as the pair and
