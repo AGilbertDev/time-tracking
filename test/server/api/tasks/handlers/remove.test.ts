@@ -1,6 +1,6 @@
 import type { Client } from '@libsql/client'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TaskTestDb } from '../../../../helpers/taskTestDb'
 
@@ -43,6 +43,12 @@ beforeEach(async () => {
     (opts: { statusCode: number; statusMessage: string; data?: unknown }) =>
       Object.assign(new Error(opts.statusMessage), opts)
   )
+})
+
+// createTaskTestDb opens a libSQL client per test, so the harness is released here rather than left
+// for the process to reap. Nothing closed them before and the handles accumulated across the run.
+afterEach(() => {
+  harness?.close()
 })
 
 describe('removeTask', () => {

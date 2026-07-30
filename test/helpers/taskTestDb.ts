@@ -83,10 +83,16 @@ const TASKS_DDL = `
 export type TaskTestDb = {
   client: Client
   db: ReturnType<typeof drizzle>
+  // Releases the underlying libSQL client. Call it from an afterEach in every suite that builds a
+  // harness, because createTaskTestDb is called per test and each call opens a client of its own.
+  // Nothing closed them before, so the handles accumulated for the whole run and the cost grew with
+  // every case added. An in-memory database is discarded with its client, so closing also drops the
+  // data rather than leaving it reachable.
+  close: () => void
 }
 
 // A fresh database with the two fixture users already present. Called per test so no state leaks
-// between cases.
+// between cases. The caller owns the lifetime: pair it with `harness.close()` in an afterEach.
 export async function createTaskTestDb(): Promise<TaskTestDb> {
   const client = createClient({ url: ':memory:' })
 
@@ -101,7 +107,10 @@ export async function createTaskTestDb(): Promise<TaskTestDb> {
     await client.execute({ sql: 'INSERT INTO users (id, email) VALUES (?, ?)', args: [id, email] })
   }
 
-  return { client, db: drizzle(client) }
+  // Closing twice is a no-op on the libSQL client, so an afterEach that runs after a failed
+  // beforeEach, or a suite that closes defensively, cannot turn a test failure into a second error
+  // that hides it.
+  return { client, db: drizzle(client), close: () => client.close() }
 }
 
 // A stored task row as the fixtures describe one. Every column is optional but id, userId, date, and

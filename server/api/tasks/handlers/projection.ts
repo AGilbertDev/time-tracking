@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 
 import { isTrackableCategory } from '#shared/categories'
-import { nowInZone, statusKey, TASK_STATUSES } from '#shared/planning'
+import { nowInZone, statusKey, TASK_STATUS_DONE } from '#shared/planning'
 
 import type { TaskListItem } from '../../../models/tasks'
 
@@ -13,12 +13,6 @@ import { loadWorkSettings } from '../../../utils/loadWorkSettings'
 // update endpoint all return the same shape, and reproducing it three times would mean three copies
 // of the late comparison drifting apart. So the select column list, the overdue expression, and the
 // row mapper live here and every task read goes through them.
-
-// The stored status that means the work is done. A task carrying it is never late, however long ago
-// its delivery was, so it is the one status the late decision excludes. Read from the shared
-// vocabulary rather than written out again, because a spelling that drifts from what the write
-// boundary stores would silently stop matching and report a finished task as late forever.
-const [, , DONE_STATUS] = TASK_STATUSES
 
 // The deadline a task with a delivery date but no delivery time is measured against. An untimed
 // delivery is due by the end of its day rather than at its first minute, so a task due today with no
@@ -67,6 +61,11 @@ export async function resolveUserNow(userId: string): Promise<string> {
 // passed. Joining the stored date and time gives the same 'YYYY-MM-DDTHH:MM' shape as `now`, and
 // both sort chronologically as plain strings, so this is a string comparison rather than any date
 // arithmetic. `now` is passed as a bound parameter because the database cannot know the user's zone.
+//
+// The finished status is imported by name from the shared vocabulary. It used to be destructured out
+// of TASK_STATUSES by position here, which took the spelling from the shared tuple but not the
+// index, so reordering the cycle would have rebound it to a different status while this expression
+// went on compiling and every finished task reported as overdue forever.
 export function taskSelection(now: string) {
   return {
     ...TASK_COLUMNS,
@@ -74,7 +73,7 @@ export function taskSelection(now: string) {
       CASE
         WHEN ${tasks.deliveryDate} IS NOT NULL
           AND ${tasks.status} IS NOT NULL
-          AND ${tasks.status} <> ${DONE_STATUS}
+          AND ${tasks.status} <> ${TASK_STATUS_DONE}
           AND (${tasks.deliveryDate} || 'T' || COALESCE(${tasks.deliveryTime}, ${END_OF_DAY})) < ${now}
         THEN 1
         ELSE 0

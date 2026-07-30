@@ -20,6 +20,7 @@ import {
   resolveSchedule,
   statusKey,
   sumEffectiveDuration,
+  TASK_STATUS_DONE,
   TASK_STATUSES,
   todayInZone
 } from '#shared/planning'
@@ -984,5 +985,37 @@ describe('TASK_STATUSES', () => {
     expect(statusKey(accepted, true)).toBe('accepte')
     expect(statusKey(inProgress, true)).toBe('encours')
     expect(statusKey(done, true)).toBe('termine')
+  })
+})
+
+// TASK_STATUS_DONE is read out of the tuple by index, which is the one thing about it worth testing.
+// The overdue expression in server/api/tasks/handlers/projection.ts compares against it, so if a
+// reorder of the cycle rebinds it the late rule keeps compiling and every finished task reports as
+// overdue forever, with nothing on screen to say why. That failure is silent by nature, so these
+// cases are what makes it loud: the value is pinned as a literal, exactly as AC44 pins the tuple,
+// because a test that reads the same export as the code under test proves the wiring and never the
+// value.
+describe('TASK_STATUS_DONE', () => {
+  it('is the finished status, spelled with its accent', () => {
+    expect(TASK_STATUS_DONE).toBe('Terminé')
+  })
+
+  it('is not either of the two unfinished statuses', () => {
+    expect(TASK_STATUS_DONE).not.toBe('Accepté')
+    expect(TASK_STATUS_DONE).not.toBe('En cours')
+  })
+
+  // The reason the constant exists at all. statusKey and the overdue comparison both have to agree
+  // about which value means finished, and this is the one that says they do.
+  it('is the value statusKey resolves to termine', () => {
+    expect(statusKey(TASK_STATUS_DONE, true)).toBe('termine')
+  })
+
+  // A finished task is never late, however long ago its delivery was, so the late flag is ignored
+  // for this value and only for this value.
+  it('outranks the overdue flag, which no other status does', () => {
+    expect(statusKey(TASK_STATUS_DONE, true, true)).toBe('termine')
+    expect(statusKey('Accepté', true, true)).toBe('retard')
+    expect(statusKey('En cours', true, true)).toBe('retard')
   })
 })

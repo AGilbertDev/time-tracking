@@ -18,11 +18,85 @@ const ROOT = fileURLToPath(new URL('../../../../', import.meta.url))
 // Source text with comments removed, so a search sees executable code only. All three forms are
 // stripped: block and line comments in TypeScript, and the HTML comments a .vue template uses, since
 // the design reasoning in those templates discusses the very status values AC44 forbids in code.
+//
+// This is a scanner rather than three regexes, and the reason is the failure mode it replaces. The
+// line-comment strip used to be /\/\/.*$/gm, which ends a line at the first `//` wherever it sits,
+// so any line carrying a URL was truncated at `https:` and everything after it stopped being
+// searchable. Every guard in this file concludes from an absence, and a search that never saw the
+// code reports the same clean result as a search that saw it and found nothing. That is a false pass
+// in a test whose whole job is to prove something is not there.
+//
+// So the scan walks the text once and only treats `//` or `/*` as a comment when it is not inside a
+// quoted string or a template literal. String bodies are copied through untouched, escapes are
+// honoured so a `\'` does not close a string early, and a single- or double-quoted string stops at a
+// newline so a lone apostrophe in Vue template prose cannot swallow the rest of the file.
+//
+// What it deliberately does not do, stated rather than smoothed over: it does not recognise a
+// regular expression literal, which cannot be told from division without really parsing. A `//`
+// inside a regex would still read as a comment start. Nothing scanned here contains one, and the
+// case is checked by the fixtures below so the limit is visible rather than assumed away.
+function stripComments(source: string): string {
+  let out = ''
+  let index = 0
+
+  while (index < source.length) {
+    // An HTML comment, the form a .vue template uses. Checked first because `<!--` cannot begin any
+    // of the other states.
+    if (source.startsWith('<!--', index)) {
+      const end = source.indexOf('-->', index + 4)
+      index = end === -1 ? source.length : end + 3
+      continue
+    }
+
+    if (source.startsWith('/*', index)) {
+      const end = source.indexOf('*/', index + 2)
+      index = end === -1 ? source.length : end + 2
+      continue
+    }
+
+    if (source.startsWith('//', index)) {
+      while (index < source.length && source[index] !== '\n') index += 1
+      continue
+    }
+
+    const char = source[index] as string
+
+    if (char === '"' || char === "'" || char === '`') {
+      out += char
+      index += 1
+
+      while (index < source.length) {
+        const inner = source[index] as string
+        out += inner
+        index += 1
+
+        // A backslash consumes whatever follows it, so an escaped quote never closes the literal.
+        if (inner === '\\' && index < source.length) {
+          out += source[index]
+          index += 1
+          continue
+        }
+
+        if (inner === char) break
+
+        // Only a template literal spans lines. Stopping the other two at the newline keeps an
+        // unmatched apostrophe in template prose from being read as an opening quote for the rest of
+        // the file, which would leave real comments unstripped far away from the typo.
+        if (char !== '`' && inner === '\n') break
+      }
+
+      continue
+    }
+
+    out += char
+    index += 1
+  }
+
+  return out
+}
+
 function code(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), 'utf8')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/.*$/gm, '')
+  return stripComments(readFileSync(join(ROOT, relativePath), 'utf8'))
 }
 
 // Every source file under a directory, recursively, skipping build output and agent worktrees.
@@ -54,6 +128,96 @@ const WRITE_HANDLERS = [
   'server/api/tasks/handlers/update.ts',
   'server/api/tasks/handlers/remove.ts'
 ]
+
+describe('the comment strip every guard below searches through', () => {
+  // ---------------------------------------------------------------------------------------------
+  // The instrument, tested before anything is concluded with it. Every other case in this file is a
+  // negative, and a negative is only worth something if the search could have produced a positive.
+  // A strip that quietly eats the tail of a line makes each of them pass for the wrong reason, and
+  // the result is indistinguishable from a real finding, so the strip gets its own fixtures rather
+  // than being trusted.
+  // ---------------------------------------------------------------------------------------------
+  it('removes a line comment', () => {
+    expect(stripComments('const a = 1 // set a\nconst b = 2\n')).not.toContain('set a')
+  })
+
+  it('removes a block comment, including one spanning lines', () => {
+    expect(stripComments('const a = 1 /* set\na */\nconst b = 2\n')).not.toContain('set')
+  })
+
+  it('removes an HTML comment, the form a .vue template carries', () => {
+    expect(stripComments('<template>\n  <!-- why -->\n  <p>x</p>\n</template>')).not.toContain(
+      'why'
+    )
+  })
+
+  it('keeps the code around a comment it removed', () => {
+    const stripped = stripComments('const a = 1 // set a\nconst b = 2\n')
+
+    expect(stripped).toContain('const a = 1')
+    expect(stripped).toContain('const b = 2')
+  })
+
+  // The bug this replaced. A line-anchored regex ends the line at the first `//`, so the rest of a
+  // line carrying a URL disappears and a guard searching for what follows finds nothing.
+  it('keeps the rest of a line whose string holds a URL', () => {
+    const stripped = stripComments("const spec = 'https://example.com/x'\nconst wordsDone = 1\n")
+
+    expect(stripped).toContain("'https://example.com/x'")
+    expect(stripped).toContain('wordsDone')
+  })
+
+  it('keeps what follows a URL on the same line', () => {
+    expect(stripComments("fetch('https://example.com', { body: wordsDone })\n")).toContain(
+      'wordsDone'
+    )
+  })
+
+  it('still removes the comment that trails a line holding a URL', () => {
+    const stripped = stripComments("const spec = 'https://example.com' // see wordsDone there\n")
+
+    expect(stripped).toContain('https://example.com')
+    expect(stripped).not.toContain('see wordsDone there')
+  })
+
+  it('leaves a // that is inside a string, since it is a value and not a comment', () => {
+    expect(stripComments('const sep = "//"\nconst after = 1\n')).toContain('"//"')
+  })
+
+  it('leaves a // inside a template literal, which spans lines', () => {
+    expect(stripComments('const q = `SELECT\n// not a comment\n1`\nconst after = 1\n')).toContain(
+      '// not a comment'
+    )
+  })
+
+  // Asserted on the body of the string rather than on the line after it. Without the escape rule the
+  // literal closes at the second quote, the `//` that follows starts a comment, and the tail of the
+  // line goes missing while everything below it survives, so a check on the next line would pass
+  // through the bug it is meant to catch.
+  it('does not let an escaped quote close a string early', () => {
+    const stripped = stripComments("const s = 'it\\'s // fine'\nconst after = wordsDone\n")
+
+    expect(stripped).toContain("it\\'s // fine")
+    expect(stripped).toContain('after = wordsDone')
+  })
+
+  // A lone apostrophe in .vue template prose is not an opening quote, and treating it as one across
+  // the whole file would leave real comments unstripped somewhere far below. Stopping at the newline
+  // bounds the damage to its own line.
+  it('does not let a lone apostrophe in prose swallow the rest of the file', () => {
+    const stripped = stripComments("<p>it's here</p>\nconst a = 1 // set a\n")
+
+    expect(stripped).toContain("it's here")
+    expect(stripped).not.toContain('set a')
+  })
+
+  // The known limit, written as a case so it is visible rather than assumed away. No file this suite
+  // scans contains a regex holding a bare `//`, and if one ever does, this is the case that names
+  // what happens.
+  it('cannot tell a regex literal from division, so a // inside one still reads as a comment', () => {
+    expect(stripComments('const r = /a\\/\\/b/\nconst after = 1\n')).toContain('after')
+  })
+})
 
 describe('route and handler shape (AC1, AC2, AC3)', () => {
   it.each(ROUTE_FILES)('%s exists and is wrapped in defineAuthenticatedEventHandler', (file) => {
@@ -197,10 +361,27 @@ describe('the write path derives no estimate (AC19)', () => {
 describe('the overdue expression exists in exactly one place (AC41)', () => {
   // Producing the response shape means resolving the overdue comparison, and two copies of it would
   // drift. The extraction is only worth anything if it stays the single copy.
-  it('finds one CASE expression under server/', () => {
-    const withCase = sourceFiles('server', ['.ts']).filter((file) => code(file).includes('CASE'))
+  //
+  // The match is anchored on the SQL keyword pair rather than on the bare word CASE. Searching for
+  // CASE alone fails this test on any unrelated identifier or message that happens to contain those
+  // four uppercase letters, UPPERCASE and BASE64 among them, and a guard named for the overdue
+  // expression should not go red over a word. \s+ rather than a space, because the expression is
+  // written across lines and CASE and WHEN are not adjacent in the source.
+  const CASE_WHEN = /\bCASE\s+WHEN\b/
 
+  it('finds one CASE WHEN expression under server/', () => {
+    const withCase = sourceFiles('server', ['.ts']).filter((file) => CASE_WHEN.test(code(file)))
+
+    // The positive control is the assertion itself. One match proves the search can see the
+    // expression, so an empty result would be a broken search rather than a finding.
     expect(withCase).toEqual(['server/api/tasks/handlers/projection.ts'])
+  })
+
+  // The narrowing is only safe if it did not also stop matching what it is meant to catch. A second
+  // copy written on one line, the shape a later hand would most likely reach for, is still found.
+  it('would still catch a second copy written on a single line', () => {
+    expect(CASE_WHEN.test('sql`CASE WHEN a THEN 1 ELSE 0 END`')).toBe(true)
+    expect(CASE_WHEN.test('const UPPERCASE_LABEL = 1')).toBe(false)
   })
 
   it('is consumed by list.ts, create.ts, and update.ts rather than reimplemented', () => {
@@ -242,13 +423,19 @@ describe('the stored status vocabulary has one copy (AC44, AC45)', () => {
     expect(source).toContain("export const TASK_STATUSES = ['Accepté', 'En cours', 'Terminé']")
   })
 
+  // Either export of the shared declaration counts, because both are the same single source. The
+  // projection reads TASK_STATUS_DONE rather than the tuple: it needs one specific value, and an
+  // index into a cycle order is a position rather than a name for it, so picking it out by index in
+  // a server file meant a reorder would silently rebind the late comparison. Asking for the tuple by
+  // name here would have pushed that back the other way, so the guard asks what it actually means,
+  // which is that the file takes its status values from shared/planning.ts and never writes one out.
   it.each([
     'shared/planning.ts',
     'server/api/tasks/handlers/projection.ts',
     'server/models/tasks.ts',
     'scripts/seed.ts'
-  ])('%s derives its status values from the tuple', (file) => {
-    expect(code(file)).toContain('TASK_STATUSES')
+  ])('%s derives its status values from the shared vocabulary', (file) => {
+    expect(code(file)).toMatch(/\bTASK_STATUS(ES|_DONE)\b/)
   })
 
   // Validating a write against the locale file would break the moment a display string is reworded

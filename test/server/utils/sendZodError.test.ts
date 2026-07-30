@@ -1,3 +1,4 @@
+import { TaskUpdateSchema } from '~~/server/models/tasks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
@@ -12,6 +13,10 @@ import { z } from 'zod'
 // empty path. Keying that issue by its path alone would drop it and leave a 422 whose `data` is
 // empty, which is exactly the case AC7 needs to be actionable: a client that sent `userId` has to be
 // told that `userId` is the field that is not writable.
+//
+// A top-level refine has an empty path for the same reason, so the contract answers both the same
+// way: an issue that names no field is filed under FORM_LEVEL_KEY and `data` is never empty. The
+// last block below covers that, and says why its old expectation was wrong.
 
 // createError is a Nitro auto-import, so in the raw source it resolves to globalThis. A minimal
 // stand-in keeps statusCode, statusMessage, and data assertable.
@@ -25,7 +30,7 @@ beforeEach(() => {
   )
 })
 
-const { sendZodError } = await import('~~/server/utils/sendZodError')
+const { FORM_LEVEL_KEY, sendZodError } = await import('~~/server/utils/sendZodError')
 
 // Runs a real schema to get a real ZodError, rather than hand-building issue objects. A hand-built
 // issue would encode this test's guess at Zod's shape, and the whole point of the unrecognized_keys
@@ -144,27 +149,80 @@ describe('sendZodError', () => {
   })
 
   describe('an object-level issue with no path', () => {
-    // An empty-patch refine carries no path, so there is no field to key it by and data stays empty.
-    // The 422 still fires and statusMessage still carries the reason, which is what AC8 needs. This
-    // documents the limit rather than calling it a defect: the failure is the body as a whole.
+    // ---------------------------------------------------------------------------------------------
+    // Why this block changed. It used to assert `data` was empty here and called that a documented
+    // limit rather than a defect, which was the wrong reading. The unrecognized_keys branch above
+    // exists precisely because a 422 whose `data` is empty gives the client nothing to act on, and a
+    // top-level refine produces the same empty path for the same reason a strict object does. So the
+    // old expectation blessed one path-less case while the branch beside it fixed the other, and it
+    // would have gone on passing while an empty PATCH answered with nothing in the map. It now pins
+    // the contract instead: a path-less issue is filed under the form-level key.
     //
     // The predicate mirrors TaskUpdateSchema's rather than counting keys. Zod keeps a present-but-
     // undefined optional key in its output, so a key count admits a body of { date: undefined } that
     // maps to no column at all. Nothing here turns on which form is used, since both fail on {} with
     // the same path-less issue, but a fixture carrying the real message beside the rejected predicate
     // is the copy a later reader finds when they go looking for the empty-patch guard.
-    it('still reports 422 with the message, and leaves data empty', () => {
-      const schema = z
-        .object({ date: z.string().optional() })
-        .refine((body) => Object.values(body).some((value) => value !== undefined), {
-          message: 'At least one task field must be provided.'
-        })
+    // ---------------------------------------------------------------------------------------------
+    const emptyPatchSchema = z
+      .object({ date: z.string().optional() })
+      .refine((body) => Object.values(body).some((value) => value !== undefined), {
+        message: 'At least one task field must be provided.'
+      })
 
-      const thrown = thrownBy(schema, {})
+    it('still reports 422 with the message', () => {
+      const thrown = thrownBy(emptyPatchSchema, {})
 
       expect(thrown.statusCode).toBe(422)
       expect(thrown.statusMessage).toContain('At least one task field must be provided.')
-      expect(thrown.data).toEqual({})
+    })
+
+    it('files the message under the form-level key rather than dropping it', () => {
+      const thrown = thrownBy(emptyPatchSchema, {})
+
+      expect(thrown.data).toEqual({ _form: 'At least one task field must be provided.' })
+    })
+
+    // The name is the part a client hardcodes, so it is pinned as a literal here rather than read
+    // back off the constant. A test that reads the same export as the code under test proves the
+    // wiring and never the value, and the value is what a translation file keys off.
+    it('names that key _form, the spelling the contract reserves', () => {
+      expect(FORM_LEVEL_KEY).toBe('_form')
+    })
+
+    // The uniformity is the point. A client should be able to read one map for every 422 instead of
+    // branching on whether this particular failure happened to name a field.
+    it('never leaves data empty, whatever kind of issue produced the 422', () => {
+      expect(Object.keys(thrownBy(emptyPatchSchema, {}).data).length).toBeGreaterThan(0)
+    })
+
+    it('reports a form-level failure alongside the fields that failed on their own', () => {
+      const schema = z
+        .object({ date: z.string().refine(() => false, { message: 'Bad date.' }) })
+        .refine(() => false, { message: 'The body as a whole is wrong.' })
+
+      const data = thrownBy(schema, { date: 'x' }).data
+
+      expect(data).toEqual({ date: 'Bad date.', _form: 'The body as a whole is wrong.' })
+    })
+
+    // The real schema, not a mirror of it. Everything above runs against a fixture shaped like
+    // TaskUpdateSchema, which proves the mapping but not that the shipped empty-patch guard actually
+    // produces the shape being mapped. This is the case that closes that gap, and it is the exact
+    // request the old expectation left answering with an empty map: PATCH /api/tasks/[id] with {}.
+    it('makes the shipped empty-patch guard actionable, which is the case that prompted this', () => {
+      const thrown = thrownBy(TaskUpdateSchema, {})
+
+      expect(thrown.statusCode).toBe(422)
+      expect(thrown.data).toEqual({ _form: 'At least one task field must be provided.' })
+    })
+
+    // A patch whose only key is present but undefined maps to no column either, so it fails the same
+    // guard and has to arrive equally actionable.
+    it('answers the same way for a patch whose only field is present but undefined', () => {
+      expect(thrownBy(TaskUpdateSchema, { client: undefined }).data).toEqual({
+        _form: 'At least one task field must be provided.'
+      })
     })
   })
 })
