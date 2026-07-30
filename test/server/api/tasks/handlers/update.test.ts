@@ -173,6 +173,15 @@ describe('updateTask', () => {
 
       expect((await readStoredRow(client, 'task-1'))?.client).toBeNull()
     })
+
+    // A words figure the patch carried lands verbatim in the one column that holds it. This used to
+    // be the surviving half of a test that also asserted the patch left words_done alone, and PLAN-33
+    // dropped that column, so what remains is the part with a live subject.
+    it('stores a changed project_word_count', async () => {
+      await updateTask(event, 'task-1', patch({ projectWordCount: 20_000 }))
+
+      expect((await readStoredRow(client, 'task-1'))?.project_word_count).toBe(20_000)
+    })
   })
 
   describe('updatedAt is refreshed on every mutation (AC15)', () => {
@@ -235,22 +244,6 @@ describe('updateTask', () => {
       const stored = await readStoredRow(client, 'task-1')
 
       expect(stored?.actual_minutes).toBe(95)
-    })
-
-    // The same rule for the other column PLAN-33 is about to drop (AC30).
-    it('never writes words_done when the word count changes', async () => {
-      await seedTask(client, {
-        id: 'task-1',
-        date: '2026-07-20',
-        category: 'translation',
-        projectWordCount: 5_000
-      })
-
-      await updateTask(event, 'task-1', patch({ projectWordCount: 12_000 }))
-      const stored = await readStoredRow(client, 'task-1')
-
-      expect(stored?.project_word_count).toBe(12_000)
-      expect(stored?.words_done).toBeNull()
     })
   })
 
@@ -489,10 +482,14 @@ describe('updateTask', () => {
           'splitGroupId',
           'status',
           'statusKey',
-          'trackable',
-          'wordsDone'
+          'trackable'
         ].sort()
       )
+
+      // The contract shape is pinned rather than merely unasserted. PLAN-33 dropped words_done, so
+      // the key is absent from the response rather than present and null.
+      expect('wordsDone' in updated).toBe(false)
+
       expect(updated).toMatchObject({ id: 'task-1', status: 'En cours', statusKey: 'encours' })
     })
 

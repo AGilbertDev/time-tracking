@@ -1,0 +1,79 @@
+-- Drop the words_done column from tasks.
+--
+-- The done-over-total pair leaves the product. The Mots column becomes the row's
+-- own total alone, so this column has no reader left and no figure the user would
+-- reliably enter. A multi-day job is several rows, each carrying the words
+-- actually done that day as its own total, which is what replaces the old pair.
+--
+-- Why nothing real is lost, stated as what is verified rather than as what is
+-- expected. The write API never wrote this column, and that is checked in the
+-- shipped code rather than assumed. server/models/tasks.ts keeps words_done out
+-- of both request bodies, and both bodies are strict, so a request naming it is a
+-- 422 instead of a write. server/api/tasks/handlers/write.ts gives the field no
+-- entry in the column mapping at all, so no request can reach it however the body
+-- is shaped. server/api/tasks/handlers/create.ts writes it on no path. So a row
+-- created through the API carries NULL here by construction.
+--
+-- The production row count is deliberately not written into this header, because
+-- it was not checked from here. This environment has no production credentials, so
+-- counting the rows in production and the non-null words_done values among them is
+-- the owner's step before he applies this by hand. The query and what each outcome
+-- means are in docs/specs/planning/row-simplification-words-total.md under "The
+-- production row check, and what is actually verified", and that number is pending
+-- rather than known. The write-path argument above is what makes the drop safe,
+-- and it holds whatever the count turns out to be.
+--
+-- SQLite has supported ALTER TABLE DROP COLUMN since 3.35, and words_done is not
+-- a primary key, not unique, not indexed, and not referenced by a constraint or a
+-- generated column, so the drop is permitted rather than needing the
+-- create-copy-swap dance. The table's only index is tasks_user_id_date_idx on
+-- (user_id, date), which does not name this column.
+--
+-- Expand-then-contract note, and this one is not symmetric the way 0007 was. The
+-- column 0007 dropped was selected by nothing, so its window was safe in both
+-- directions. This column has a live reader in the build this migration replaces.
+-- TASK_COLUMNS in server/api/tasks/handlers/projection.ts genuinely selected
+-- words_done right up to PLAN-33, which is the deploy that stops selecting it, and
+-- that projection backs the list endpoint and both write responses. So an old
+-- build against a dropped column fails every task read with `no such column`, and
+-- the planning week returns a 500 rather than degrading.
+--
+-- The safe order is therefore the deploy first and this migration strictly after,
+-- never the reverse and never in the same step. The other window is the safe one
+-- and it lasts indefinitely, because new code never selects the column, so a
+-- tasks table that still has it behaves identically. Sit in that window between
+-- the two steps.
+--
+-- Undo. One statement restores a schema an old build can query.
+--   ALTER TABLE `tasks` ADD `words_done` integer;
+-- The values do not come back, so the undo restores a working old build and no
+-- data at all. That costs nothing here because nothing real was in them. On the
+-- development database this used to be fully recoverable with `bun run seed`, and
+-- after this feature it is not, because the seed stops writing the column.
+--
+-- Idempotency note, and this deliberately does not follow 0007's wording.
+-- Idempotency in this repo comes from the `_applied_migrations` ledger rather than
+-- from error tolerance. scripts/apply-migrations.ts records a file only after every
+-- statement in it succeeded, never executes a recorded file a second time, and
+-- tolerates no error at all, which its own comment at lines 137 to 145 states
+-- plainly. So a re-run of `bun run apply-migrations` is a no-op because this file
+-- is skipped, and not because a benign `no such column` error would be swallowed.
+-- SQLite has no IF EXISTS on ALTER TABLE DROP COLUMN, so the ledger is the whole
+-- guard, and running this statement by hand outside the runner is not idempotent.
+-- 0007's header claims the runner tolerates the error and continues. That claim is
+-- wrong about the shipped runner and 0007 is left exactly as it is, because
+-- applied history does not get edited. It is recorded as a known defect in
+-- docs/pipeline.md so a later reader can tell it was seen and left standing.
+--
+-- This drop matches how 0000 through 0007 are authored in this project, as plain
+-- statement-broken SQL applied by hand rather than by a snapshot-diffing runner,
+-- because the project keeps no drizzle-kit meta snapshot directory.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso
+-- database, matching 0000 through 0007. It must not be pointed at a live database
+-- by CI, a deploy hook, or a dev-boot migration runner, and the production row
+-- check above gates that manual run. There are no production database credentials
+-- in this environment.
+
+ALTER TABLE `tasks` DROP COLUMN `words_done`;

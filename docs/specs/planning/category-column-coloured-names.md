@@ -147,6 +147,14 @@ edits and it is also slated to change, and it is still not this feature's. `AC20
 as it is today. The same goes for whatever `PLAN-33` decides about signalling over or under
 estimate.
 
+**Discharged 2026-07-30.** `PLAN-33` shipped, specced in
+[row-simplification-words-total.md](row-simplification-words-total.md). The pair is one figure now
+and `words_done` is gone from the schema. This non-goal did its job, since the pair left this
+feature untouched and was reduced by the feature that owned it. On the second half, `PLAN-33`
+decided to signal nothing at all for the moment, so the row carries no over-or-under indicator and
+the four candidate routes stay parked in
+[the duration pair is the progress signal](overview.md#the-duration-pair-is-the-progress-signal-and-that-reopens-a-shipped-decision).
+
 **The drag grip and the seventh reserved track are untouched.** The 1 rem grip cell
 (`TaskRow.vue` L111 to L114) and the empty 3 rem action track exist for `PLAN-15`, `PLAN-17`, and
 `PLAN-13`. Their widths and their reasons are not this feature's to revisit, and the category

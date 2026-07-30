@@ -31,7 +31,6 @@ const TASK_COLUMNS = {
   deliveryDate: tasks.deliveryDate,
   deliveryTime: tasks.deliveryTime,
   projectWordCount: tasks.projectWordCount,
-  wordsDone: tasks.wordsDone,
   quotaWphOverride: tasks.quotaWphOverride,
   estimatedMinutes: tasks.estimatedMinutes,
   actualMinutes: tasks.actualMinutes,

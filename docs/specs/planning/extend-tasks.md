@@ -560,6 +560,14 @@ you notice they are about two different totals.
   dash rather than `0`, so a planned task is not misread as a recorded zero. A null
   `projectWordCount` drops the second figure. Both null shows the em dash alone. An excluded task
   shows its real figures in full.
+  - **Discharged 2026-07-30. The supersession below is now implemented**, by `PLAN-33` in
+    [row-simplification-words-total.md](row-simplification-words-total.md). The words field is one
+    figure, the row's own total, and `words_done` no longer exists as a column. The null rules in the
+    criterion above survive with one figure instead of two, so a non-trackable task still shows the em
+    dash, a trackable task with no total still shows the em dash rather than `0`, and an excluded task
+    still shows its real figure in full. The em-dash-rather-than-zero reasoning transferred from
+    `wordsDone` to `projectWordCount` rather than being dropped. The note below is kept as the record
+    of the decision and is no longer pending.
   - **Superseded 2026-07-29, not yet implemented.** The owner does not track words as the user goes, so
     a done-over-total pair shows progress the user never records. The user's words: "we don't track words
     translated in realtime. useless to track x/y. only totals." The field becomes the project total

@@ -7,8 +7,8 @@ import { onTestFinished } from 'vitest'
 // A real in-memory SQLite database for the PLAN-09 write handlers, not a mocked query builder.
 //
 // The spec asks several criteria to be verified against the stored row rather than against the
-// response (AC16 and AC31 name `SELECT actual_minutes` and `SELECT words_done` explicitly, because
-// the response resolves the estimate fallback for display and would look right either way). A faked
+// response (AC16 names `SELECT actual_minutes` explicitly, because the response resolves the
+// estimate fallback for display and would look right either way). A faked
 // db object records whatever the handler happened to pass it, which proves nothing about what a
 // column ends up holding, so the seam is moved one layer down: `useDb` is the only thing mocked and
 // it returns a genuine Drizzle instance over an in-memory libSQL client. Column defaults, NOT NULL
@@ -54,8 +54,13 @@ const SETTINGS_DDL = `
 `
 
 // The tasks table exactly as the live schema stands: migration 0004, plus 0006's exclude_from_stats
-// default false, minus 0007's dropped instructions column. words_done is nullable with no default
-// and actual_minutes is nullable, which is what makes AC16 and AC31 assertable as stored NULLs.
+// default false, minus 0007's dropped instructions column and minus 0008's dropped words_done.
+// actual_minutes is nullable with no default, which is what makes AC16 assertable as a stored NULL.
+//
+// This DDL is hand-written rather than imported from the schema, so it has to be kept in step with a
+// migration by hand. When 0008 dropped words_done the Drizzle schema stopped naming the column, so
+// an extra nullable column here would have gone on working silently while describing a table that no
+// longer exists. It is removed for that reason rather than because anything was red.
 const TASKS_DDL = `
   CREATE TABLE tasks (
     id text PRIMARY KEY NOT NULL,
@@ -67,7 +72,6 @@ const TASKS_DDL = `
     delivery_date text,
     delivery_time text,
     project_word_count integer,
-    words_done integer,
     quota_wph_override integer,
     estimated_minutes integer,
     actual_minutes integer,
@@ -133,7 +137,6 @@ export type TaskRowSeed = {
   deliveryDate?: string | null
   deliveryTime?: string | null
   projectWordCount?: number | null
-  wordsDone?: number | null
   quotaWphOverride?: number | null
   estimatedMinutes?: number | null
   actualMinutes?: number | null
@@ -150,9 +153,9 @@ export async function seedTask(client: Client, row: TaskRowSeed): Promise<string
   await client.execute({
     sql: `INSERT INTO tasks (
             id, user_id, date, client, project, category, delivery_date, delivery_time,
-            project_word_count, words_done, quota_wph_override, estimated_minutes, actual_minutes,
+            project_word_count, quota_wph_override, estimated_minutes, actual_minutes,
             status, split_group_id, sort_order, exclude_from_stats, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       row.id,
       row.userId ?? OWNER_ID,
@@ -163,7 +166,6 @@ export async function seedTask(client: Client, row: TaskRowSeed): Promise<string
       row.deliveryDate ?? null,
       row.deliveryTime ?? null,
       row.projectWordCount ?? null,
-      row.wordsDone ?? null,
       row.quotaWphOverride ?? null,
       row.estimatedMinutes ?? null,
       row.actualMinutes ?? null,

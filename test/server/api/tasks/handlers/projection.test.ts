@@ -65,6 +65,11 @@ async function overdueFlagFor(
 
 describe('toTaskListItem (pure row mapper)', () => {
   // A complete projection row, so each case below overrides only the field it is about.
+  //
+  // It carries exactly the keys taskSelection selects and nothing more. That matters because
+  // toTaskListItem spreads its input, so any extra key in this fixture is copied into the result and
+  // the key-list assertion below would then pass on a shape the real query can never produce. That is
+  // how the fixture went on asserting a words_done field for a while after PLAN-33 dropped it.
   const baseRow = {
     id: 'task-1',
     date: '2026-07-20',
@@ -74,7 +79,6 @@ describe('toTaskListItem (pure row mapper)', () => {
     deliveryDate: '2026-07-25',
     deliveryTime: '17:00',
     projectWordCount: 12_000,
-    wordsDone: null,
     quotaWphOverride: null,
     estimatedMinutes: 120,
     actualMinutes: null,
@@ -108,8 +112,7 @@ describe('toTaskListItem (pure row mapper)', () => {
         'splitGroupId',
         'status',
         'statusKey',
-        'trackable',
-        'wordsDone'
+        'trackable'
       ].sort()
     )
     expect('isOverdue' in item).toBe(false)
@@ -127,7 +130,6 @@ describe('toTaskListItem (pure row mapper)', () => {
       deliveryDate: '2026-07-25',
       deliveryTime: '17:00',
       projectWordCount: 12_000,
-      wordsDone: null,
       quotaWphOverride: null,
       estimatedMinutes: 120,
       actualMinutes: null,
@@ -410,12 +412,47 @@ describe('readTaskForUser', () => {
       status: 'En cours',
       estimatedMinutes: 120,
       actualMinutes: null,
-      wordsDone: null,
       excludeFromStats: false,
       sortOrder: 4,
       statusKey: 'encours',
       trackable: true
     })
+  })
+
+  // The contract shape, pinned end to end rather than only on the pure mapper (AC9).
+  //
+  // This reads through the real table, the real select list and the real mapper, so it is the one
+  // assertion that would catch words_done coming back from any of the three. toTaskListItem spreads
+  // its input, so a key reaching it from the select list reaches the client, and a key list asserted
+  // on a hand-built fixture cannot see that. PLAN-33 dropped the column, so the response carries no
+  // wordsDone key at all rather than carrying one that is null.
+  it('returns exactly the TaskListItem contract fields, with no wordsDone key', async () => {
+    await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'translation' })
+
+    const item = await readTaskForUser(OWNER_ID, 'task-1')
+
+    expect(Object.keys(item ?? {}).sort()).toEqual(
+      [
+        'actualMinutes',
+        'category',
+        'client',
+        'date',
+        'deliveryDate',
+        'deliveryTime',
+        'estimatedMinutes',
+        'excludeFromStats',
+        'id',
+        'project',
+        'projectWordCount',
+        'quotaWphOverride',
+        'sortOrder',
+        'splitGroupId',
+        'status',
+        'statusKey',
+        'trackable'
+      ].sort()
+    )
+    expect(item && 'wordsDone' in item).toBe(false)
   })
 
   // Ownership is a WHERE clause rather than a check after the fact, so another user's row is simply

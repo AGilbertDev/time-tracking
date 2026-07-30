@@ -12,7 +12,7 @@ import { createTaskTestDb, OTHER_USER_ID, OWNER_ID, seedTask } from '../../../..
 // Derived from docs/specs/planning/task-write-api.md: "Partial update semantics, absent against
 // explicit null", "Do not store the fallback", "Status is validated against the category, on the
 // resulting row", "sort_order is assigned by the server", and acceptance criteria AC14, AC16, AC17,
-// AC23, AC25, AC26, AC29, AC30.
+// AC23, AC25, AC26. AC29 and AC30 retired with the words_done column PLAN-33 dropped.
 //
 // toTaskColumns and assertStatusFitsCategory are pure and are tested directly with no mocks.
 // nextSortOrder issues a real max() aggregate, so it runs against a real in-memory SQLite database
@@ -113,7 +113,7 @@ describe('toTaskColumns', () => {
     })
   })
 
-  describe('the two columns this must never write (AC16, AC17, AC29, AC30)', () => {
+  describe('what the mapper must never invent (AC16, AC17)', () => {
     // ---------------------------------------------------------------------------------------------
     // DO NOT "FIX" THIS BY ADDING THE AUTO-FILL BACK.
     //
@@ -139,19 +139,20 @@ describe('toTaskColumns', () => {
     })
 
     // ---------------------------------------------------------------------------------------------
-    // DO NOT ADD A words_done MIRROR HERE.
+    // THE MAPPER INFERS NOTHING. ONE FIELD IN IS EXACTLY ONE COLUMN OUT.
     //
-    // Route B in the spec's "The words_done question, and how it was settled" is the tempting one,
-    // because overview.md contains a line reading "the app should set it rather than ask twice". It
-    // was rejected. Mirroring project_word_count into words_done is the same defect as auto-filling
-    // actual_minutes, and TaskRow.vue prints "words done / project total", so a brand-new 12 000-word
-    // task would render 12 000 / 12 000 and read as finished before it had been started. The column
-    // is also scheduled for removal in PLAN-33.
+    // The exact-equality assertion is the general form of the anti-mirror rule, so it catches a words
+    // figure being copied into any second column rather than only into the one this test was
+    // originally written against. Deriving a column from a words figure stores a value the app
+    // assumed in a column meant for one the user supplied, which is the same defect as auto-filling
+    // actual_minutes above, and a later reader cannot tell the two apart once the row is written.
+    //
+    // The specific mirror this guarded, project_word_count into words_done, is now structurally
+    // impossible, because PLAN-33 dropped that column from the schema.
     // ---------------------------------------------------------------------------------------------
-    it('never mirrors projectWordCount into wordsDone', () => {
+    it('infers no second column from a words figure', () => {
       const columns = toTaskColumns({ projectWordCount: 12_000 }) as Record<string, unknown>
 
-      expect('wordsDone' in columns).toBe(false)
       expect(columns).toEqual({ projectWordCount: 12_000 })
     })
 
@@ -168,7 +169,6 @@ describe('toTaskColumns', () => {
         'userId',
         'createdAt',
         'updatedAt',
-        'wordsDone',
         'sortOrder',
         'splitGroupId'
       ]) {

@@ -218,7 +218,7 @@ const dayNameClass = computed(() =>
           role="group"
           tabindex="0"
         >
-          <div class="min-w-[62rem]" role="table">
+          <div class="min-w-[60rem]" role="table">
             <!-- One column header line per open card, instead of a label above every value on every
                  row. A five-row card printed ten tiny labels before and would have printed thirty
                  with the fields this feature adds; this prints six, once, and none at all while the
@@ -240,7 +240,7 @@ const dayNameClass = computed(() =>
                  2.6:1 against the card surface and these six words are the only field labels the
                  feature has left. -->
             <div
-              class="grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_7.5rem_4.5rem_6rem_3rem] gap-x-4 border-b border-default px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-toned"
+              class="grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_5.5rem_4.5rem_6rem_3rem] gap-x-4 border-b border-default px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-toned"
               role="row"
             >
               <span role="presentation" />

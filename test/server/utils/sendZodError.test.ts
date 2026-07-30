@@ -123,17 +123,20 @@ describe('sendZodError', () => {
       expect(data.userId).toBeTruthy()
     })
 
+    // The point is that a strict schema reports every unknown key rather than only the first, so two
+    // server-owned keys make it as well as three did. It sent a third, wordsDone, until PLAN-33
+    // dropped that column, and a key naming a column that no longer exists proves nothing about a
+    // request contract.
     it('names every rejected key when a body carries several at once', () => {
       const schema = z.object({ date: z.string() }).strict()
 
       const data = thrownBy(schema, {
         date: '2026-07-20',
-        wordsDone: 500,
         sortOrder: 3,
         splitGroupId: 'group-1'
       }).data
 
-      expect(Object.keys(data).sort()).toEqual(['sortOrder', 'splitGroupId', 'wordsDone'])
+      expect(Object.keys(data).sort()).toEqual(['sortOrder', 'splitGroupId'])
     })
 
     it('reports a rejected key alongside a genuinely invalid field', () => {

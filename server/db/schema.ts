@@ -81,10 +81,24 @@ export const tasks = sqliteTable(
     deliveryTime: text('delivery_time'),
     // Plain integer counts and whole-minute durations. The schema stores raw
     // facts only; the quota math (PLAN-22) and the frozen estimate (PLAN-12)
-    // live in their own features. wordsDone is the quota numerator, treated as
-    // zero when absent. quotaWphOverride NULL means use settings.quota_wph.
+    // live in their own features. quotaWphOverride NULL means use
+    // settings.quota_wph.
+    //
+    // projectWordCount holds the words for this row's own day, which for an
+    // unsplit task is the whole project. A multi-day job is several rows, each
+    // carrying its own total rather than the job's, so the quota numerator sums
+    // each row's own figure. That splitting is what keeps a multi-day job from
+    // counting its whole project on every day it touches. It is enforced by the
+    // shape of the data rather than by a rule, since PLAN-33 left one words
+    // column where there used to be two and a summing query has nothing else to
+    // reach for. PLAN-18 owns the splitting flow and PLAN-22 owns the summing.
+    //
+    // Read the name as a warning. The identifier says `project` and the value is
+    // per row, so summing this across a split group double counts, and the name
+    // invites exactly that. PLAN-33 kept the name deliberately, because renaming
+    // it would change a client-writable request contract where dropping the other
+    // column changed none, and PLAN-18 is the feature that renames it.
     projectWordCount: integer('project_word_count'),
-    wordsDone: integer('words_done'),
     quotaWphOverride: integer('quota_wph_override'),
     estimatedMinutes: integer('estimated_minutes'),
     actualMinutes: integer('actual_minutes'),

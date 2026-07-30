@@ -12,8 +12,8 @@ import { tasks } from '../../../db/schema'
 // copies of any of them would drift the moment one endpoint changed.
 
 // The columns a write may set. It is deliberately not the full insert shape. id, userId, createdAt,
-// wordsDone, and splitGroupId have no entry here at all, so no request can reach them however the
-// body is shaped, and sortOrder and updatedAt are present but are only ever filled by the server.
+// and splitGroupId have no entry here at all, so no request can reach them however the body is
+// shaped, and sortOrder and updatedAt are present but are only ever filled by the server.
 export type TaskColumnValues = {
   date?: string
   client?: string | null

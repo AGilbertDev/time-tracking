@@ -4,6 +4,17 @@
 
 `PLAN-01` lays the data foundation for the planning dashboard. It adds a single `tasks` table keyed to `users.id`, and it ships no UI. The table stores one row per task-day slice, which is the locked model for multi-day work: a piece of work that spans days is one logical task made of one slice per day, sharing a `project` and a `split_group_id`, each slice carrying its own `words_done` and its own duration. Storing it this way keeps every period statistic (day, week, month, year) a plain indexed range sum over `(user_id, date)` and avoids allocating words at query time, which is exactly the shape the availability-quota engine (`PLAN-22`) needs. The table records raw facts only. It defers all meaning to the contracts and features that own it: the `trackable` flag lives in the `PLAN-02` category contract, the freezing of `estimated_minutes` happens in `PLAN-12`, the quota math is `PLAN-22`, the effective-dated work schedule is `PLAN-03`, and recurrence is `PLAN-19`. The schema stays a permissive record of reality, matching the product rule that the app records what happened and never blocks the user, and validation and coercion sit at the write boundary (`PLAN-09`) rather than in the columns.
 
+**Annotated 2026-07-30. `words_done` no longer exists.** It was dropped in migration `0008` by
+`PLAN-33`, specced in [row-simplification-words-total.md](row-simplification-words-total.md), so
+three claims in this document are now history rather than description and are left standing with this
+note instead of being rewritten. The intent paragraph above, and design inputs 1 and 2 below, all say
+the quota sums `words_done` and that each slice carries its own. **The model is unchanged and only the
+column is.** A period statistic still sums a stored per-day fact rather than a project total, and it
+still does so as a plain indexed range scan over `(user_id, date)`. What it sums is each row's own
+`project_word_count`. Splitting is what keeps a multi-day job from counting its whole total on every
+day it touches, so the guarantee moved from a second column to the shape of the rows. The column name
+is a leftover from the two-column model and `PLAN-18` is the trigger to rename it.
+
 ## Inputs
 
 This is a backend, data-only feature with no runtime user inputs. Its inputs are the locked data-model decisions from [`overview.md`](overview.md) that the table must serve, and the existing repo conventions it must match:
@@ -31,7 +42,7 @@ A new `tasks` table in `server/db/schema.ts`, following the exact style of the t
 | `deliveryDate` | `delivery_date` | `text` | yes | Deadline calendar day, `'YYYY-MM-DD'`. |
 | `deliveryTime` | `delivery_time` | `text` | yes | Deadline wall-clock time, `'HH:MM'` (24-hour). |
 | `projectWordCount` | `project_word_count` | `integer` | yes | Total project words. Integer count. |
-| `wordsDone` | `words_done` | `integer` | yes | Words completed on this slice, on this day. The quota numerator fact; the engine treats absent as zero. |
+| ~~`wordsDone`~~ | ~~`words_done`~~ | ~~`integer`~~ | ~~yes~~ | **Superseded.** Dropped in migration `0008`, see [row-simplification-words-total.md](row-simplification-words-total.md). It was the quota numerator fact. The numerator now sums each row's own `project_word_count`, and splitting is what keeps a multi-day job from counting its whole total on every day it touches. |
 | `quotaWphOverride` | `quota_wph_override` | `integer` | yes | Per-task override of the default quota. `NULL` means use the user's default. |
 | `estimatedMinutes` | `estimated_minutes` | `integer` | yes | Frozen computed duration in minutes (`PLAN-12`). Just an integer here. |
 | `actualMinutes` | `actual_minutes` | `integer` | yes | Real duration in minutes. Mirrors estimated until edited (`PLAN-12`). |
@@ -43,7 +54,7 @@ A new `tasks` table in `server/db/schema.ts`, following the exact style of the t
 | `createdAt` | `created_at` | `integer` (`mode: 'timestamp'`) | matches `users` | `$defaultFn(() => new Date())`, Unix-seconds instant. |
 | `updatedAt` | `updated_at` | `integer` (`mode: 'timestamp'`) | matches `users` | `$defaultFn(() => new Date())`, Unix-seconds instant. |
 
-Word counts (`project_word_count`, `words_done`) and durations (`estimated_minutes`, `actual_minutes`) are stored as plain integers, durations as whole minutes. The two timestamp columns are true instants and use the repo's integer Unix-seconds `mode: 'timestamp'` pattern, matching `users.created_at` and `users.updated_at` exactly (no `.notNull()`, defaulted through `$defaultFn`).
+Word counts (`project_word_count`) and durations (`estimated_minutes`, `actual_minutes`) are stored as plain integers, durations as whole minutes. The two timestamp columns are true instants and use the repo's integer Unix-seconds `mode: 'timestamp'` pattern, matching `users.created_at` and `users.updated_at` exactly (no `.notNull()`, defaulted through `$defaultFn`).
 
 - **AC1.** The `tasks` table exists in `server/db/schema.ts` with exactly the columns above and the stated SQLite types (`text` vs `integer`, and `mode: 'timestamp'` on the two instants). The generated migration applies cleanly on a fresh SQLite database and the resulting columns match the contract, verifiable with `PRAGMA table_info(tasks)`.
 - **AC2.** A foreign key ties `user_id` to `users.id`, declared through `foreignKey(...)` in the table callback in the same style as `settings`, with `onDelete: 'cascade'` added. Every task row therefore belongs to exactly one user.

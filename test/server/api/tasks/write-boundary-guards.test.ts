@@ -4,14 +4,19 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 // The criteria docs/specs/planning/task-write-api.md words as searches rather than as behaviour:
-// AC1, AC2, AC17, AC19, AC30, AC37, AC41, AC44, AC45 and AC46. Each of them names a property of the
+// AC1, AC2, AC17, AC19, AC37, AC41, AC44, AC45 and AC46. Each of them names a property of the
 // source itself that no behavioural test can observe, and each guards a change a later implementer
 // would make believing it was harmless. Two copies of the overdue expression both behave correctly
 // until one of them is edited; a fourth handwritten copy of the status vocabulary behaves correctly
 // until someone drops an accent.
 //
-// Comments are stripped before every search. AC44 exempts prose inside comments explicitly, and the
-// handler comments discuss the very values and columns these guards forbid in executable code.
+// docs/specs/planning/row-simplification-words-total.md AC9 adds one more of the same kind, at the
+// bottom of this file, and it is the only guard here that searches raw source rather than stripped
+// source. AC2 of that spec asks for its string gone from comments as well as code, which is the
+// opposite exemption from AC44's.
+//
+// Comments are stripped before every other search. AC44 exempts prose inside comments explicitly, and
+// the handler comments discuss the very values and columns these guards forbid in executable code.
 
 const ROOT = fileURLToPath(new URL('../../../../', import.meta.url))
 
@@ -97,6 +102,12 @@ function stripComments(source: string): string {
 
 function code(relativePath: string): string {
   return stripComments(readFileSync(join(ROOT, relativePath), 'utf8'))
+}
+
+// The same file, comments and all. Only the words_done guard at the bottom reads through this, because
+// it is the only criterion here that forbids its string in prose as well as in code.
+function raw(relativePath: string): string {
+  return readFileSync(join(ROOT, relativePath), 'utf8')
 }
 
 // Every source file under a directory, recursively, skipping build output and agent worktrees.
@@ -326,35 +337,20 @@ describe('the estimate never writes the actual (AC17)', () => {
   })
 })
 
-describe('words_done is never written (AC30)', () => {
-  // ---------------------------------------------------------------------------------------------
-  // The mirror is Route B in the spec's "The words_done question", rejected because it stores a
-  // value the app assumed in a column meant for one the user supplied, and because TaskRow.vue
-  // prints "words done / project total" so a brand-new task would read as finished. The only
-  // wordsDone the write path may contain is the read projection's passthrough.
-  // ---------------------------------------------------------------------------------------------
-  it.each([...WRITE_HANDLERS, 'server/api/tasks/handlers/write.ts'])(
-    '%s never mentions wordsDone in executable code',
-    (file) => {
-      expect(code(file)).not.toContain('wordsDone')
-    }
-  )
-
-  it('leaves wordsDone only in the shared read projection select list', () => {
-    const mentions = sourceFiles('server/api/tasks', ['.ts']).filter((file) =>
-      code(file).includes('wordsDone')
-    )
-
-    expect(mentions).toEqual(['server/api/tasks/handlers/projection.ts'])
-  })
-
-  it('is not writable through the request schemas either (AC29)', () => {
-    const source = code('server/models/tasks.ts')
-    const writable = source.slice(source.indexOf('const TaskWritableSchema'))
-
-    expect(writable).not.toContain('wordsDone')
-  })
-})
+// -------------------------------------------------------------------------------------------------
+// The three guards that used to sit here, under `words_done is never written (AC30)`, are gone.
+//
+// They stopped a mirror into a column, and PLAN-33 dropped the column, so there is nothing left to
+// mirror into. They were not repointed at project_word_count, because that column is supposed to be
+// written and a guard asserting the opposite of what it used to assert under the same name is worse
+// than no guard. Their coverage moved to the repo-wide assertion at the bottom of this file, which is
+// strictly stronger, because it fails on a reintroduction anywhere in the source rather than only in
+// the three write handlers. Ruled on in docs/specs/planning/row-simplification-words-total.md under "The
+// test surface, and what becomes of a guard whose subject is gone".
+//
+// The sibling block above, on actualMinutes and estimatedMinutes, is a different column pair, is
+// still live, and stays exactly as it was.
+// -------------------------------------------------------------------------------------------------
 
 describe('the write path derives no estimate (AC19)', () => {
   // The derivation needs a per-category quota that does not exist yet, so the only quota available
@@ -534,5 +530,74 @@ describe('no schema change and no migration (AC37)', () => {
     )
 
     expect(softDelete).toEqual([])
+  })
+})
+
+describe('words_done is gone from the whole source, not only from the write path (AC2, AC9)', () => {
+  // -------------------------------------------------------------------------------------------------
+  // The guard that replaces the four deleted assertions, and it covers more than they did. They only
+  // watched the three write handlers and the shared mapper. This watches every source directory, so a
+  // column reintroduced in the schema, selected in the projection, typed onto the shared contract, or
+  // printed by a component fails here rather than passing unnoticed.
+  //
+  // Two things about the scope are deliberate rather than incidental.
+  //
+  // It reads raw source rather than stripped source, which is the reverse of every other guard in this
+  // file. AC2 asks for the string gone "in executable code and in comments alike", and the reason is
+  // AC7's. A comment that outlives its column is worse than no comment, because it is the sentence a
+  // later implementer trusts. schema.ts carried "wordsDone is the quota numerator" right up to this
+  // feature, and that sentence became false the moment the migration landed.
+  //
+  // server/db/migrations/ is excluded, and permanently. 0004's historical DDL declares the column and
+  // 0008 names it in its own DROP COLUMN statement and header, and neither may be edited, because
+  // rewriting an applied migration would make the ledger describe a file that never ran. It is written as
+  // a path filter rather than left to rest on the extension list, so it still holds if a .ts ever lands
+  // in that directory.
+  //
+  // Agent worktrees under .claude/ are out of scope too. They hold whole stale copies of the repo at
+  // older commits, including this column, and they are nobody's source of truth. Nothing here reaches
+  // them, because the walk starts at each named source directory and sourceFiles skips worktrees.
+  // -------------------------------------------------------------------------------------------------
+  const NEEDLES = ['words_done', 'wordsDone']
+
+  const SCANNED = [
+    ...sourceFiles('app', ['.ts', '.vue']),
+    ...sourceFiles('server', ['.ts']),
+    ...sourceFiles('shared', ['.ts']),
+    ...sourceFiles('scripts', ['.ts']),
+    ...sourceFiles('i18n', ['.json', '.ts'])
+  ].filter((file) => !file.includes('/migrations/'))
+
+  function carriers(needle: string): string[] {
+    return SCANNED.filter((file) => raw(file).includes(needle))
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // The instrument, proven before anything is concluded from its silence. A guard that passes
+  // because its glob matched nothing, or because its needle can never match, is worse than no guard
+  // at all, and it reads exactly like a clean result.
+  // ---------------------------------------------------------------------------------------------
+  it('scans a real and substantial set of source files', () => {
+    expect(SCANNED.length).toBeGreaterThan(20)
+
+    // A words column is genuinely present in this scope, so the scan is looking at the files that
+    // would carry the dropped one if it came back.
+    expect(carriers('projectWordCount').length).toBeGreaterThan(0)
+  })
+
+  it.each(NEEDLES)('would still recognise %s if it were written back', (needle) => {
+    // The matcher, against the exact declaration this feature removed from schema.ts.
+    expect(`wordsDone: integer('words_done')`.includes(needle)).toBe(true)
+  })
+
+  it('finds words_done in the historical migration, which is why migrations are excluded', () => {
+    // Real file, read through the same reader, carrying the real string. An empty result from the scan
+    // below is therefore a finding rather than a broken read.
+    expect(raw('server/db/migrations/0004_add_tasks_table.sql')).toContain('words_done')
+    expect(raw('server/db/migrations/0008_drop_tasks_words_done.sql')).toContain('words_done')
+  })
+
+  it.each(NEEDLES)('no file under app, server, shared, scripts or i18n mentions %s', (needle) => {
+    expect(carriers(needle)).toEqual([])
   })
 })

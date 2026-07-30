@@ -85,7 +85,6 @@ export type TaskListItem = {
   deliveryDate: string | null
   deliveryTime: string | null
   projectWordCount: number | null
-  wordsDone: number | null
   quotaWphOverride: number | null
   estimatedMinutes: number | null
   actualMinutes: number | null
@@ -111,16 +110,12 @@ export type TaskListItem = {
 // The tasks table was written permissive on purpose, with almost every column nullable and category
 // and status left as free text, and the schema comments name this feature as the place the meaning
 // gets enforced instead. So everything below is the only thing standing between a request and what
-// the database holds forever. Two rules are worth stating before the fields, because both look like
-// missing conveniences rather than decisions.
+// the database holds forever. One rule is worth stating before the fields, because it looks like a
+// missing convenience rather than a decision.
 //
 // Nothing here writes actual_minutes from estimated_minutes. Storing the copy would make a duration
 // the user confirmed and a duration the app assumed into identical rows, and nothing downstream
 // could tell them apart afterwards. The fallback is resolved at read time by effectiveDuration.
-//
-// words_done is in neither body. The user already gives that figure as projectWordCount, nothing
-// reads words_done for a statistic, and the column is scheduled for removal, so keeping it out of
-// the request contract makes that removal an internal cleanup rather than a breaking change.
 
 // A clock time is 'HH:MM' on a 24-hour clock, matching what tasks.delivery_time stores. The pattern
 // pins the ranges as well as the widths, so 24:00 and 12:60 are refused without any parsing.
@@ -218,8 +213,8 @@ const TaskWritableSchema = z.object({
 // strict() is the mass-assignment protection, and an unknown or server-owned key is an error rather
 // than a silent drop on purpose. A client that sends userId and gets a 201 has been told its write
 // succeeded as sent, which is false. The owning user always comes from the session regardless of
-// what the body claims, and id, createdAt, updatedAt, sortOrder, splitGroupId, and wordsDone are all
-// refused the same way, each owned by the server or by another feature.
+// what the body claims, and id, createdAt, updatedAt, sortOrder, and splitGroupId are all refused
+// the same way, each owned by the server or by another feature.
 export const TaskCreateSchema = TaskWritableSchema.extend({
   date: calendarDaySchema,
   category: categorySchema

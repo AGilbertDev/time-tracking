@@ -16,7 +16,7 @@ import { DEFAULT_CATEGORY_IDS } from '#shared/categories'
 // Every rule below is taken from docs/specs/planning/task-write-api.md: "The writable field
 // contract" table, "Formats, ranges, and the little coercion there is", "Category validation rejects
 // rather than coerces", "Status is validated against the category", and acceptance criteria AC6,
-// AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC20, AC21, AC22, AC27, AC29 and AC46. Nothing here
+// AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC20, AC21, AC22, AC27 and AC46. Nothing here
 // is derived from reading the implementation as correct.
 //
 // The three stored status values are written out as literals on purpose. AC44 exempts test fixtures
@@ -91,7 +91,7 @@ describe('TaskCreateSchema', () => {
     })
   })
 
-  describe('server-owned and other-feature fields are refused, not dropped (AC7, AC27, AC29)', () => {
+  describe('server-owned and other-feature fields are refused, not dropped (AC7, AC27)', () => {
     // strict() is the mass-assignment protection. A client that sends userId and gets a 201 has been
     // told its write succeeded as sent, which is false, so each of these is an error rather than a
     // silent omission.
@@ -100,7 +100,6 @@ describe('TaskCreateSchema', () => {
       ['userId', 'user-other'],
       ['createdAt', 1_700_000_000],
       ['updatedAt', 1_700_000_000],
-      ['wordsDone', 500],
       ['sortOrder', 3],
       ['splitGroupId', 'group-1']
     ])('rejects a body carrying %s', (field, value) => {
@@ -119,14 +118,14 @@ describe('TaskCreateSchema', () => {
       const result = TaskCreateSchema.safeParse({
         ...MINIMAL_CREATE,
         userId: 'user-other',
-        wordsDone: 500
+        sortOrder: 3
       })
 
       expect(result.success).toBe(false)
       const issue = result.error?.issues.find((candidate) => candidate.code === 'unrecognized_keys')
       expect(issue).toBeDefined()
       expect(issue && 'keys' in issue ? issue.keys : []).toEqual(
-        expect.arrayContaining(['userId', 'wordsDone'])
+        expect.arrayContaining(['userId', 'sortOrder'])
       )
     })
   })
@@ -449,13 +448,12 @@ describe('TaskUpdateSchema', () => {
     })
   })
 
-  describe('the same refusals as create (AC7, AC20, AC22, AC27, AC29)', () => {
+  describe('the same refusals as create (AC7, AC20, AC22, AC27)', () => {
     it.each([
       ['id', 'some-id'],
       ['userId', 'user-other'],
       ['createdAt', 1_700_000_000],
       ['updatedAt', 1_700_000_000],
-      ['wordsDone', 500],
       ['sortOrder', 3],
       ['splitGroupId', 'group-1'],
       ['nope', true]

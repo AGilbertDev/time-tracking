@@ -69,14 +69,11 @@ const deadline = computed(() =>
   formatDeadline(task.deliveryDate, task.date, monthsShort.value, task.deliveryTime)
 )
 
-// The words pair, done over the project total. A non-trackable task produces no words at all, so
-// its cell is the em dash. A null `wordsDone` is also the em dash rather than `0`, so a planned task
-// is never misread as a recorded zero, and a missing project total drops the slash and the second
-// figure rather than printing an em dash after the slash. An excluded task shows its real figures in
-// full, because the app records reality and the `hors stats` marker is what says they do not count.
-const wordsDone = computed(() =>
-  typeof task.wordsDone === 'number' ? formatCount(task.wordsDone, locale.value) : null
-)
+// The words figure, which is this row's own total and the only one the cell prints. A non-trackable
+// task produces no words at all, so its cell is the em dash. A null total is also the em dash rather
+// than `0`, so a planned task is never misread as a recorded zero. An excluded task shows its real
+// figure in full, because the app records reality and the `hors stats` marker is what says it does
+// not count.
 const projectWords = computed(() =>
   typeof task.projectWordCount === 'number'
     ? formatCount(task.projectWordCount, locale.value)
@@ -107,7 +104,7 @@ const primaryName = computed(() => task.client || task.project || null)
 
 <template>
   <div
-    class="group/row grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_7.5rem_4.5rem_6rem_3rem] items-center gap-x-4 px-5 py-[clamp(0.5rem,1.1vh,0.75rem)]"
+    class="group/row grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_5.5rem_4.5rem_6rem_3rem] items-center gap-x-4 px-5 py-[clamp(0.5rem,1.1vh,0.75rem)]"
     role="row"
   >
     <!-- The grip is the drag affordance for PLAN-15 and is decorative until then, so the cell is
@@ -191,26 +188,19 @@ const primaryName = computed(() => task.client || task.project || null)
     </div>
 
     <!-- Mots. Right-aligned tabular figures line up on their last digit down the column, so the eye
-         reads magnitude without reading the numbers. The slash and the weight contrast make the pair
-         read as one ratio with a numerator and a denominator. The slash is the only thing that says
-         the two figures are one ratio, so it is read out rather than hidden: hidden, the cell
-         announces as two unrelated numbers under a header that says `Mots`. -->
+         reads magnitude without reading the numbers. -->
     <div class="whitespace-nowrap text-right text-sm tabular-nums" role="cell">
       <span v-if="!task.trackable" class="text-muted">
         <span aria-hidden="true">{{ t('planning.emDash') }}</span>
         <span class="sr-only">{{ t('planning.notApplicable') }}</span>
       </span>
-      <template v-else>
-        <span v-if="wordsDone" class="font-semibold text-highlighted">{{ wordsDone }}</span>
-        <span v-else class="text-muted">
-          <span aria-hidden="true">{{ t('planning.emDash') }}</span>
-          <span class="sr-only">{{ t('planning.notSet') }}</span>
-        </span>
-        <template v-if="projectWords">
-          <span class="text-muted"> / </span>
-          <span class="text-muted">{{ projectWords }}</span>
-        </template>
-      </template>
+      <span v-else-if="projectWords" class="font-semibold text-highlighted">
+        {{ projectWords }}
+      </span>
+      <span v-else class="text-muted">
+        <span aria-hidden="true">{{ t('planning.emDash') }}</span>
+        <span class="sr-only">{{ t('planning.notSet') }}</span>
+      </span>
     </div>
 
     <div

@@ -15,12 +15,9 @@ import { assertStatusFitsCategory, nextSortOrder, toTaskColumns } from './write'
 // already a 422 at the schema, and even if one arrived it could not reach a column, because the
 // insert reads user.id here.
 //
-// Two things this deliberately does not write. actual_minutes is left alone unless the user sent it,
+// One thing this deliberately does not write. actual_minutes is left alone unless the user sent it,
 // so a create carrying only an estimate stores NULL and the read path resolves the fallback through
-// effectiveDuration. And words_done is never written at all: the user already gives that figure as
-// projectWordCount, nothing reads words_done for a statistic, and mirroring it would make a
-// brand-new task print as fully done in the words column, which is the misreading that column was
-// built to avoid.
+// effectiveDuration.
 export async function createTask(event: H3Event, body: TaskCreateInput): Promise<TaskListItem> {
   const { user } = await requireUserSession(event)
   const db = useDb()

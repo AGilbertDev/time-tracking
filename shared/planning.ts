@@ -17,7 +17,6 @@ export type PlanningTask = {
   deliveryDate: string | null
   deliveryTime: string | null
   projectWordCount: number | null
-  wordsDone: number | null
   quotaWphOverride: number | null
   estimatedMinutes: number | null
   actualMinutes: number | null

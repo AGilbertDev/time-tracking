@@ -103,7 +103,6 @@ type SeedTask = {
   deliveryDate?: string | null
   deliveryTime?: string | null
   projectWordCount?: number | null
-  wordsDone?: number | null
   estimatedMinutes: number
   actualMinutes?: number | null
   status?: string | null
@@ -277,8 +276,9 @@ function patternFor(weekIndex: number, dayIndex: number, needsTranslation: boole
 
 // Where a date sits relative to today, which decides how finished its tasks look. A past day is
 // recorded work: it has a real duration and a completed status. Today is in progress. A future day
-// is planned only, so it carries an estimate with no actual duration and no words yet, which also
-// exercises the effectiveDuration fallback from actual to estimate.
+// is planned only, so it carries an estimate with no actual duration, which also exercises the
+// effectiveDuration fallback from actual to estimate. A word count is present in every phase,
+// because the total is known when the job is accepted rather than accumulated as the work happens.
 type Phase = 'past' | 'today' | 'future'
 
 function phaseOf(date: string): Phase {
@@ -350,9 +350,6 @@ function rowsForDay(
       deliveryDate,
       deliveryTime: dayIndex % 2 === 0 ? '16:00' : '12:00',
       projectWordCount: entry.words,
-      // A finished project has all its words done; today's has roughly half; a planned one has none.
-      wordsDone:
-        phase === 'past' ? entry.words : phase === 'today' ? Math.round(entry.words / 2) : null,
       // A finished day records what it actually took, a little off the estimate in both directions so
       // the numbers do not all read as the plan met exactly.
       actualMinutes:
@@ -392,20 +389,40 @@ weeks.forEach((weekDays, weekIndex) => {
 
   if (hasSplit) {
     // Link the two translations into one logical task. Both slices share the client, the project, the
-    // whole-project word count, the delivery, and a group id, and each keeps its own words for its own
-    // day, which is what the row's split meta line reads. The second slice is the `suite`.
+    // delivery, and a group id, which is everything that makes them one job, and what they do not
+    // share is the words. Each slice carries the words for its own day as its own figure, and the
+    // two add up to the job total, so a reviewer can sum the pair on screen and get the job. Sharing
+    // one whole-project figure across both rows, which is what this used to do, would have every day
+    // of a multi-day job claim the whole thing and a quota summing row totals would double count.
+    // The second slice is the `suite`.
+    //
+    // The seed divides the job equally, and that is reference data rather than the product behaviour.
+    // It halves because it needs plausible rows and has no user to ask, and a job split across two
+    // days is almost never split evenly in reality. PLAN-18 asks the user how many words each part
+    // gets, because only they know how far they actually got on the first day. So nothing here should
+    // be read as the model, and PLAN-18 must not reach for an automatic division because the seed
+    // does one.
     const wednesday = rows.find((row) => row.date === weekDays[3] && row.category === 'translation')
     const thursday = rows.find((row) => row.date === weekDays[4] && row.category === 'translation')
 
     if (wednesday && thursday) {
       const splitGroupId = crypto.randomUUID()
-      const projectWordCount = (wednesday.projectWordCount ?? 0) + (thursday.projectWordCount ?? 0)
 
-      for (const slice of [wednesday, thursday]) {
+      // The job total is what the pair already came to, so splitting changes how the job is spread
+      // across its two days and never how big it is. An odd remainder goes on the first slice, which
+      // keeps the two summing to exactly the total rather than one word under it.
+      const jobWordCount = (wednesday.projectWordCount ?? 0) + (thursday.projectWordCount ?? 0)
+      const thursdayWords = Math.floor(jobWordCount / 2)
+      const wednesdayWords = jobWordCount - thursdayWords
+
+      for (const [slice, words] of [
+        [wednesday, wednesdayWords],
+        [thursday, thursdayWords]
+      ] as const) {
         slice.splitGroupId = splitGroupId
         slice.client = wednesday.client
         slice.project = wednesday.project
-        slice.projectWordCount = projectWordCount
+        slice.projectWordCount = words
         slice.deliveryDate = weekDays[4]
         slice.deliveryTime = '17:00'
       }
@@ -436,9 +453,6 @@ weeks.forEach((weekDays, weekIndex) => {
       lateTrackable.status = STATUS_IN_PROGRESS
       lateTrackable.deliveryDate = lateDay
       lateTrackable.deliveryTime = '11:00'
-      // A late task is partly done rather than untouched, which is the realistic case and keeps the
-      // words column meaningful next to the red badge.
-      lateTrackable.wordsDone = Math.round((lateTrackable.projectWordCount ?? 0) / 3)
     }
   }
 
@@ -469,7 +483,6 @@ weeks.forEach((weekDays, weekIndex) => {
       project: `P-${2000 + weekIndex * 7}`,
       category: 'translation',
       projectWordCount: 1800,
-      wordsDone: phase === 'past' ? 1800 : phase === 'today' ? 800 : null,
       estimatedMinutes: 90,
       actualMinutes: phase === 'future' ? null : 90,
       status: STATUS_BY_PHASE[phase],
