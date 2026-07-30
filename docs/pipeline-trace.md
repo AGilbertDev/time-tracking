@@ -38,3 +38,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | 13  | 2026-07-28 | Progressive disclosure for the planning week | yes | no              | [spec](specs/planning/extend-tasks.md), [design](specs/planning/extend-tasks-design.md) | [#20](https://github.com/AGilbertDev/time-tracking/pull/20) |
 | 14  | 2026-07-29 | The nine default categories | yes | yes             | [spec](specs/planning/nine-task-categories.md) | [#21](https://github.com/AGilbertDev/time-tracking/pull/21) |
 | 15  | 2026-07-29 | The category column with coloured names | yes | no              | [spec](specs/planning/category-column-coloured-names.md), [design](specs/planning/category-column-coloured-names-design.md) | [#22](https://github.com/AGilbertDev/time-tracking/pull/22) |
+| 16  | 2026-07-30 | The task write API | yes | no              | [spec](specs/planning/task-write-api.md) | [#30](https://github.com/AGilbertDev/time-tracking/pull/30) |
