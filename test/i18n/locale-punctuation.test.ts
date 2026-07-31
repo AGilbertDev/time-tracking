@@ -211,8 +211,22 @@ export function findParityGaps(
 
 // Flattens a locale file to key-and-string pairs, following arrays as well as objects so the month
 // name lists are covered rather than skipped.
+//
+// Segments are joined with a dot, so two different shapes can flatten to one path: `{"a.b": {"c":
+// …}}` and `{"a": {"b.c": …}}` both produce `a.b.c`. A plain overwrite would drop the first string,
+// and a dropped string is never punctuation-checked and never parity-compared, so the loss would be
+// silent and this whole suite would report clean on copy it never read. Colliding on a key is
+// therefore a hard failure rather than a last-write-wins. No key in either locale file contains a
+// literal dot today, so this guards the flattener against a future one rather than fixing a live
+// miss.
 function flattenStrings(source: unknown, prefix = '', out = new Map<string, string>()) {
   if (typeof source === 'string') {
+    if (out.has(prefix)) {
+      throw new Error(
+        `Duplicate flattened locale key "${prefix}". A literal dot in a key has collided with a ` +
+          `nested path, so one of the two strings would be dropped and never checked.`
+      )
+    }
     out.set(prefix, source)
     return out
   }

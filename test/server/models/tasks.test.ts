@@ -110,7 +110,12 @@ describe('TaskCreateSchema', () => {
       const explicit = TaskCreateSchema.safeParse({ date: '2026-07-20', category: 'other' })
       const omitted = TaskCreateSchema.safeParse({ date: '2026-07-20' })
 
+      // Both parses are asserted before the two are compared. Without the second assertion the
+      // comparison can pass on a pair of undefineds, so a schema that stopped emitting a category
+      // at all would satisfy it rather than fail it.
       expect(explicit.success).toBe(true)
+      expect(omitted.success).toBe(true)
+      expect(explicit.data?.category).toBe(DEFAULT_CATEGORY_ID)
       expect(explicit.data?.category).toBe(omitted.data?.category)
     })
 

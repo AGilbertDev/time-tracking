@@ -248,9 +248,19 @@ describe('AC52 and AC54, focus is never left on the body', () => {
   it('ends every focus candidate list with the day disclosure control', () => {
     // The day card's own control always exists and is never inert, because AC32 makes every card
     // disclosable, so it is the fallback that cannot fail. Every list of candidates has to end there.
+    //
+    // Every call site is counted first, and the parsed lists are then required to account for all of
+    // them. The argument pattern below needs a newline before the closing parenthesis, so a call
+    // written on one line would not parse into `lists`; on its own, asserting only that at least one
+    // list was found would let that call ship unchecked while the others carried the test. Comparing
+    // the two counts closes that gap, failing loudly on a call the argument pattern cannot read
+    // rather than skipping it in silence. The lookbehind keeps the function's own declaration out of
+    // the count, since it is the one `focusFirstReachable(` in the file that is not a call.
+    const callSites = [...page.matchAll(/(?<!function )focusFirstReachable\(/g)].length
     const lists = [...page.matchAll(/focusFirstReachable\(\s*([\s\S]*?)\n\s*\)/g)].map((m) => m[1])
 
-    expect(lists.length).toBeGreaterThan(0)
+    expect(callSites).toBeGreaterThan(0)
+    expect(lists.length).toBe(callSites)
     for (const list of lists) {
       const ids = [...(list ?? '').matchAll(/`planning-[a-z-]+-\$\{[^}]+\}`/g)].map((m) => m[0])
 

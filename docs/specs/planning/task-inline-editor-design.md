@@ -32,7 +32,7 @@ where the two disagree, and it is the member every stale passage got wrong.
 | The transparent draft edge                       | [The coloured left edge](#the-coloured-left-edge-and-the-live-colour-requirement) | The edge binds to the model, never to a coerced value |
 | The `USelectMenu` placeholder and `v-else`       | [The category selector](#the-category-selector)                                   | One `#default` branch, no placeholder                 |
 | "There is no preselected value"                  | [The category selector](#the-category-selector)                                   | The field always holds a value and reads plain        |
-| `:disabled="!categoryChosen \|\| !dirty"`        | [The save control](#the-save-control)                                             | `:disabled="!dirty"`                                  |
+| `:disabled="!categoryChosen \|\| !dirty"`        | [The save control](#the-save-control)                                             | `:disabled="!canSave"`                                |
 | The `AC51` typeahead hazard and its wording      | [Focus treatment](#focus-treatment)                                               | No hazard on `Combobox`, and none to guard            |
 | The two-branch border, restated                  | [Key Tailwind decisions](#key-tailwind-decisions)                                 | Same as the first row                                 |
 | The words cell keyed on `trackable`              | [The words cell becomes one figure](#the-words-cell-becomes-one-figure)           | Keyed on `deliverable`                                |
@@ -143,7 +143,7 @@ and it should be reported rather than shipped quietly.
 
 ### The resulting shape of the disclosure region
 
-```
+```text
 div.grid.transition-[grid-template-rows]                        (unchanged)
   div#planning-day-panel-{date}  @container/day  overflow-hidden  [inert] [aria-hidden]
     ├─ div.overflow-x-auto  [role=group] [tabindex=0]            (only when the day has tasks)
@@ -223,7 +223,7 @@ real word count, which is the defect the split exists to remove.
 > [`other-category-design.md`](other-category-design.md). The nine other members render identically
 > under either rule, so only `Autre` changes, and only `Autre` was ever wrong.
 
-```
+```text
 cell      whitespace-nowrap text-right text-sm tabular-nums
 figure    text-highlighted                     (normal weight, not semibold)
 absent    text-muted  +  the shipped glyph-plus-sr-only pair
@@ -245,7 +245,7 @@ far less. A seven-character grouped count is about 58 px at `text-sm` tabular, t
 `Mots` is about 34 px, and even an implausible `1 250 000` is about 74 px. **`5rem`** holds every one
 of them right-aligned with room, and it frees `2.5rem`.
 
-```
+```text
 grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_5rem_4.5rem_6rem_3rem]
 ```
 
@@ -319,7 +319,7 @@ The affordance is the day header's, reused verbatim. A real button inside the ta
 stretched pseudo-element making the whole row clickable, and the focus ring on the row rather than on
 the button because the row is the target.
 
-```
+```text
 row (collapsed)     group/row relative grid grid-cols-[…] items-center gap-x-4 px-5
                     py-[clamp(0.5rem,1.1vh,0.75rem)]
                     has-[button:hover]:bg-primary/[0.06] dark:has-[button:hover]:bg-primary/10
@@ -361,7 +361,7 @@ buttons land as the hover overlay `extend-tasks-design.md` already documents, po
 
 ### The panel box
 
-```
+```text
 cell        sticky left-0 w-[100cqw] px-5 pb-4 pt-1
 form        rounded-xl p-4
             border border-accented dark:border-default
@@ -487,7 +487,7 @@ else, so the reading order, the tab order, and the visual order are one thing.
 
 At `@4xl/day` that produces five lines.
 
-```
+```text
 Catégorie 3  |  Jour 3  |  Client 3  |  Numéro de projet 3
 Livraison 3  |  Heure 2  |  Mots 3                              (ragged, and deliberately so)
 Durée estimée 4  |  Durée réelle 4  |  Statut 4
@@ -559,7 +559,7 @@ The duration pairs reuse `work-fields.vue`'s inner markup verbatim, including
 `:aria-label="t('onboarding.work.hoursLabel')"` on each half and the `text-sm text-muted` unit spans,
 so the two halves are individually named and the pair is not two unlabelled boxes.
 
-```
+```text
 pair wrapper   flex items-end gap-3
 half           flex items-center gap-1.5
 input          w-24
@@ -704,7 +704,7 @@ under the control. Two reasons. `help` is where the 422 error lands, and a count
 competing for the same line is worse than either alone. And the units in `work-fields.vue` already
 use `hint` for exactly this kind of metadata about a field, so it is the house slot for it.
 
-```
+```text
 counter, normal      text-xs text-dimmed
 counter, ≥ 90 %      text-xs text-warning-800 dark:text-warning-400
 counter, over 2000   text-xs text-error-800 dark:text-error-400
@@ -721,7 +721,7 @@ The panel ends with a message slot and a button row. The message slot is one reg
 possible occupants, so there is one place on screen where the editor speaks and the user learns where
 to look once.
 
-```
+```text
 message slot   (a full-width UAlert, when there is something to say)
 button row     flex flex-wrap items-center justify-between gap-3
   left         the unsaved-changes note, when it is showing
@@ -756,15 +756,18 @@ nouvel onglet", so the trailing glyph is reinforcement and no new copy key is ne
 ### The dirty state
 
 **The save control's enabled state is the ambient dirty affordance and nothing else is added for
-it.** `AC39` disables save when nothing has changed, so an enabled save button already means
-"something is unsaved", visible at all times, costing no new element. A permanent badge on top of
-that would say the same thing twice.
+it.** `AC39` disables save when nothing has changed **on an edit**, so an enabled save button already
+means "something is unsaved", visible at all times, costing no new element. A permanent badge on top
+of that would say the same thing twice. **A draft is the exception**: it stays saveable untouched,
+because it sends a `POST` that already carries the day and the preselected `other` category, so there
+is no empty request to guard against and gating it would make adding a task impossible without a
+pointless edit first.
 
 The `planning.editor.unsaved` line is reserved for the one moment the spec names, a click outside
 with changes pending. It appears in the button row's left slot and stays until the editor is saved or
 discarded, because it is a true statement for as long as it is showing.
 
-```
+```text
 i-ph-warning-circle size-4  +  text-xs text-warning-800 dark:text-warning-400
 ```
 
@@ -773,10 +776,14 @@ place and a 2 px amber ring around a 560 px panel is not quiet. A text line with
 
 ### The save control
 
-```
+```text
 UButton color="primary" icon="i-ph-check-bold" :label="t('planning.editor.save')"
-        :loading="saving" :disabled="!dirty" type="submit"
+        :loading="saving" :disabled="!canSave" type="submit"
 ```
+
+`canSave` is `!task || dirty`, so an edit needs a change before it can be saved and a draft never
+does. The distinction is `AC39`'s: the guard exists to stop an empty `PATCH`, and a draft's `POST` is
+never empty.
 
 > **Superseded, and the original is kept below.** The guard first read
 > `:disabled="!categoryChosen || !dirty"`. With `other` preselected on every draft there is no
@@ -821,7 +828,7 @@ promise the card cannot keep has to be rewritten rather than left contradicting 
 An open day with no tasks renders no scroller, no `role="table"`, and **no column header line**, since
 six headers over zero rows label nothing. It renders the footer block alone.
 
-```
+```text
 footer block   border-t border-default px-5 py-3
 empty line     text-sm text-muted                          (planning.editor.emptyDay)
 add control    UButton color="primary" variant="ghost" size="sm" icon="i-ph-plus-bold"
@@ -853,6 +860,15 @@ the reason, so recorded weekend work can be entered where it happened.
 
 `UModal`, following the shared confirmation modal in `app/pages/admin/users.vue` so the app has one
 confirmation idiom.
+
+**It is mounted on the page, not inside `PlanningTaskEditor`.** The spec makes the page the owner of
+the dirty-close decision under [the close paths](task-inline-editor.md), because a close request can
+come from the row itself, from the day collapsing, from week navigation, from leaving the route, or
+from another row being opened, and only some of those originate inside the editor. A modal owned by
+the editor could not answer the ones that do not, and an editor about to be unmounted cannot be the
+thing that asks whether to unmount it. So `discardOpen` and the pending-close target live in page
+state beside the single open-editor value, one instance for the whole week, and every close path runs
+the same rule. The markup below therefore belongs to `app/pages/index.vue`.
 
 ```html
 <UModal
@@ -1021,25 +1037,25 @@ Concrete blueprints in this repo's idiom.
 
 **Task row grid, both declarations, character-for-character identical**
 
-```
+```text
 grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_5rem_4.5rem_6rem_3rem]
 ```
 
 **Table scroller**
 
-```
+```text
 min-w-[60rem]
 ```
 
 **Disclosure region, the new query container**
 
-```
+```text
 @container/day overflow-hidden
 ```
 
 **Task row**
 
-```
+```text
 group/row relative grid grid-cols-[…] items-center gap-x-4 px-5
 py-[clamp(0.5rem,1.1vh,0.75rem)] transition-colors duration-150 motion-reduce:transition-none
 has-[button:hover]:bg-primary/[0.06] dark:has-[button:hover]:bg-primary/10
@@ -1050,14 +1066,14 @@ bg-primary/[0.06] dark:bg-primary/10                       (when its editor is o
 
 **Editor panel row and cell**
 
-```
+```text
 row    (no classes beyond role="row")
 cell   sticky left-0 w-[100cqw] px-5 pb-4 pt-1
 ```
 
 **Editor panel box**
 
-```
+```text
 rounded-xl border border-accented dark:border-default border-l-2 p-4
 planning-cat-edge                       (always, superseding the two-branch original)
 ```
@@ -1070,20 +1086,20 @@ planning-cat-edge                       (always, superseding the two-branch orig
 
 **Field grid**
 
-```
+```text
 grid grid-cols-12 gap-x-4 gap-y-4
 ```
 
 **Panel heading**
 
-```
+```text
 text-sm font-semibold text-highlighted          (a draft)
 sr-only                                         (an edit)
 ```
 
 **Footer**
 
-```
+```text
 wrapper   mt-4 space-y-3
 buttons   flex flex-wrap items-center justify-between gap-3
 right     flex items-center gap-2
@@ -1092,19 +1108,19 @@ unsaved   inline-flex items-center gap-1.5 text-xs text-warning-800 dark:text-wa
 
 **Day footer block**
 
-```
+```text
 border-t border-default px-5 py-3 flex flex-col gap-3 items-start
 ```
 
 **Note marker**
 
-```
+```text
 ml-1 shrink-0 self-center text-dimmed     +     UIcon size-3.5 i-ph-note
 ```
 
 **Words cell**
 
-```
+```text
 whitespace-nowrap text-right text-sm tabular-nums
 figure    text-highlighted
 absent    text-muted + glyph and sr-only pair
@@ -1126,9 +1142,12 @@ Phosphor throughout, matching the rest of the app.
 
 ## Component hierarchy
 
-- `app/pages/index.vue` — gains the single open-editor value, the save composable's status, and the
-  polite live region
+- `app/pages/index.vue` — gains the single open-editor value, the save composable's status, the
+  polite live region, and the discard confirmation
   - `p[aria-live=polite].sr-only` — new, and it has to be here rather than in the panel
+  - `UModal` — the discard confirmation. One instance for the whole week, here rather than in the
+    editor because the page owns the dirty-close decision and several close paths start outside the
+    editor entirely
   - `PlanningWeek` — threads the open-editor value down, stays a thin renderer
     - `PlanningDayCard` — every day disclosable, the disclosure region becomes `@container/day`,
       the column header line narrows the words track, the day footer block is new
@@ -1143,7 +1162,6 @@ Phosphor throughout, matching the rest of the app.
           [`other-category-design.md`](other-category-design.md)'s, not this document's
         - `UFormField` × 13
         - `UInputNumber` × 6
-        - `UModal` — the discard confirmation
       - add control — new, inline in `DayCard.vue`
 - `app/assets/css/main.css` — one new unlayered rule, `.planning-cat-edge`
 - `app/utils/` — the hours and minutes conversion and the change diff, both pure and both unit

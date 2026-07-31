@@ -169,7 +169,7 @@ TanStack Query mutations, `app/composables/useUpdateProfileMutation.ts` being th
 `app/queries/keys.ts`, which today holds only `me`. **A TanStack mutation invalidating a query key
 would refresh nothing here**, because the planning week is not in the query cache. What this feature
 does about that is under [how a saved row gets back into the
-list](#how-a-saved-row-gets-back-into-the-list).
+list](#saving-and-how-a-saved-row-gets-back-into-the-list).
 
 ## Scope
 
@@ -207,7 +207,7 @@ Out of scope, each its own later pipeline run.
   now that a row carries its own slice total rather than a whole project's. Decided under
   [the words column](#the-words-column-is-one-figure) and the answer is no.
 - **Moving the planning week onto TanStack Query.** Reasoned about under [how a saved row gets back
-  into the list](#how-a-saved-row-gets-back-into-the-list) and deliberately not done.
+  into the list](#saving-and-how-a-saved-row-gets-back-into-the-list) and deliberately not done.
 - **A second arrangement for narrow screens.** The app has no mobile version and the card scrolls
   inside its own container, which is unchanged here.
 
@@ -464,6 +464,31 @@ window that order leaves breaks a read, which the page's existing error state an
 control already handle, where the reverse order breaks a write, and a failed save is where typed work
 can be lost. Nothing is lost in either case and both are recoverable in one step.
 
+**The rollout that leaves no window at all, which is the one to use.** The window above only exists
+because both migrations are applied in a single invocation. Splitting them removes it entirely, and
+the split is three ordered steps rather than two:
+
+1. Apply `0009` alone, the expand half. It adds `notes` and breaks nothing, so the old build keeps
+   serving normally.
+2. Deploy the new build. It stops selecting `words_done` and starts using `notes`. Both columns exist
+   at this moment, which is the whole point of expanding first, so neither the old build nor the new
+   one can reach a missing column.
+3. Apply `0008` alone, the contract half. Nothing reads `words_done` by now, so the drop is invisible.
+
+Between every pair of steps the deployed build and the schema agree, so there is no instant at which
+the planning week cannot load. The cost is one extra manual step and a deploy that is not a single
+command. Do it this way for any deploy that matters.
+
+**When the single invocation is acceptable instead.** Applying both files at once and then deploying
+is the fallback, and it is defensible here for reasons specific to this app rather than as general
+practice. There is one real user, the owner performs the deploy and knows when they are not working,
+and the failure is a read that the page's existing error state and `Réessayer` control already
+present as a retry rather than as data loss. Those three facts are what make a short window
+tolerable, and none of them survives a second user or an automated deploy. **So drain first**: do not
+apply the migrations while a session is open on the planning week, and if the app ever gains a second
+user or the deploy stops being hand-run, the three-step rollout above stops being the better option
+and becomes the only correct one.
+
 **The undo, stated in the file as `0007` does.** If the drop is applied and the old build has to come
 back, `ALTER TABLE tasks ADD words_done integer;` restores a working old build. The contents
 are gone, which costs nothing, and the reason it costs nothing is the claim in
@@ -686,8 +711,12 @@ added, which is the one thing this feature exists to make possible.
 - **AC34.** The today-open default still applies, and now applies on an empty today as well, since
   today's card has something to disclose. The tri-state `userOpen` null meaning untouched is unchanged,
   so paging away and back during a fetch does not pin a card shut.
-- **AC35.** Pressing the add control opens a draft editor with every field empty except the day, which
-  is the card's date. No row appears in the day until the create succeeds.
+- **AC35.** Pressing the add control opens a draft editor with every user-entered field empty, the day
+  prefilled from the card's date, and `category` preselected to `other`, which is
+  `DEFAULT_CATEGORY_ID`. **Category is not empty.** The selector has no empty state to fall back to
+  once `other` exists, and a draft that already carries a valid category is one the user can save
+  without first answering a question they may not have an answer to. The default is non-trackable, so
+  it produces no words and moves no quota figure. No row appears in the day until the create succeeds.
 - **AC36.** A `POST` is sent only on save. Abandoning a draft in any way creates no row, verified by a
   task count that does not change.
 - **AC37.** After a successful create the draft closes, the new row appears collapsed in its day
@@ -731,8 +760,12 @@ out for itself. See [other-category.md](other-category.md) `UC11`.
 
 - **AC38.** An edit sends only the fields whose normalized value differs from the loaded row. An edit
   that changes only the client name sends a body with exactly one key.
-- **AC39.** The save control is disabled when nothing has changed, so no empty `PATCH` is ever sent and
-  the write API's 422 for one is never reached from the interface.
+- **AC39.** **On an edit**, the save control is disabled when nothing has changed, so no empty `PATCH`
+  is ever sent and the write API's 422 for one is never reached from the interface. **On a draft it
+  stays enabled even untouched**, because the criterion exists to stop an empty `PATCH` and a draft
+  sends a `POST`, which is never empty: it carries the day and the `other` category `AC35` preselects.
+  Gating a draft on dirtiness would make "add a task, save it" impossible without first editing a field
+  the user may have nothing to say about. So the guard reads `!task || dirty` rather than `dirty`.
 - **AC40.** A row whose stored `category` is a retired id such as `revision` can have its other fields
   edited and saved. The request carries no `category` key and the save succeeds. The selector displays
   the coerced value, and if the user picks a category the request carries the picked id and the row is
@@ -1114,30 +1147,31 @@ are. The decision to draw a glyph is under [the notes field](#the-notes-field).
 
 The client renders these. It never renders the server's message.
 
-| `data` key from the 422              | Key                                              | French                                           | English                                      |
-| ------------------------------------ | ------------------------------------------------ | ------------------------------------------------ | -------------------------------------------- |
-| (removed, see below)                 | `planning.editor.validation.categoryRequired`    | Choisissez une catégorie.                        | Choose a category.                           |
-| `date`                               | `planning.editor.validation.dayInvalid`          | Choisissez un jour valide.                       | Choose a valid day.                          |
-| `client`, `project`                  | `planning.editor.validation.textTooLong`         | Ce champ doit contenir au plus {max} caractères. | This field must be at most {max} characters. |
-| `deliveryDate`                       | `planning.editor.validation.deliveryDateInvalid` | Choisissez une date de livraison valide.         | Choose a valid delivery date.                |
-| `deliveryTime`                       | `planning.editor.validation.timeInvalid`         | Entrez une heure au format 24 h (HH:MM).         | Enter a time in 24-hour format (HH:MM).      |
-| `projectWordCount`                   | `planning.editor.validation.wordsInvalid`        | Entrez un nombre entier de mots.                 | Enter a whole number of words.               |
-| `estimatedMinutes`, `actualMinutes`  | `planning.editor.validation.durationInvalid`     | Entrez une durée valide.                         | Enter a valid duration.                      |
-| `quotaWphOverride`                   | `planning.editor.validation.quotaInvalid`        | Le quota doit être d'au moins 1 mot à l'heure.   | The quota must be at least 1 word per hour.  |
-| `status`                             | `planning.editor.validation.statusNotTrackable`  | Cette catégorie ne peut pas porter de statut.    | This category cannot carry a status.         |
-| `notes`                              | `planning.editor.validation.notesTooLong`        | La note doit contenir au plus {max} caractères.  | The note must be at most {max} characters.   |
-| `category`, and any unrecognised key | `planning.editor.validation.invalid`             | Cette valeur est invalide.                       | This value is invalid.                       |
-| `_form`                              | `planning.editor.saveError`                      | La tâche n'a pas pu être enregistrée.            | The task could not be saved.                 |
+| `data` key from the 422              | Key                                               | French                                           | English                                      |
+| ------------------------------------ | ------------------------------------------------- | ------------------------------------------------ | -------------------------------------------- |
+| (removed, see below)                 | `planning.editor.validation.categoryRequired`     | Choisissez une catégorie.                        | Choose a category.                           |
+| `date`                               | `planning.editor.validation.dayInvalid`           | Choisissez un jour valide.                       | Choose a valid day.                          |
+| `client`, `project`                  | `planning.editor.validation.textTooLong`          | Ce champ doit contenir au plus {max} caractères. | This field must be at most {max} characters. |
+| `deliveryDate`                       | `planning.editor.validation.deliveryDateInvalid`  | Choisissez une date de livraison valide.         | Choose a valid delivery date.                |
+| `deliveryTime`                       | `planning.editor.validation.timeInvalid`          | Entrez une heure au format 24 h (HH:MM).         | Enter a time in 24-hour format (HH:MM).      |
+| `projectWordCount`                   | `planning.editor.validation.wordsInvalid`         | Entrez un nombre entier de mots.                 | Enter a whole number of words.               |
+| `estimatedMinutes`, `actualMinutes`  | `planning.editor.validation.durationInvalid`      | Entrez une durée valide.                         | Enter a valid duration.                      |
+| `quotaWphOverride`                   | `planning.editor.validation.quotaInvalid`         | Le quota doit être d'au moins 1 mot à l'heure.   | The quota must be at least 1 word per hour.  |
+| `status`                             | `planning.editor.validation.statusNotDeliverable` | Cette catégorie ne peut pas porter de statut.    | This category cannot carry a status.         |
+| `notes`                              | `planning.editor.validation.notesTooLong`         | La note doit contenir au plus {max} caractères.  | The note must be at most {max} characters.   |
+| `category`, and any unrecognised key | `planning.editor.validation.invalid`              | Cette valeur est invalide.                       | This value is invalid.                       |
+| `_form`                              | `planning.editor.saveError`                       | La tâche n'a pas pu être enregistrée.            | The task could not be saved.                 |
 
 **Two rows of that table are superseded.**
 `planning.editor.validation.categoryRequired` **no longer exists in either locale file**, confirmed absent
 from both, because there is no client-side category-required check left to produce it. It is kept in the
 table for the same reason as the placeholder above, so a reader looking for the key learns it was removed
-rather than finding nothing. And `planning.editor.validation.statusNotTrackable` **is renamed**, because it
-is named after the flag that was split, while the French and English strings it holds are already correct
-and unchanged, since both describe the status concern rather than trackability. So that row is a stale
-identifier rather than wrong copy shown to anyone. See [other-category.md](other-category.md) `UC27` and
-its copy section.
+rather than finding nothing. And `planning.editor.validation.statusNotTrackable` **is renamed to
+`planning.editor.validation.statusNotDeliverable`**, which is the key the table above now carries and the
+one both locale files define. It was named after the flag that was split, while the French and English
+strings it holds are already correct and unchanged, since both describe the status concern rather than
+trackability. So that row was a stale identifier rather than wrong copy shown to anyone. See
+[other-category.md](other-category.md) `UC27` and its copy section.
 
 - **AC56.** Every string above exists in both `i18n/locales/fr.json` and `i18n/locales/en.json`, the two
   files stay at key parity, and no visible string in any component this feature adds is a literal. **Read
@@ -1255,8 +1289,11 @@ Specs and code review are never skipped.
   cascade-on-user-delete erasure path, that nothing logs its contents, and that no error message echoes
   it back. It must not turn that into a product constraint. The conventions are explicit that the
   confidentiality rule governs published prose and not what the owner's own tool stores, and that "do
-  not police the user" wins. It ran, and what it found is under
-  [follow-ups](#follow-ups-recorded-not-built-here).
+  not police the user" wins. It ran and found one gap, that account deletion left `tasks` and
+  `work_schedule` rows behind. The owner ruled on 2026-07-31 that both halves of it are folded into this
+  feature rather than deferred, so explicit deletion of both tables ships here and is specified under
+  [the account purge](#the-account-purge-erases-tasks-explicitly), covered by `AC68` through `AC70`. No
+  compliance finding is left outstanding, and the erasure gap is no longer a follow-up.
 - **Accessibility.** Runs. A new form, a new disclosure, focus management, a live region, a modal
   confirmation, and hand-rolled table semantics that have to stay valid with a panel row inside them.
 - **Unit test.** Runs, per `AC62` through `AC65`, plus `AC68` through `AC70` for the purge.
@@ -1298,9 +1335,14 @@ implementation.
 watched the row collapse with its new values. Nothing has exercised the real category popover, the real
 date picker, the real modal, or the real focus moves against a real browser's focus behaviour. Those
 probes were also ad-hoc verification runs rather than committed tests, so the suite figure above covers
-the pure modules and the write path and not the editor's own behaviour, and the unit-test stage has yet
-to run. So every behavioural claim about the interface in this document is an argued expectation
-supported by module-level evidence, not an observation.
+the pure modules and the write path and not the editor's own behaviour. So every behavioural claim about
+the interface in this document is an argued expectation supported by module-level evidence, not an
+observation.
+
+**What the automated stage did settle.** The unit-test stage ran and finished: `bun run test` passes
+1,584 tests across 31 files at exit 0, and `bun run lint` exits 0. That is the whole of the automated
+evidence. It bounds what is claimed above rather than extending it, because none of those tests drive
+the editor in a browser, so a green suite and an unclicked editor are both true at once.
 
 **What follows from that.** The first person to sign in and use the form is doing first-pass manual
 verification rather than confirming something already seen working, and it should be planned as that.

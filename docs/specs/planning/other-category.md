@@ -218,13 +218,14 @@ common non-trackable row in the app, a status the user cannot set and a word cou
 the row refuses to print. Both would need this same separation to fix later, on rows by then holding
 real data.
 
-**The name of the second fact is the contract stage's to finalize.** This spec proposes `deliverable`
-on the descriptor, with `isDeliverableCategory(id)` beside `isTrackableCategory(id)` and a resolved
-`deliverable` boolean on `PlanningTask`. Any other name is acceptable provided it is not a synonym of
-`trackable`, reads positively so call sites are not double negatives, and carries a comment saying
-which of the two questions it answers. What is not acceptable is overloading `trackable`, or deriving
-the answer from an id comparison against `'other'`, because that is a special case where a declared
-fact belongs and `PLAN-30` would inherit it.
+**The name of the second fact was the contract stage's to finalize, and it settled on `deliverable`.**
+That is what shipped: a `deliverable` boolean on the descriptor, `isDeliverableCategory(id)` beside
+`isTrackableCategory(id)`, and a resolved `deliverable` boolean on `PlanningTask`, all in
+`shared/categories.ts` and `shared/planning.ts`. The name had to avoid being a synonym of `trackable`,
+read positively so call sites are not double negatives, and carry a comment saying which of the two
+questions it answers, and it does. What was not acceptable, and was not done, is overloading
+`trackable`, or deriving the answer from an id comparison against `'other'`, because that is a special
+case where a declared fact belongs and `PLAN-30` would inherit it.
 
 - **UC8.** The `Category` type carries a second declared boolean beside `trackable`, true for the four
   trackable ids and for `other`, false for `terminology`, `meetings`, `breaks`, `admin`, and `dtp`. A
@@ -594,7 +595,8 @@ punctuation is a real U+00A0 in the JSON rather than a plain space.
 
 **One identifier changes and no user-visible string changes with it.**
 `planning.editor.validation.statusNotTrackable` is named after the flag this feature splits, so the name
-goes stale and is renamed. **The French and English strings it holds are already correct**, because both
+goes stale and is renamed to `planning.editor.validation.statusNotDeliverable`, which is the key both
+locale files define. **The French and English strings it holds are already correct**, because both
 describe the status concern rather than trackability, so this is a stale identifier and not a wrong
 explanation shown to anyone. Nothing here needs the owner's copy read, which is the reason it is recorded
 in this section rather than sent to the follow-ups with the label question.
@@ -849,7 +851,8 @@ exception, a separator above `Autre`, and a plain preselected value, and the own
 under [the colour](#the-colour-decided-by-the-design-stage-and-accepted-in-full). Nothing now blocks the
 contract stage.
 
-1. **The name of the second per-category fact.** `deliverable` is proposed and the contract stage may
-   choose better, within the three constraints under [the status
-   field](#the-status-field-and-the-two-meanings-of-non-trackable). This is a naming question rather than
-   a behaviour question, so it does not block anything.
+1. **The name of the second per-category fact. Closed.** The contract stage kept `deliverable`, so the
+   descriptor carries `deliverable`, the helper is `isDeliverableCategory(id)`, and `PlanningTask`
+   carries a resolved `deliverable` boolean. It met the three constraints under [the status
+   field](#the-status-field-and-the-two-meanings-of-non-trackable), and it was a naming question rather
+   than a behaviour question, so nothing was blocked while it was open.

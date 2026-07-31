@@ -77,6 +77,7 @@ function planningTask(overrides: Partial<PlanningTask> = {}): PlanningTask {
     category: 'translation',
     client: null,
     date: '2026-07-20',
+    deliverable: true,
     deliveryDate: null,
     deliveryTime: null,
     estimatedMinutes: null,

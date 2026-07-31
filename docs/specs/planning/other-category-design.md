@@ -213,13 +213,14 @@ feature and it belongs in `PLAN-30`'s spec rather than being discovered when a u
 One integer and nothing else. The descriptor keeps the shape it has today plus the second per-category
 fact the spec already asked for, and the colour adds no member to the type.
 
-```
-{ id: 'other', trackable: false, hue: 90, <second fact>: true }
+```text
+{ id: 'other', trackable: false, hue: 90, deliverable: true }
 ```
 
-The second fact is the one named under the spec's `§ The status field`, proposed there as
-`deliverable` and left to the contract stage. It is true for `other`, because `Autre` is work that can
-be in progress and can have words. `trackable` is false, so nothing it holds reaches a quota. No
+The second fact is the one named under the spec's `§ The status field`, and the contract stage
+finalized it as `deliverable`, which is the name that shipped alongside the `isDeliverableCategory(id)`
+helper. It is true for `other`, because `Autre` is work that can be in progress and can have words.
+`trackable` is false, so nothing it holds reaches a quota. No
 colour value for `other` exists anywhere outside `shared/categories.ts` and the fixed properties in
 `main.css`, which is `UC28`.
 
