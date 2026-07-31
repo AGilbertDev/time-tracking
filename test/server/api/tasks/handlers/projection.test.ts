@@ -74,12 +74,12 @@ describe('toTaskListItem (pure row mapper)', () => {
     deliveryDate: '2026-07-25',
     deliveryTime: '17:00',
     projectWordCount: 12_000,
-    wordsDone: null,
     quotaWphOverride: null,
     estimatedMinutes: 120,
     actualMinutes: null,
     status: 'En cours',
     excludeFromStats: false,
+    notes: null,
     splitGroupId: null,
     sortOrder: 2,
     isOverdue: 0
@@ -101,6 +101,7 @@ describe('toTaskListItem (pure row mapper)', () => {
         'estimatedMinutes',
         'excludeFromStats',
         'id',
+        'notes',
         'project',
         'projectWordCount',
         'quotaWphOverride',
@@ -109,7 +110,7 @@ describe('toTaskListItem (pure row mapper)', () => {
         'status',
         'statusKey',
         'trackable',
-        'wordsDone'
+        'deliverable'
       ].sort()
     )
     expect('isOverdue' in item).toBe(false)
@@ -127,12 +128,12 @@ describe('toTaskListItem (pure row mapper)', () => {
       deliveryDate: '2026-07-25',
       deliveryTime: '17:00',
       projectWordCount: 12_000,
-      wordsDone: null,
       quotaWphOverride: null,
       estimatedMinutes: 120,
       actualMinutes: null,
       status: 'En cours',
       excludeFromStats: false,
+      notes: null,
       splitGroupId: null,
       sortOrder: 2
     })
@@ -410,7 +411,7 @@ describe('readTaskForUser', () => {
       status: 'En cours',
       estimatedMinutes: 120,
       actualMinutes: null,
-      wordsDone: null,
+      notes: null,
       excludeFromStats: false,
       sortOrder: 4,
       statusKey: 'encours',

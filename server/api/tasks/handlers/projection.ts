@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 
-import { isTrackableCategory } from '#shared/categories'
+import { isDeliverableCategory, isTrackableCategory } from '#shared/categories'
 import { nowInZone, statusKey, TASK_STATUS_DONE } from '#shared/planning'
 
 import type { TaskListItem } from '../../../models/tasks'
@@ -31,19 +31,19 @@ const TASK_COLUMNS = {
   deliveryDate: tasks.deliveryDate,
   deliveryTime: tasks.deliveryTime,
   projectWordCount: tasks.projectWordCount,
-  wordsDone: tasks.wordsDone,
   quotaWphOverride: tasks.quotaWphOverride,
   estimatedMinutes: tasks.estimatedMinutes,
   actualMinutes: tasks.actualMinutes,
   status: tasks.status,
   excludeFromStats: tasks.excludeFromStats,
+  notes: tasks.notes,
   splitGroupId: tasks.splitGroupId,
   sortOrder: tasks.sortOrder
 }
 
 // A selected row before the derived fields are named. SQLite has no boolean, so the database's late
 // verdict arrives as 1 or 0.
-export type TaskProjectionRow = Omit<TaskListItem, 'statusKey' | 'trackable'> & {
+export type TaskProjectionRow = Omit<TaskListItem, 'statusKey' | 'trackable' | 'deliverable'> & {
   isOverdue: number
 }
 
@@ -56,7 +56,7 @@ export async function resolveUserNow(userId: string): Promise<string> {
 }
 
 // The select shape for any task read, the stored columns plus the late decision made by the
-// database. A task is late when it has a delivery date, carries a status at all (a non-trackable
+// database. A task is late when it has a delivery date, carries a status at all (a non-deliverable
 // break or meeting has none and no delivery to miss), is not finished, and its deadline has already
 // passed. Joining the stored date and time gives the same 'YYYY-MM-DDTHH:MM' shape as `now`, and
 // both sort chronologically as plain strings, so this is a string comparison rather than any date
@@ -84,18 +84,26 @@ export function taskSelection(now: string) {
 
 // Names the database's verdict, handing the client a finished row rather than a raw row plus the
 // rules for reading it. The late flag is only ever set on a row the query already proved late, and
-// statusKey re-checks the finished and non-trackable guards anyway, so a stale or odd stored value
+// statusKey re-checks the finished and non-deliverable guards anyway, so a stale or odd stored value
 // cannot produce a late row.
 //
-// `trackable` is resolved from the same lookup, so the row carries the answer and the page never
-// reads the category contract itself. Resolving it once per row also means the value the client
-// draws and the value statusKey was decided from can never disagree.
+// Both category flags are resolved from the same contract here, so the row carries the answers and
+// the page never reads the category contract itself. Resolving them once per row also means the
+// values the client draws and the value statusKey was decided from can never disagree.
+//
+// statusKey is handed `deliverable` rather than `trackable`, because the N/A guard asks whether the
+// row can be in progress and not whether its words reach a quota. Those were the same boolean for
+// the first nine categories and they differ on `other`, which carries a status and contributes
+// nothing to the quota. Passing `trackable` here would hide a real stored status on every `other`
+// row and on every legacy row holding a retired id.
 export function toTaskListItem({ isOverdue, ...task }: TaskProjectionRow): TaskListItem {
   const trackable = isTrackableCategory(task.category)
+  const deliverable = isDeliverableCategory(task.category)
   return {
     ...task,
-    statusKey: statusKey(task.status, trackable, isOverdue === 1),
-    trackable
+    statusKey: statusKey(task.status, deliverable, isOverdue === 1),
+    trackable,
+    deliverable
   }
 }
 

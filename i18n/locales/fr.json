@@ -6,7 +6,7 @@
     "submit": "Se connecter",
     "error": "Identifiants invalides.",
     "deactivated": "Votre compte a été désactivé. Contactez l'administrateur.",
-    "noAccount": "Première fois ? Créez votre compte"
+    "noAccount": "Première fois ? Créez votre compte"
   },
   "signup": {
     "subtitle": "Créer un compte",
@@ -17,7 +17,7 @@
     "sent": "Si votre adresse courriel est autorisée par l'administrateur, vous recevrez un lien à usage unique dans votre boîte de réception pour activer votre nouveau compte.",
     "expired": "Ce lien n'est plus valide. Demandez-en un nouveau ci-dessous.",
     "error": "Une erreur est survenue. Veuillez réessayer.",
-    "hasAccount": "Déjà un compte ? Connectez-vous"
+    "hasAccount": "Déjà un compte ? Connectez-vous"
   },
   "onboarding": {
     "title": "Bienvenue",
@@ -139,17 +139,17 @@
     "confirm": {
       "cancel": "Annuler",
       "deactivateActive": {
-        "title": "Désactiver ce compte ?",
+        "title": "Désactiver ce compte ?",
         "body": "Cette personne perdra l'accès à l'application et recevra un courriel l'informant de la désactivation. Vous pourrez réactiver le compte plus tard.",
         "confirm": "Désactiver"
       },
       "revokeInvite": {
-        "title": "Révoquer cette invitation ?",
+        "title": "Révoquer cette invitation ?",
         "body": "L'invitation sera retirée et le lien d'inscription cessera de fonctionner. Aucun courriel ne sera envoyé.",
         "confirm": "Révoquer"
       },
       "reactivate": {
-        "title": "Réactiver ce compte ?",
+        "title": "Réactiver ce compte ?",
         "body": "L'accès sera rétabli et la personne pourra se reconnecter. Aucun courriel ne sera envoyé.",
         "confirm": "Réactiver"
       }
@@ -186,7 +186,8 @@
     "meetings": "Réunions",
     "breaks": "Pauses",
     "admin": "Administration",
-    "dtp": "Mise en page"
+    "dtp": "Mise en page",
+    "other": "Autre"
   },
   "planning": {
     "title": "Tableau de bord",
@@ -201,6 +202,7 @@
     "splitTagLabel": "Suite d'une tâche répartie sur plusieurs jours",
     "excluded": "hors stats",
     "excludedLabel": "Exclue du calcul du quota",
+    "noteLabel": "Cette tâche porte une note",
     "loadError": "La semaine n'a pas pu être chargée.",
     "retry": "Réessayer",
     "columns": {
@@ -230,6 +232,62 @@
       "retard": "En retard",
       "termine": "Terminé",
       "na": "N/A"
+    },
+    "editor": {
+      "addTask": "Ajouter une tâche",
+      "emptyDay": "Aucune tâche ce jour.",
+      "newTask": "Nouvelle tâche",
+      "editRowLabel": "Modifier",
+      "editFormLabel": "Modification de la tâche",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "saved": "La tâche a été enregistrée.",
+      "created": "La tâche a été ajoutée.",
+      "unsaved": "Modifications non enregistrées.",
+      "discardTitle": "Abandonner les modifications ?",
+      "discardBody": "Vos modifications n'ont pas été enregistrées. Elles seront perdues.",
+      "discardConfirm": "Abandonner",
+      "discardCancel": "Continuer l'édition",
+      "saveError": "La tâche n'a pas pu être enregistrée.",
+      "sessionExpired": "Votre session a expiré. Ouvrez la connexion dans un nouvel onglet, reconnectez-vous, puis réessayez. Vos saisies restent ici.",
+      "signInNewTab": "Ouvrir la connexion",
+      "gone": "Cette tâche n'existe plus. Elle a probablement été supprimée ailleurs.",
+      "goneCreate": "Enregistrer comme nouvelle tâche",
+      "goneDiscard": "Fermer",
+      "fields": {
+        "category": "Catégorie",
+        "day": "Jour",
+        "client": "Client",
+        "project": "Numéro de projet",
+        "deliveryDate": "Livraison",
+        "deliveryTime": "Heure",
+        "words": "Mots",
+        "wordsHint": "Le total de mots à faire ce jour-là.",
+        "estimatedDuration": "Durée estimée",
+        "actualDuration": "Durée réelle",
+        "status": "Statut",
+        "statusNone": "Aucun",
+        "statusUnavailable": "Cette catégorie ne porte pas de statut.",
+        "quota": "Quota",
+        "quotaHint": "Vide : votre quota par défaut.",
+        "excludeFromStats": "Exclure des stats",
+        "excludeHint": "La tâche reste au calendrier, mais ses mots ne comptent pas dans le quota.",
+        "notes": "Notes",
+        "notesPlaceholder": "Précisions, rappels, détails à retenir…",
+        "notesCounter": "{count} / {max} caractères"
+      },
+      "validation": {
+        "dayInvalid": "Choisissez un jour valide.",
+        "textTooLong": "Ce champ doit contenir au plus {max} caractères.",
+        "deliveryDateInvalid": "Choisissez une date de livraison valide.",
+        "timeInvalid": "Entrez une heure au format 24 h (HH:MM).",
+        "wordsInvalid": "Entrez un nombre entier de mots.",
+        "durationInvalid": "Entrez une durée valide.",
+        "quotaInvalid": "Le quota doit être d'au moins 1 mot à l'heure.",
+        "statusNotDeliverable": "Cette catégorie ne peut pas porter de statut.",
+        "notesTooLong": "La note doit contenir au plus {max} caractères.",
+        "invalid": "Cette valeur est invalide."
+      }
     },
     "monthsLong": [
       "janvier",
@@ -269,10 +327,12 @@
     "adminTag": "(Admin)",
     "manageUsers": "Gérer les utilisateurs",
     "accountMenu": "Menu du compte",
-    "language": "Langue : {code}",
+    "language": "Langue : {code}",
     "logout": "Déconnexion"
   },
-  "footer": { "rights": "Tous droits réservés." },
+  "footer": {
+    "rights": "Tous droits réservés."
+  },
   "theme": {
     "light": "Thème clair",
     "dark": "Thème sombre",
@@ -287,7 +347,9 @@
       "foret": "Forêt"
     }
   },
-  "a11y": { "switchLocale": "Changer de langue" },
+  "a11y": {
+    "switchLocale": "Changer de langue"
+  },
   "preferences": {
     "saveError": "Votre préférence n'a pas pu être enregistrée. Elle s'appliquera pour cette session seulement."
   },
@@ -313,7 +375,7 @@
       "replace": "Remplacer",
       "remove": "Retirer la photo",
       "cancel": "Annuler",
-      "hint": "JPEG, PNG ou WebP, 5 Mo maximum.",
+      "hint": "JPEG, PNG ou WebP, 5 Mo maximum.",
       "staged": "Nouvelle photo sélectionnée. Enregistrez pour l'appliquer.",
       "removalStaged": "Photo à retirer. Enregistrez pour l'appliquer.",
       "uploading": "Téléversement en cours…",
@@ -321,7 +383,7 @@
       "uploadSuccess": "Votre photo de profil a été enregistrée.",
       "removeSuccess": "Votre photo de profil a été retirée.",
       "error": {
-        "tooLarge": "L'image dépasse la taille maximale de 5 Mo.",
+        "tooLarge": "L'image dépasse la taille maximale de 5 Mo.",
         "type": "Format d'image non pris en charge. Utilisez un fichier JPEG, PNG ou WebP.",
         "corrupt": "Cette image est illisible ou endommagée.",
         "generic": "Une erreur est survenue. Veuillez réessayer."

@@ -1,0 +1,51 @@
+-- Add the notes column to tasks.
+--
+-- The inline task editor carries a Notes field, so the task needs somewhere to keep
+-- it. It holds free multiline text, a paragraph the user writes for themselves or
+-- pastes out of an instruction in an email. The collapsed planning row shows only
+-- that a note is present and never the text.
+--
+-- This is a fresh field, NOT a revival of the instructions column 0007 dropped.
+-- Reading the pair as a mistake being undone would be wrong twice over. Consignes,
+-- the field instructions backed, is out of the product and stays out; nothing ever
+-- wrote to that column but the dev seed, so there is no content to bring back and
+-- no backfill to write; and Notes is the user's own free text on a single task
+-- rather than a client's instructions for a job. The two happen to be the same SQL
+-- type on the same table and they are not the same field.
+--
+-- Nullable with no default, so every existing row reads as having no note and no
+-- backfill is needed. A cleared note stores NULL rather than an empty string,
+-- because a field cleared to '' and a field cleared to NULL are the same thing to
+-- the user and two different things to every reader. The write boundary trims the
+-- value and normalizes an emptied one to NULL, and it bounds the length at 2000
+-- characters as an anti-garbage bound, so the column itself stays permissive and the
+-- meaning is enforced where every other task field's meaning is.
+--
+-- Expand-then-contract note. This is the expand half and it is safe to apply before
+-- the new build, because no build selects the column until this feature's deploy
+-- lands. It ships alongside 0008, which is the contract half; the runner applies
+-- pending files in filename order in one invocation, so 0008's window is what
+-- decides the deploy ordering and that reasoning lives in 0008's header rather than
+-- twice.
+--
+-- Undo. One statement, and it loses whatever notes have been written since:
+--   ALTER TABLE `tasks` DROP COLUMN `notes`;
+--
+-- DO NOT renumber or rename this file once it has been applied anywhere, for the
+-- reason 0008's header sets out: the runner's ledger is keyed on the filename alone
+-- with no checksum, so a renamed file is unrecorded and runs again.
+--
+-- This add matches how 0000 through 0008 are authored in this project, as plain
+-- statement-broken SQL applied by hand rather than by a snapshot-diffing runner,
+-- because the project keeps no drizzle-kit meta snapshot directory.
+--
+-- Idempotency note. SQLite does not support IF NOT EXISTS on ALTER TABLE ADD
+-- COLUMN, so re-running this file is guarded by the ledger rather than by the
+-- statement, which is the same arrangement 0006 relies on.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso
+-- database, matching 0000 through 0008. It must not be pointed at a live database
+-- by CI, a deploy hook, or a dev-boot migration runner.
+
+ALTER TABLE `tasks` ADD `notes` text;

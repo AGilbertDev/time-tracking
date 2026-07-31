@@ -102,11 +102,16 @@ type SeedTask = {
   category: string
   deliveryDate?: string | null
   deliveryTime?: string | null
+  // This row's own words total. There is no second words figure: words_done was dropped by
+  // migration 0008, so the row prints this one number alone.
   projectWordCount?: number | null
-  wordsDone?: number | null
   estimatedMinutes: number
   actualMinutes?: number | null
   status?: string | null
+  // Free multiline text. Omitted on almost every row, because a note is the exception rather than the
+  // rule, and set on one task per week further down so the collapsed row's note marker is visible on
+  // a freshly seeded week without hand-entering one.
+  notes?: string | null
   // Omitted on almost every row. The column is NOT NULL with a false default, so leaving it out
   // seeds a task that counts normally, and only the deliberately excluded ones set it.
   excludeFromStats?: boolean
@@ -155,14 +160,34 @@ const CLIENTS = [
   'Le Mot Juste Pour Rire'
 ] as const
 
+// Notes a translator might plausibly leave for themselves, invented as dev data like the client names
+// above. Nothing here is a real instruction from a real client and nothing names anybody, per the
+// confidentiality rule. The column is free multiline text, so the last member carries a line break,
+// which puts a multiline note somewhere in the seeded span rather than leaving that case to be
+// discovered in the editor. The app never warns about, reformats, or polices what goes in this field,
+// so the seed does not model any rule about its contents either.
+const NOTES = [
+  'Le client veut le glossaire maison, pas celui du projet précédent.',
+  'Garder les titres de sections en anglais, confirmé par courriel.',
+  'Reçu en PDF, les tableaux sont à retaper à la main.',
+  'Deux questions de terminologie encore en attente.\nRelancer avant la livraison.'
+] as const
+
+// The note on the non-trackable row, kept apart from the pool because it is there to make one point:
+// a note on a meeting is normal and is one of the cases the field exists for, and the collapsed row's
+// marker reads the same on it as on any other row.
+const MEETING_NOTE = 'Début du projet, apporter les questions de terminologie.'
+
 // The day patterns, grouped by the capacity band they produce. The first entry of every pattern is
 // the trackable work; the rest is the non-trackable time that still eats the day. Durations are
 // whole minutes and the sums are deliberate: under 390 reads good, 390 through 450 reads warn (the
 // remaining time has fallen into the buffer), and over 450 reads overbooked.
 //
-// Between them these patterns and the two off-day rows further down put every one of the nine
-// default categories on at least one seeded row, so a developer opening the dev app sees the whole
-// set rather than a subset. The two revision members lead one pattern each rather than sharing one,
+// Between them these patterns and the off-day rows further down put every one of the ten default
+// categories on at least one seeded row, so a developer opening the dev app sees the whole set rather
+// than a subset. `other` is the one that is not in any pattern here, because a pattern's minutes are
+// tuned to a capacity band and an extra row would move the day out of it, so it is seeded as its own
+// Saturday row instead. The two revision members lead one pattern each rather than sharing one,
 // because they are separate categories with separate quotas and a seed that only ever wrote one of
 // them would make the pair look like a single category with a longer name.
 const PATTERNS: DayPattern[] = [
@@ -350,9 +375,6 @@ function rowsForDay(
       deliveryDate,
       deliveryTime: dayIndex % 2 === 0 ? '16:00' : '12:00',
       projectWordCount: entry.words,
-      // A finished project has all its words done; today's has roughly half; a planned one has none.
-      wordsDone:
-        phase === 'past' ? entry.words : phase === 'today' ? Math.round(entry.words / 2) : null,
       // A finished day records what it actually took, a little off the estimate in both directions so
       // the numbers do not all read as the plan met exactly.
       actualMinutes:
@@ -436,9 +458,6 @@ weeks.forEach((weekDays, weekIndex) => {
       lateTrackable.status = STATUS_IN_PROGRESS
       lateTrackable.deliveryDate = lateDay
       lateTrackable.deliveryTime = '11:00'
-      // A late task is partly done rather than untouched, which is the realistic case and keeps the
-      // words column meaningful next to the red badge.
-      lateTrackable.wordsDone = Math.round((lateTrackable.projectWordCount ?? 0) / 3)
     }
   }
 
@@ -456,12 +475,36 @@ weeks.forEach((weekDays, weekIndex) => {
 
   if (excludedTrackable) excludedTrackable.excludeFromStats = true
 
+  // One trackable task per week carries a note, so the collapsed row's note marker is visible in every
+  // seeded week in both directions rather than only where a developer happens to look. The pick is the
+  // week's first trackable task that was neither left late nor excluded, so the three markers land on
+  // three different rows and each reads on its own.
+  const notedTrackable = rows.find(
+    (row) =>
+      weekDays.includes(row.date) &&
+      row.date !== lateDay &&
+      row !== excludedTrackable &&
+      isTrackableCategory(row.category)
+  )
+
+  if (notedTrackable) notedTrackable.notes = pick(NOTES, weekIndex, 0)
+
+  // And one meeting carries one, because a note on a non-trackable task is ordinary rather than an
+  // edge case. Nothing about the marker changes for it, which is the thing worth being able to see.
+  const notedMeeting = rows.find(
+    (row) => weekDays.includes(row.date) && row.category === 'meetings'
+  )
+
+  if (notedMeeting) notedMeeting.notes = MEETING_NOTE
+
   // Some off days carry recorded work and some are empty, which is the common case. Every third week
   // logs a short Saturday translation, honouring the do-not-police rule that weekend work is recorded
   // and bonifies the week; every fourth week starts with a Sunday admin task.
-  if (weekIndex % 3 === 0) {
-    const saturday = weekDays[6]!
-    const phase = phaseOf(saturday)
+  const saturday = weekDays[6]!
+  const saturdayPhase = phaseOf(saturday)
+  const hasSaturdayTranslation = weekIndex % 3 === 0
+
+  if (hasSaturdayTranslation) {
     rows.push({
       userId: ownerId,
       date: saturday,
@@ -469,13 +512,36 @@ weeks.forEach((weekDays, weekIndex) => {
       project: `P-${2000 + weekIndex * 7}`,
       category: 'translation',
       projectWordCount: 1800,
-      wordsDone: phase === 'past' ? 1800 : phase === 'today' ? 800 : null,
       estimatedMinutes: 90,
-      actualMinutes: phase === 'future' ? null : 90,
-      status: STATUS_BY_PHASE[phase],
+      actualMinutes: saturdayPhase === 'future' ? null : 90,
+      status: STATUS_BY_PHASE[saturdayPhase],
       sortOrder: 0
     })
   }
+
+  // Every week logs one Autre task, so the tenth category is on a row in every seeded week rather
+  // than only where a developer happens to look. It carries both a word count and a status, and that
+  // combination is the point of seeding it at all. Autre is the one member that is not trackable and
+  // does still carry a status, so this row is what makes all three of its differences visible without
+  // hand-entering anything: its own colour on the printed category name, a real status where the
+  // other non-trackable categories read N/A, and a figure in the Mots cell where they read the
+  // not-applicable dash. Its words reach no quota, because the row is not trackable.
+  //
+  // It goes on the Saturday rather than into a day pattern because every pattern's minutes are tuned
+  // to land its day in a named capacity band, and adding a row to one would move that day out of the
+  // band it was written to demonstrate.
+  rows.push({
+    userId: ownerId,
+    date: saturday,
+    client: pick(CLIENTS, weekIndex, 6, 1),
+    project: `A-${3000 + weekIndex * 7}`,
+    category: 'other',
+    projectWordCount: 900,
+    estimatedMinutes: 60,
+    actualMinutes: saturdayPhase === 'future' ? null : 60,
+    status: STATUS_BY_PHASE[saturdayPhase],
+    sortOrder: hasSaturdayTranslation ? 1 : 0
+  })
 
   if (weekIndex % 4 === 1) {
     const sunday = weekDays[0]!

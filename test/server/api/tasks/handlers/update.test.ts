@@ -237,8 +237,12 @@ describe('updateTask', () => {
       expect(stored?.actual_minutes).toBe(95)
     })
 
-    // The same rule for the other column PLAN-33 is about to drop (AC30).
-    it('never writes words_done when the word count changes', async () => {
+    // Replaces the guard that used to assert words_done stayed NULL when the word count changed.
+    // Migration 0008 dropped the column, so `SELECT words_done` is now a SQL error rather than an
+    // assertion. It is replaced rather than deleted per task-inline-editor.md AC8: a patch carrying
+    // wordsDone is still a 422, now as an unknown key refused by strict() rather than as a named
+    // exclusion, and nothing here would otherwise notice a later hand re-adding the column.
+    it('refuses a patch carrying wordsDone, and stores the word count with no second column', async () => {
       await seedTask(client, {
         id: 'task-1',
         date: '2026-07-20',
@@ -246,11 +250,17 @@ describe('updateTask', () => {
         projectWordCount: 5_000
       })
 
+      expect(TaskUpdateSchema.safeParse({ wordsDone: 500 }).success).toBe(false)
+
       await updateTask(event, 'task-1', patch({ projectWordCount: 12_000 }))
       const stored = await readStoredRow(client, 'task-1')
+      const columns = Object.keys(stored ?? {})
 
+      // Positive control first, so the absence below is a finding rather than an empty read.
       expect(stored?.project_word_count).toBe(12_000)
-      expect(stored?.words_done).toBeNull()
+      expect(columns).toContain('project_word_count')
+
+      expect(columns).not.toContain('words_done')
     })
   })
 
@@ -358,10 +368,12 @@ describe('updateTask', () => {
       expect(updated.statusKey).toBe('accepte')
     })
 
-    // Trackability is read from the shared contract, so every non-trackable id behaves the same way
-    // rather than a hand-written subset of them.
+    // The rule is read from the shared contract, so every id that carries no status behaves the same
+    // way rather than a hand-written subset of them. These five are the kinds of consumed time, which
+    // is a narrower set than the six non-trackable ids, because `other` is non-trackable and does
+    // carry a status. That distinction is the next two tests.
     it.each(['terminology', 'meetings', 'breaks', 'admin', 'dtp'])(
-      'clears the status when moving to the non-trackable category %s',
+      'clears the status when moving to the non-deliverable category %s',
       async (category) => {
         await seedTask(client, {
           id: `task-${category}`,
@@ -375,6 +387,84 @@ describe('updateTask', () => {
         expect((await readStoredRow(client, `task-${category}`))?.status).toBeNull()
       }
     )
+
+    // -------------------------------------------------------------------------------------------
+    // UC13, and the data-loss path this feature would have created rather than inherited if the
+    // clearing rule had stayed keyed on trackability. `other` is not trackable, so a guard reading
+    // isTrackableCategory would wipe a stored status the moment a user moved a row to Autre, silently
+    // and as part of a write they made for another reason. The guard reads the deliverable flag
+    // instead, so moving to `other` clears nothing.
+    //
+    // Read back from the row rather than only off the response, because the criterion is about what
+    // the database holds afterwards.
+    // -------------------------------------------------------------------------------------------
+    it('leaves the stored status alone when the patch moves the task to other', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        status: 'Terminé'
+      })
+
+      const updated = await updateTask(event, 'task-1', patch({ category: 'other' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.status).toBe('Terminé')
+      expect(updated.status).toBe('Terminé')
+      expect(updated.statusKey).toBe('termine')
+      // The row is not trackable and it does carry a status, which is the pair of facts that made the
+      // two flags necessary. Asserted together so neither can be read as implying the other.
+      expect(updated.trackable).toBe(false)
+      expect(updated.deliverable).toBe(true)
+    })
+
+    // UC12: the same move stated in full is legal too, so a client that does send the status is not
+    // punished for it. This is the create-and-update symmetry assertStatusFitsCategory guarantees.
+    it('accepts a move to other that asserts a status at the same time', async () => {
+      await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'breaks' })
+
+      const updated = await updateTask(
+        event,
+        'task-1',
+        patch({ category: 'other', status: 'En cours' })
+      )
+
+      expect((await readStoredRow(client, 'task-1'))?.status).toBe('En cours')
+      expect(updated.statusKey).toBe('encours')
+    })
+
+    // The reverse direction, which is the workflow the default exists to allow. A row that landed on
+    // `other` and was later classified keeps its status and starts counting toward the quota, and
+    // nothing warns, because classifying a row later is ordinary rather than an error.
+    it('keeps the status when moving from other to a trackable category', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'other',
+        status: 'Terminé'
+      })
+
+      const updated = await updateTask(event, 'task-1', patch({ category: 'translation' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.status).toBe('Terminé')
+      expect(updated.trackable).toBe(true)
+      expect(updated.deliverable).toBe(true)
+    })
+
+    // And the path that does still clear, starting from `other` rather than from a trackable id, so
+    // the clearing rule is shown to depend on the destination rather than on where the row began.
+    it('clears the status when moving from other to a non-deliverable category', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'other',
+        status: 'Terminé'
+      })
+
+      const updated = await updateTask(event, 'task-1', patch({ category: 'breaks' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.status).toBeNull()
+      expect(updated.statusKey).toBe('na')
+    })
   })
 
   describe('sort_order on a date change (AC28)', () => {
@@ -482,6 +572,7 @@ describe('updateTask', () => {
           'estimatedMinutes',
           'excludeFromStats',
           'id',
+          'notes',
           'project',
           'projectWordCount',
           'quotaWphOverride',
@@ -490,7 +581,7 @@ describe('updateTask', () => {
           'status',
           'statusKey',
           'trackable',
-          'wordsDone'
+          'deliverable'
         ].sort()
       )
       expect(updated).toMatchObject({ id: 'task-1', status: 'En cours', statusKey: 'encours' })
@@ -544,5 +635,84 @@ describe('updateTask', () => {
       expect(stored?.status).toBe('En cours')
       expect(stored?.actual_minutes).toBe(95)
     })
+  })
+})
+
+// The notes column on a patch, from docs/specs/planning/task-inline-editor.md AC11 and AC12. The
+// three instructions a patch can carry for it are different from each other and only a stored-row
+// read tells them apart: a value stores that value, an explicit null clears the column, and an
+// omitted key leaves whatever was there alone.
+describe('updateTask and the notes column (AC11, AC12)', () => {
+  it('stores a note the patch carried', async () => {
+    await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'translation' })
+
+    const updated = await updateTask(event, 'task-1', patch({ notes: 'Relire le glossaire.' }))
+
+    expect((await readStoredRow(client, 'task-1'))?.notes).toBe('Relire le glossaire.')
+    expect(updated.notes).toBe('Relire le glossaire.')
+  })
+
+  it('clears the column on an explicit null', async () => {
+    await seedTask(client, {
+      id: 'task-1',
+      date: '2026-07-20',
+      category: 'translation',
+      notes: 'Ancienne note.'
+    })
+
+    await updateTask(event, 'task-1', patch({ notes: null }))
+
+    expect((await readStoredRow(client, 'task-1'))?.notes).toBeNull()
+  })
+
+  it('clears the column when the note is emptied to whitespace', async () => {
+    await seedTask(client, {
+      id: 'task-1',
+      date: '2026-07-20',
+      category: 'translation',
+      notes: 'Ancienne note.'
+    })
+
+    await updateTask(event, 'task-1', patch({ notes: '  \n ' }))
+
+    const stored = await readStoredRow(client, 'task-1')
+    expect(stored?.notes).toBeNull()
+    expect(stored?.notes).not.toBe('')
+  })
+
+  it('leaves an existing note alone when the patch omits notes', async () => {
+    await seedTask(client, {
+      id: 'task-1',
+      date: '2026-07-20',
+      category: 'translation',
+      notes: 'Ancienne note.'
+    })
+
+    await updateTask(event, 'task-1', patch({ client: 'Acme' }))
+
+    const stored = await readStoredRow(client, 'task-1')
+    expect(stored?.notes).toBe('Ancienne note.')
+    expect(stored?.client).toBe('Acme')
+  })
+
+  it('replaces an existing note with a new one', async () => {
+    await seedTask(client, {
+      id: 'task-1',
+      date: '2026-07-20',
+      category: 'translation',
+      notes: 'Ancienne note.'
+    })
+
+    await updateTask(event, 'task-1', patch({ notes: 'Nouvelle note.' }))
+
+    expect((await readStoredRow(client, 'task-1'))?.notes).toBe('Nouvelle note.')
+  })
+
+  it('keeps the newlines of a multiline note through a patch', async () => {
+    await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'translation' })
+
+    await updateTask(event, 'task-1', patch({ notes: 'ligne un\nligne deux' }))
+
+    expect((await readStoredRow(client, 'task-1'))?.notes).toBe('ligne un\nligne deux')
   })
 })

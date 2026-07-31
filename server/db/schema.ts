@@ -74,22 +74,44 @@ export const tasks = sqliteTable(
     // Free text. Absent on non-trackable tasks (a break has no client/project).
     client: text('client'),
     project: text('project'),
-    // Free-text category id. The trackable flag and the known set live in the
-    // PLAN-02 contract; coerced at read, validated at the PLAN-09 write boundary.
+    // Free-text category id. The two category flags and the known set live in the
+    // PLAN-02 contract, coerced at read and validated at the PLAN-09 write
+    // boundary. No CHECK and no enum here on purpose, which is why adding a
+    // category needs no migration and an existing row keeps whatever it holds.
+    // Deliberately no DDL default either, even though a create now defaults it.
+    // SQLite cannot add one to an existing column without rebuilding the table,
+    // and a literal here could not import the contract, so it would be a second
+    // copy of the fallback id free to drift. The default is declared once on
+    // TaskCreateSchema instead.
     category: text('category').notNull(),
     deliveryDate: text('delivery_date'),
     deliveryTime: text('delivery_time'),
     // Plain integer counts and whole-minute durations. The schema stores raw
     // facts only; the quota math (PLAN-22) and the frozen estimate (PLAN-12)
-    // live in their own features. wordsDone is the quota numerator, treated as
-    // zero when absent. quotaWphOverride NULL means use settings.quota_wph.
+    // live in their own features. quotaWphOverride NULL means use
+    // settings.quota_wph.
+    //
+    // project_word_count is this row's own total, which is the whole project's
+    // total only when the work is not split across days. The name reads as a
+    // whole project's and is therefore mildly misleading, and it is kept rather
+    // than renamed: a rename means either ALTER TABLE RENAME COLUMN plus an edit
+    // to every reader or a create-copy-swap, and it also renames
+    // projectWordCount on a request contract that has already shipped, which
+    // turns an internal tidy into a breaking API change for no behaviour gained.
+    //
+    // There is no second words column. words_done was the quota numerator and
+    // migration 0008 dropped it, because a per-row progress figure the user will
+    // not reliably enter produces worse statistics than no figure. Work spanning
+    // several days is several rows, each carrying the words actually done that
+    // day as its own total, and that is what the quota engine sums.
     projectWordCount: integer('project_word_count'),
-    wordsDone: integer('words_done'),
     quotaWphOverride: integer('quota_wph_override'),
     estimatedMinutes: integer('estimated_minutes'),
     actualMinutes: integer('actual_minutes'),
-    // Free text. Trackable only ('Accepté' / 'En cours' / 'Terminé'); NULL reads
-    // as 'N/A' for non-trackable tasks. Validated at the PLAN-09 write boundary.
+    // Free text ('Accepté' / 'En cours' / 'Terminé'), carried only by a category
+    // the contract marks deliverable, which is not the same set as the trackable
+    // ones. NULL reads as 'N/A' for a category that carries no status. Validated
+    // at the PLAN-09 write boundary.
     status: text('status'),
     // Takes this task out of the quota numerator while its duration still comes out of the
     // denominator, which is the split PLAN-22 implements. SQLite has no boolean type, so the
@@ -97,6 +119,18 @@ export const tasks = sqliteTable(
     // NOT NULL with a false default because "not excluded" is the answer for every existing row
     // and a nullable flag would give the quota engine a third state to interpret.
     excludeFromStats: integer('exclude_from_stats', { mode: 'boolean' }).notNull().default(false),
+    // The user's own free multiline text on this task, added by migration 0009.
+    // Nullable with no default, and a cleared note stores NULL rather than '' so
+    // every reader has one absent case instead of two. It is a fresh field rather
+    // than a revival of the instructions column 0007 dropped: Consignes is out of
+    // the product, nothing but the dev seed ever wrote that column, and a note is
+    // the user's own reminder on one task rather than a client's instructions for
+    // a job. Trimmed at the write boundary and bounded there by TASK_NOTES_MAX
+    // from shared/planning.ts, which is where every other task field's meaning is
+    // enforced. The bound lives in the shared layer rather than here because the
+    // editor needs the same number for its character counter, so both sides read
+    // one declaration instead of keeping two that drift.
+    notes: text('notes'),
     // A plain grouping key (a shared uuid) linking the per-day slices of one
     // logical multi-day task. No self-FK: all slices are peers with no parent,
     // and a group of one (an interrupted split) is a valid state.
@@ -114,21 +148,30 @@ export const tasks = sqliteTable(
     // data with no reason to outlive the account, so cascade leaves no orphans
     // and gives a future erasure path (PLAN-29) a clean sweep.
     //
-    // Cascade needs PRAGMA foreign_keys = ON, and nothing in this repo sets it
-    // because nothing here has to. Turso enforces foreign keys by default at the
-    // server, so enforcement comes from the platform rather than from any client
+    // Cascade needs PRAGMA foreign_keys = ON, and no application code here sets
+    // it. Turso enforces foreign keys by default at the server, so in production
+    // enforcement comes from the platform rather than from any client
     // configuration, and the libSQL client needs no pragma of its own. The
     // pipeline orchestrator checked this on 2026-07-29 with a read-only probe
     // against the development database, running SELECT 1 as a positive control
     // first and then PRAGMA foreign_keys, which answered 1. Production was never
     // probed, so read this as verified in development only.
     //
-    // The suite cannot catch a regression here. test/helpers/taskTestDb.ts
-    // declares this same foreign key on an in-memory libSQL client and never
-    // issues the pragma, and SQLite leaves foreign_keys off per connection until
-    // something turns it on, so cascades are not enforced under test. A cascade
-    // that stopped working would keep the suite green, which is worth knowing
-    // before reading a passing run as cover for anything in this area.
+    // Nothing depends on that cascade for erasure. The purge endpoint
+    // (server/api/cron/purge-deactivated.get.ts) deletes tasks and work_schedule
+    // explicitly, precisely because the pragma is unverified on the one database
+    // where a failed erasure would matter. Read this cascade as a second line of
+    // defence rather than as the mechanism.
+    //
+    // The suite does now cover this area, which it could not before. As long as
+    // test/helpers/taskTestDb.ts issued no pragma, SQLite left foreign keys off
+    // per connection and every key declared here was decoration under test, so a
+    // broken cascade kept the suite green. That helper now turns the pragma on by
+    // default and test/server/api/cron/purge-deactivated-rows.test.ts asserts
+    // both that it reads back on and that an orphan insert is genuinely refused,
+    // so the enforcement is proved rather than configured. The one suite that
+    // opts out is that same file's purge case, which needs the cascade absent in
+    // order to prove the explicit deletes do the work themselves.
     foreignKey({ columns: [table.userId], foreignColumns: [users.id] }).onDelete('cascade'),
     // userId first for the equality match, date second for the range, so every
     // period stat is a single indexed range scan over (userId, date).

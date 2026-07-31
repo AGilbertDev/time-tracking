@@ -7,7 +7,7 @@ import {
 } from '~~/server/models/tasks'
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_CATEGORY_IDS } from '#shared/categories'
+import { DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_IDS } from '#shared/categories'
 
 // The Zod schemas behind POST /api/tasks, PATCH /api/tasks/[id], and both [id] routes' path
 // parameter. They are the whole of the write boundary the tasks table was deliberately left
@@ -64,9 +64,11 @@ describe('isValidClockTime (HH:MM, 24-hour)', () => {
 })
 
 describe('TaskCreateSchema', () => {
-  describe('required fields (AC10)', () => {
-    // Only date and category are required, because they are the only two NOT NULL columns with no
-    // default. Adding a break or a meeting should cost the user nothing more.
+  describe('required fields (AC10, UC20 to UC24)', () => {
+    // Only date is required now. Category was required until the other-category spec gave it a
+    // default at this boundary, and it stopped being required by the rule already in force rather
+    // than by an exception to it, since that rule is that a field is required when its column is NOT
+    // NULL and has no default. The column is still NOT NULL and it now has a default.
     it('accepts a body of only date and category', () => {
       const result = TaskCreateSchema.safeParse(MINIMAL_CREATE)
 
@@ -78,11 +80,45 @@ describe('TaskCreateSchema', () => {
       expect(TaskCreateSchema.safeParse({ category: 'translation' }).success).toBe(false)
     })
 
-    it('rejects a body with no category', () => {
-      expect(TaskCreateSchema.safeParse({ date: '2026-07-20' }).success).toBe(false)
+    // UC20 and UC21, and this assertion is the inversion of one that read "rejects a body with no
+    // category". The smallest legal add is now a day, which is what brings the create form in line
+    // with do not police the user, because a save blocked by a dropdown nobody touched is the app
+    // refusing to record something that happened.
+    //
+    // The category is read off the parse result rather than inferred from success alone, because the
+    // criterion is about the value the boundary supplies and not merely about the body being accepted.
+    it('accepts a body of only date and defaults the category', () => {
+      const result = TaskCreateSchema.safeParse({ date: '2026-07-20' })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.category).toBe('other')
     })
 
-    // The columns are NOT NULL, so neither field is nullable even though most of the others are.
+    // UC23: the default is read from the shared constant rather than from a literal repeated at the
+    // boundary, so the coercion fallback and the create default cannot drift apart. Asserted against
+    // DEFAULT_CATEGORY_ID rather than against the string, so a future move of the fallback moves this
+    // with it instead of failing here.
+    it('takes its default category from DEFAULT_CATEGORY_ID rather than a literal', () => {
+      const result = TaskCreateSchema.safeParse({ date: '2026-07-20' })
+
+      expect(result.data?.category).toBe(DEFAULT_CATEGORY_ID)
+    })
+
+    // UC19: an explicit choice and an omission reach the same stored value by two legal routes, which
+    // is the point rather than a redundancy.
+    it('accepts an explicit other, so omitting and choosing it agree', () => {
+      const explicit = TaskCreateSchema.safeParse({ date: '2026-07-20', category: 'other' })
+      const omitted = TaskCreateSchema.safeParse({ date: '2026-07-20' })
+
+      expect(explicit.success).toBe(true)
+      expect(explicit.data?.category).toBe(omitted.data?.category)
+    })
+
+    // The columns are NOT NULL, so neither field is nullable even though most of the others are. An
+    // omitted category and an explicit null are deliberately different. Omitting it means "you decide"
+    // and takes the default, and a null means "store nothing" against a NOT NULL column, which is not
+    // a question the server can answer, so it stays a 422. A Zod default fires on undefined only,
+    // which is exactly this distinction.
     it.each([
       ['date', { ...MINIMAL_CREATE, date: null }],
       ['category', { ...MINIMAL_CREATE, category: null }]
@@ -384,6 +420,153 @@ describe('TaskCreateSchema', () => {
       ).toBe(true)
     })
   })
+
+  // The notes column arrived with the inline task editor, so these cases come from
+  // docs/specs/planning/task-inline-editor.md rather than from the write-API spec above. The criteria
+  // are AC11 (a create or update accepting notes stores it, and null clears it), AC12 (whitespace
+  // only stores NULL and a multiline value keeps its newline), AC13 (2000 accepted, 2001 a 422 naming
+  // notes, and the length measured after trimming), AC15 (notes is writable on both endpoints because
+  // both bodies are strict) and AC63 (the schema covered at 0, 1, 2000 and 2001 characters).
+  //
+  // The bound is deliberately not the 200 of the identity fields. A note is a paragraph, often pasted
+  // out of an instruction in an email, and 200 characters would cut it mid-sentence. The figures are
+  // written as literals here for the same reason the status values are, which is that reading the same
+  // constant as the code under test proves the wiring and never the value.
+  describe('the notes field (AC11, AC12, AC13, AC15, AC63)', () => {
+    it('accepts a note and keeps its text', () => {
+      const result = TaskCreateSchema.safeParse({
+        ...MINIMAL_CREATE,
+        notes: 'Relire le glossaire.'
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBe('Relire le glossaire.')
+    })
+
+    it('is writable on the create endpoint at all, which a strict body only allows if it is declared', () => {
+      expect(TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: 'x' }).success).toBe(true)
+    })
+
+    it('leaves an omitted note out of the parsed body, so the column is left alone', () => {
+      const result = TaskCreateSchema.safeParse(MINIMAL_CREATE)
+
+      expect(result.success).toBe(true)
+      expect('notes' in (result.data ?? {})).toBe(false)
+    })
+
+    it('accepts an explicit null, which is what clears a note', () => {
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: null })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBeNull()
+    })
+
+    // AC63's zero-character case. A cleared field stored as '' and one stored as NULL are the same
+    // thing to the user and two different things to every reader, so only NULL is stored.
+    it('stores an empty note as null rather than as an empty string', () => {
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: '' })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBeNull()
+    })
+
+    // AC12: notes of '  ' store NULL, not a whitespace string.
+    it.each(['  ', '\n', ' \n\t '])('stores the whitespace-only note %j as null', (value) => {
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: value })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBeNull()
+    })
+
+    it('accepts a note of one character', () => {
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: 'a' })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBe('a')
+    })
+
+    it('trims the ends of a note', () => {
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: '  Relire  ' })
+
+      expect(result.data?.notes).toBe('Relire')
+    })
+
+    // AC12: 'ligne un\nligne deux' stores both lines with the newline intact, because trimming only
+    // touches the ends.
+    it('keeps the newlines inside a multiline note', () => {
+      const result = TaskCreateSchema.safeParse({
+        ...MINIMAL_CREATE,
+        notes: 'ligne un\nligne deux'
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBe('ligne un\nligne deux')
+    })
+
+    it('keeps the interior newlines while trimming the ends of a multiline note', () => {
+      const result = TaskCreateSchema.safeParse({
+        ...MINIMAL_CREATE,
+        notes: '\n ligne un\n\nligne deux \n'
+      })
+
+      expect(result.data?.notes).toBe('ligne un\n\nligne deux')
+    })
+
+    it('accepts a note of exactly 2000 characters', () => {
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: 'a'.repeat(2000) })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toHaveLength(2000)
+    })
+
+    it('rejects a note of 2001 characters', () => {
+      expect(
+        TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: 'a'.repeat(2001) }).success
+      ).toBe(false)
+    })
+
+    // AC13: the 422's `data` names notes, because sendZodError keys the response by field name and the
+    // editor maps that key to its own French message.
+    it('names notes in the issue path when the note is too long', () => {
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: 'a'.repeat(2001) })
+
+      expect(result.success).toBe(false)
+      expect(result.error?.issues.map((issue) => issue.path.join('.'))).toContain('notes')
+    })
+
+    // AC13: the length is measured after trimming, so 2000 characters surrounded by spaces is
+    // accepted rather than counted as 2002.
+    it('measures the bound after trimming', () => {
+      const result = TaskCreateSchema.safeParse({
+        ...MINIMAL_CREATE,
+        notes: `  ${'a'.repeat(2000)}  `
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toHaveLength(2000)
+    })
+
+    // The note is its own bound rather than the identity fields' 200, so a paragraph is not cut
+    // mid-sentence.
+    it('accepts a note far longer than the 200 the one-line fields allow', () => {
+      expect(
+        TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: 'a'.repeat(201) }).success
+      ).toBe(true)
+    })
+
+    it('rejects a note that is not a string', () => {
+      expect(TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: 42 }).success).toBe(false)
+    })
+
+    // Nothing in the editor or at the boundary polices what the user writes in a note.
+    it('accepts a note carrying punctuation, accents, and an emoji', () => {
+      const note = 'Réunion : suivi du dossier — voir pièce jointe 📎'
+      const result = TaskCreateSchema.safeParse({ ...MINIMAL_CREATE, notes: note })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBe(note)
+    })
+  })
 })
 
 describe('TaskUpdateSchema', () => {
@@ -493,6 +676,59 @@ describe('TaskUpdateSchema', () => {
 
       expect(result.success).toBe(true)
       expect(result.data?.[field]).toBeNull()
+    })
+  })
+
+  // The notes half of the inline editor's contract, on the endpoint the editor patches through.
+  // AC11 spells out all three states a patch can express for it, and AC15 says the field is writable
+  // on both endpoints rather than only on create.
+  describe('the notes field on a patch (AC11, AC15)', () => {
+    it('accepts a patch carrying only notes', () => {
+      const result = TaskUpdateSchema.safeParse({ notes: 'Relire le glossaire.' })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBe('Relire le glossaire.')
+    })
+
+    it('clears a note sent as an explicit null', () => {
+      const result = TaskUpdateSchema.safeParse({ notes: null })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBeNull()
+    })
+
+    it('clears a note sent as an empty string', () => {
+      const result = TaskUpdateSchema.safeParse({ notes: '' })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBeNull()
+    })
+
+    it('clears a note sent as whitespace only', () => {
+      const result = TaskUpdateSchema.safeParse({ notes: '  \n ' })
+
+      expect(result.success).toBe(true)
+      expect(result.data?.notes).toBeNull()
+    })
+
+    // An omitted notes leaves the column alone, which is the difference between the two instructions a
+    // partial patch can carry.
+    it('leaves the column alone when notes is omitted', () => {
+      const result = TaskUpdateSchema.safeParse({ client: 'Acme' })
+
+      expect(result.success).toBe(true)
+      expect('notes' in (result.data ?? {})).toBe(false)
+    })
+
+    it('keeps a multiline note intact on a patch', () => {
+      const result = TaskUpdateSchema.safeParse({ notes: 'ligne un\nligne deux' })
+
+      expect(result.data?.notes).toBe('ligne un\nligne deux')
+    })
+
+    it('accepts 2000 characters and rejects 2001 on a patch as well', () => {
+      expect(TaskUpdateSchema.safeParse({ notes: 'a'.repeat(2000) }).success).toBe(true)
+      expect(TaskUpdateSchema.safeParse({ notes: 'a'.repeat(2001) }).success).toBe(false)
     })
   })
 })

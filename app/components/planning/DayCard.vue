@@ -1,34 +1,53 @@
 <script setup lang="ts">
 import type { DayCapacity, PlanningTask } from '#shared/planning'
+import type { OpenEditorTarget } from '~/utils/taskEditor'
 
 // One day card in the week stack (PLAN-07). Every day is one section: a three-zone header band above
-// a disclosure region holding the column header line and the task rows. A work day is a solid card
-// with a tinted band; an off day is a quieter dashed block with no meter and no reading (the
-// do-not-police rule keeps a non-work day off the capacity read), and today adds a primary ring on
-// either.
+// a disclosure region holding the column header line, the task rows, and the day footer block. A work
+// day is a solid card with a tinted band; an off day is a quieter dashed block with no meter and no
+// reading (the do-not-police rule keeps a non-work day off the capacity read), and today adds a
+// primary ring on either.
 //
-// The card is the week's only interactive element. Every day starts collapsed except today, so the
-// week reads as a short stack of headers and the user opens the day they care about. Collapsing is
-// safe because the capacity meter stays in the collapsed header unchanged: a full or overbooked day
-// is red before it is opened. On an off day, which carries no meter, the task count is the only
-// signal that recorded weekend work is there, which is the strongest single reason the count exists.
+// Every card is now interactive twice over: the header discloses the day, and each row inside
+// discloses its own editor. Collapsing is still safe because the capacity meter stays in the collapsed
+// header unchanged: a full or overbooked day is red before it is opened. On an off day, which carries
+// no meter, the task count is the only signal that recorded weekend work is there, which is the
+// strongest single reason the count exists.
 const props = defineProps<{
+  capacity: DayCapacity | null
+  continuationIds: Set<string>
   date: string
   dayLabel: string
+  // Bumped by the page to pull focus back into an open editor, which is what happens when the user
+  // declines the discard confirmation. Threaded through untouched.
+  editorFocusRequest: number
   isToday: boolean
   isWorkDay: boolean
   offLabel: string | null
+  // The one editor open anywhere in the week, so this card can tell whether it holds it.
+  openEditor: null | OpenEditorTarget
   tasks: PlanningTask[]
-  continuationIds: Set<string>
-  capacity: DayCapacity | null
+}>()
+
+const emit = defineEmits<{
+  // Ask the page to close whatever editor is open. The optional continuation is run once it has
+  // actually gone, which is how a collapse waits for the dirty check: the page may put a discard
+  // confirmation in the way, and the card must not collapse around an editor that is still holding
+  // unsaved values, because `inert` on the panel would make it a dead end.
+  closeEditor: [after?: () => void]
+  openEditor: [target: OpenEditorTarget]
+  saved: [payload: { mode: 'create' | 'update'; taskId: string }]
+  'update:editorDirty': [dirty: boolean]
 }>()
 
 const { t } = useI18n()
 
-// A day with no tasks grows no control. There is nothing to disclose, and a button that opens onto
-// an empty body is a promise the card cannot keep. That also means the today-starts-open rule simply
-// does not apply on a day today happens to be empty.
-const canDisclose = computed(() => props.tasks.length > 0)
+// Every day is disclosable, including a day with no tasks, so there is no longer any condition on the
+// control at all. It used to grow none on the grounds that a button opening onto an empty body is a
+// promise the card cannot keep, and that premise changed when the add control moved into the body: an
+// empty day now discloses the one thing that makes a first task possible. Without that, the first task
+// of a day could never be added, which is the one thing this feature exists to make possible. The
+// today-starts-open default therefore applies on an empty today as well.
 
 // The open state lives here and nowhere else. This is the narrow presentation exception the
 // project's backend-logic rule carves out by name: whether a panel is open has no meaning off the
@@ -42,9 +61,35 @@ const canDisclose = computed(() => props.tasks.length > 0)
 // the visit. Null means the user has not touched this card, so the default keeps applying until the
 // data lands; the first toggle pins it.
 const userOpen = ref<boolean | null>(null)
-const open = computed(() => userOpen.value ?? (props.isToday && canDisclose.value))
+const open = computed(() => userOpen.value ?? props.isToday)
+
+// Whether the one open editor in the week is inside this card, which is the only case where
+// collapsing has to wait for anything.
+const holdsOpenEditor = computed(() => props.openEditor?.date === props.date)
+
+const editingTaskId = computed(() =>
+  props.openEditor?.kind === 'edit' && props.openEditor.date === props.date
+    ? props.openEditor.taskId
+    : null
+)
+
+const draftOpen = computed(
+  () => props.openEditor?.kind === 'draft' && props.openEditor.date === props.date
+)
+
+const draftPanelId = computed(() => `planning-day-draft-${props.date}`)
+
+function taskPanelId(taskId: string) {
+  return `planning-task-editor-${taskId}`
+}
 
 function toggleOpen() {
+  if (open.value && holdsOpenEditor.value) {
+    emit('closeEditor', () => {
+      userOpen.value = false
+    })
+    return
+  }
   userOpen.value = !open.value
 }
 
@@ -112,7 +157,6 @@ const dayNameClass = computed(() =>
       <!-- Left zone: the disclosure control, the day name, and its tags. -->
       <div class="flex min-w-0 items-baseline gap-x-2">
         <UIcon
-          v-if="canDisclose"
           aria-hidden="true"
           class="size-4 shrink-0 self-center text-muted transition-transform duration-150 motion-reduce:transition-none"
           :class="open && 'rotate-90'"
@@ -124,24 +168,24 @@ const dayNameClass = computed(() =>
              The stretched pseudo-element makes the whole band the click target without wrapping a
              heading in a button, which is not valid button content. No expand or collapse copy is
              added: aria-expanded is the correct carrier and assistive technology announces the state
-             itself. A day with nothing to disclose renders no button and no chevron at all. -->
+             itself. -->
         <h2
           :id="`planning-day-${date}`"
           class="min-w-0 truncate first-letter:uppercase"
           :class="dayNameClass"
         >
           <button
-            v-if="canDisclose"
+            :id="`planning-day-toggle-${date}`"
             :aria-controls="`planning-day-panel-${date}`"
-            :aria-describedby="open ? undefined : `planning-day-count-${date}`"
+            :aria-describedby="open || !tasks.length ? undefined : `planning-day-count-${date}`"
             :aria-expanded="open"
             class="scroll-mt-24 text-left first-letter:uppercase after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+            data-editor-gate
             type="button"
             @click="toggleOpen"
           >
             {{ dayLabel }}
           </button>
-          <template v-else>{{ dayLabel }}</template>
         </h2>
 
         <span
@@ -161,7 +205,9 @@ const dayNameClass = computed(() =>
              away once the rows are visible and counting them again would be noise. It is the length
              of this card's own tasks array, never an endpoint field, so it can never disagree with
              the rows it labels. It lives inside the fixed left track, so appearing and disappearing
-             cannot move the capacity bar.
+             cannot move the capacity bar. An empty day prints no count at all rather than a zero:
+             no count already means no work, and a zero would need its own copy in two locales to say
+             the same thing.
 
              It is also the button's description while the day is shut, so the count is announced on
              focus and not only when reading the header line by line. A collapsed day's task count
@@ -169,7 +215,7 @@ const dayNameClass = computed(() =>
              measures 1.8:1 in light, so the tone is lifted to `text-toned` (8.7:1 or better in every
              theme). -->
         <span
-          v-if="canDisclose && !open"
+          v-if="tasks.length && !open"
           :id="`planning-day-count-${date}`"
           class="shrink-0 text-xs font-medium tabular-nums text-toned"
         >
@@ -191,9 +237,9 @@ const dayNameClass = computed(() =>
     <!-- The disclosure region. Height only, 150 ms, no slide, no fade, no per-row stagger, animated
          through grid-template-rows so nothing has to be measured. The chevron rotates on the same
          duration so the two read as one gesture, and both are suppressed under prefers-reduced-motion
-         so the region snaps. -->
+         so the region snaps. The editor panel inside adds no motion of its own: it is created and
+         destroyed rather than hidden, so an exit animation would keep an unmounted form on screen. -->
     <div
-      v-if="canDisclose"
       class="grid transition-[grid-template-rows] duration-150 ease-out motion-reduce:transition-none"
       :class="open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
     >
@@ -201,24 +247,35 @@ const dayNameClass = computed(() =>
            else: without `inert` it stays in the accessibility tree and in the tab order, so a screen
            reader would read every row of a day the button has just announced as collapsed, and the
            scroller below would be a tab stop into invisible content. `aria-hidden` is the fallback
-           for a browser that does not support `inert` yet. -->
+           for a browser that does not support `inert` yet. No editor is ever left in here, because
+           the toggle above routes a collapse through the page's dirty check first.
+
+           It is also a named query container, which is what lets the editor panel be exactly as wide
+           as the visible card rather than as wide as the table's minimum. Its inline size is the
+           card's inner width, which is what a form should be measured against, where the viewport
+           tells you nothing because the card does not fill it. Inline-size containment does not
+           contain the block size, so the grid-template-rows collapse above still works. -->
       <div
         :id="`planning-day-panel-${date}`"
         :aria-hidden="!open"
-        class="overflow-hidden"
+        class="@container/day overflow-hidden"
         :inert="!open"
       >
         <!-- Below the row's minimum width the card scrolls inside its own container and the page body
              never scrolls sideways. There is no second arrangement: the app has no mobile version.
              A scrollable container has to be reachable by keyboard, so it takes a tab stop and is
-             named by the day heading it belongs to rather than announcing as an unlabelled group. -->
+             named by the day heading it belongs to rather than announcing as an unlabelled group.
+
+             An open day with no tasks renders no scroller, no table, and no column header line, since
+             six headers over zero rows label nothing. It renders the footer block alone. -->
         <div
+          v-if="tasks.length"
           :aria-labelledby="`planning-day-${date}`"
           class="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
           role="group"
           tabindex="0"
         >
-          <div class="min-w-[62rem]" role="table">
+          <div class="min-w-[60rem]" role="table">
             <!-- One column header line per open card, instead of a label above every value on every
                  row. A five-row card printed ten tiny labels before and would have printed thirty
                  with the fields this feature adds; this prints six, once, and none at all while the
@@ -238,9 +295,13 @@ const dayNameClass = computed(() =>
                  action cells, so six headers sit above six cells. The tone is `text-toned` rather
                  than the `text-dimmed` the blueprint asks for, because dimmed measures 2.0:1 to
                  2.6:1 against the card surface and these six words are the only field labels the
-                 feature has left. -->
+                 feature has left.
+
+                 This template must stay character-for-character identical to TaskRow.vue's. The
+                 words track is 5rem rather than 7.5rem now that the cell holds one figure instead of
+                 a pair, and the scroller minimum came down from 62rem to 60rem with it. -->
             <div
-              class="grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_7.5rem_4.5rem_6rem_3rem] gap-x-4 border-b border-default px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-toned"
+              class="grid grid-cols-[1rem_9rem_minmax(12rem,1fr)_9rem_5rem_4.5rem_6rem_3rem] gap-x-4 border-b border-default px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-toned"
               role="row"
             >
               <span role="presentation" />
@@ -255,14 +316,88 @@ const dayNameClass = computed(() =>
             </div>
 
             <div class="divide-y divide-default" role="rowgroup">
-              <PlanningTaskRow
-                v-for="task in tasks"
-                :key="task.id"
-                :is-split-continuation="continuationIds.has(task.id)"
-                :task="task"
-              />
+              <template v-for="task in tasks" :key="task.id">
+                <PlanningTaskRow
+                  :expanded="editingTaskId === task.id"
+                  :is-split-continuation="continuationIds.has(task.id)"
+                  :panel-id="taskPanelId(task.id)"
+                  :task="task"
+                  @toggle="emit('openEditor', { date, kind: 'edit', taskId: task.id })"
+                />
+
+                <!-- The edit panel is a sibling row in the same rowgroup, directly beneath the row it
+                     edits, because inside a rowgroup the only legal child is a row and the collapsed
+                     line has to stay visible above the form. Its single cell spans six accessible
+                     columns rather than eight, because the grip and the reserved action track are
+                     both role="presentation" and the table is six columns wide to a screen reader.
+
+                     The visual span comes from CSS instead, and it is the one genuinely new part of
+                     this layout. The cell is sized in cqw against the day card rather than against
+                     the 60rem table, so a fourteen-control form is never inside a horizontal
+                     scroller, and it is sticky at the left edge, so scrolling the table sideways to
+                     read a later column leaves the form pinned where it was. The row itself carries
+                     no grid template, so there is no third copy of the column widths anywhere. -->
+                <div v-if="editingTaskId === task.id" role="row">
+                  <div
+                    aria-colspan="6"
+                    class="sticky left-0 w-[100cqw] scroll-mt-24 px-5 pb-4 pt-1"
+                    role="cell"
+                  >
+                    <PlanningTaskEditor
+                      :date="task.date"
+                      :focus-request="editorFocusRequest"
+                      :panel-id="taskPanelId(task.id)"
+                      :task="task"
+                      @close-request="emit('closeEditor')"
+                      @saved="emit('saved', $event)"
+                      @update:dirty="emit('update:editorDirty', $event)"
+                    />
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
+        </div>
+
+        <!-- The day footer block, outside the scroller on purpose. Inside it, `width: auto` would
+             resolve to the scroll content's width, which the 60rem table sets, so the add control
+             would sit 60rem from the left on a narrow card and the user would scroll sideways to
+             reach it. `border-t` because divide-y draws only between rows and leaves the last one
+             bare. An off day carries the control like any other card, so recorded weekend work can be
+             entered where it happened. -->
+        <div class="flex flex-col items-start gap-3 border-t border-default px-5 py-3">
+          <p v-if="!tasks.length" class="text-sm text-muted">
+            {{ t('planning.editor.emptyDay') }}
+          </p>
+
+          <!-- A draft has no row, no cell and no colspan, because it has no tabular identity until it
+               has been saved, and it issues no request until then either. -->
+          <PlanningTaskEditor
+            v-if="draftOpen"
+            class="w-full"
+            :date="date"
+            :focus-request="editorFocusRequest"
+            :panel-id="draftPanelId"
+            @close-request="emit('closeEditor')"
+            @saved="emit('saved', $event)"
+            @update:dirty="emit('update:editorDirty', $event)"
+          />
+
+          <!-- `aria-controls` only while the draft is open, for the same reason the row's expand
+               button does it: the draft editor is created and destroyed, and the id it resolves to is
+               the draft form's own. -->
+          <UButton
+            :id="`planning-day-add-${date}`"
+            :aria-controls="draftOpen ? draftPanelId : undefined"
+            :aria-expanded="draftOpen"
+            color="primary"
+            data-editor-gate
+            icon="i-ph-plus-bold"
+            :label="t('planning.editor.addTask')"
+            size="sm"
+            variant="ghost"
+            @click="emit('openEditor', { date, kind: 'draft' })"
+          />
         </div>
       </div>
     </div>

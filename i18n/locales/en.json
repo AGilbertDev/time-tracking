@@ -186,7 +186,8 @@
     "meetings": "Meetings",
     "breaks": "Breaks",
     "admin": "Admin",
-    "dtp": "DTP"
+    "dtp": "DTP",
+    "other": "Other"
   },
   "planning": {
     "title": "Dashboard",
@@ -201,6 +202,7 @@
     "splitTagLabel": "Continuation of a task split across several days",
     "excluded": "excluded",
     "excludedLabel": "Excluded from the quota calculation",
+    "noteLabel": "This task has a note",
     "loadError": "The week could not be loaded.",
     "retry": "Try again",
     "columns": {
@@ -230,6 +232,62 @@
       "retard": "Overdue",
       "termine": "Done",
       "na": "N/A"
+    },
+    "editor": {
+      "addTask": "Add a task",
+      "emptyDay": "No tasks on this day.",
+      "newTask": "New task",
+      "editRowLabel": "Edit",
+      "editFormLabel": "Editing task",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "The task was saved.",
+      "created": "The task was added.",
+      "unsaved": "Unsaved changes.",
+      "discardTitle": "Discard changes?",
+      "discardBody": "Your changes have not been saved. They will be lost.",
+      "discardConfirm": "Discard",
+      "discardCancel": "Keep editing",
+      "saveError": "The task could not be saved.",
+      "sessionExpired": "Your session has expired. Open sign-in in a new tab, sign back in, then try again. Your entries stay here.",
+      "signInNewTab": "Open sign-in",
+      "gone": "This task no longer exists. It was probably deleted elsewhere.",
+      "goneCreate": "Save as a new task",
+      "goneDiscard": "Close",
+      "fields": {
+        "category": "Category",
+        "day": "Day",
+        "client": "Client",
+        "project": "Project number",
+        "deliveryDate": "Delivery",
+        "deliveryTime": "Time",
+        "words": "Words",
+        "wordsHint": "The total words to do on that day.",
+        "estimatedDuration": "Estimated time",
+        "actualDuration": "Actual time",
+        "status": "Status",
+        "statusNone": "None",
+        "statusUnavailable": "This category carries no status.",
+        "quota": "Quota",
+        "quotaHint": "Empty means your default quota.",
+        "excludeFromStats": "Exclude from stats",
+        "excludeHint": "The task stays on the calendar, but its words do not count toward the quota.",
+        "notes": "Notes",
+        "notesPlaceholder": "Details, reminders, anything to remember…",
+        "notesCounter": "{count} / {max} characters"
+      },
+      "validation": {
+        "dayInvalid": "Choose a valid day.",
+        "textTooLong": "This field must be at most {max} characters.",
+        "deliveryDateInvalid": "Choose a valid delivery date.",
+        "timeInvalid": "Enter a time in 24-hour format (HH:MM).",
+        "wordsInvalid": "Enter a whole number of words.",
+        "durationInvalid": "Enter a valid duration.",
+        "quotaInvalid": "The quota must be at least 1 word per hour.",
+        "statusNotDeliverable": "This category cannot carry a status.",
+        "notesTooLong": "The note must be at most {max} characters.",
+        "invalid": "This value is invalid."
+      }
     },
     "monthsLong": [
       "January",
@@ -272,7 +330,9 @@
     "language": "Language: {code}",
     "logout": "Sign out"
   },
-  "footer": { "rights": "All rights reserved." },
+  "footer": {
+    "rights": "All rights reserved."
+  },
   "theme": {
     "light": "Light theme",
     "dark": "Dark theme",
@@ -287,7 +347,9 @@
       "foret": "Forêt"
     }
   },
-  "a11y": { "switchLocale": "Switch language" },
+  "a11y": {
+    "switchLocale": "Switch language"
+  },
   "preferences": {
     "saveError": "Your preference could not be saved. It will apply for this session only."
   },

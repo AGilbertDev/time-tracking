@@ -2,7 +2,7 @@ import type { H3Event } from 'h3'
 
 import { and, eq } from 'drizzle-orm'
 
-import { isTrackableCategory } from '#shared/categories'
+import { isDeliverableCategory } from '#shared/categories'
 
 import type { TaskListItem, TaskUpdateInput } from '../../../models/tasks'
 
@@ -50,11 +50,17 @@ export async function updateTask(
   const category = body.category ?? existing.category
   assertStatusFitsCategory(category, body.status)
 
-  // The patch moved the task to a non-trackable category and said nothing about status, so the
-  // server clears the stored value itself and keeps the row valid. Refusing until the client sent
-  // status: null too would force the editor to know which categories are trackable in order to
+  // The patch moved the task to a category that carries no status and said nothing about status, so
+  // the server clears the stored value itself and keeps the row valid. Refusing until the client
+  // sent status: null too would force the editor to know which categories carry a status in order to
   // compose a valid request, which is the backend rule leaking into the frontend.
-  if (body.status === undefined && existing.status !== null && !isTrackableCategory(category)) {
+  //
+  // The guard reads `deliverable` rather than `trackable`, and getting this one wrong in the other
+  // direction would be worse than the defect it replaces. `other` is non-trackable and does carry a
+  // status, so a version still keyed on `trackable` would silently wipe a stored status the moment a
+  // user moved a row to Autre, which is a data-loss path this feature would have created rather than
+  // inherited. Moving a task to `other` leaves its status alone. Moving it to `breaks` still clears.
+  if (body.status === undefined && existing.status !== null && !isDeliverableCategory(category)) {
     values.status = null
   }
 

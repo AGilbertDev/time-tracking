@@ -326,33 +326,50 @@ describe('the estimate never writes the actual (AC17)', () => {
   })
 })
 
-describe('words_done is never written (AC30)', () => {
+describe('words_done has left the codebase (task-inline-editor AC6, AC8)', () => {
   // ---------------------------------------------------------------------------------------------
-  // The mirror is Route B in the spec's "The words_done question", rejected because it stores a
-  // value the app assumed in a column meant for one the user supplied, and because TaskRow.vue
-  // prints "words done / project total" so a brand-new task would read as finished. The only
-  // wordsDone the write path may contain is the read projection's passthrough.
+  // This block used to guard against mirroring project_word_count into words_done, which was Route
+  // B in the write API spec's "The words_done question". Migration 0008 dropped the column, so the
+  // mirror has nowhere left to go and the old guards lost their subject.
+  //
+  // They are replaced rather than deleted, which task-inline-editor.md AC8 asks for by name. A
+  // deleted guard leaves nothing asserting that a body carrying wordsDone is still an error, and it
+  // is: the write API's AC29 refused it as a named exclusion from the writable list, and strict()
+  // now refuses it as an unknown key, so that criterion holds for a different reason. The refusal
+  // itself is asserted behaviourally against the real schemas in test/server/models/tasks.test.ts.
+  // What is asserted here is the property no behavioural test can observe, which is that no
+  // executable line under server/ or shared/ still reads or writes the dropped column, so a later
+  // hand cannot quietly bring it back.
   // ---------------------------------------------------------------------------------------------
-  it.each([...WRITE_HANDLERS, 'server/api/tasks/handlers/write.ts'])(
-    '%s never mentions wordsDone in executable code',
-    (file) => {
-      expect(code(file)).not.toContain('wordsDone')
-    }
-  )
+  const SCANNED = [...sourceFiles('server', ['.ts']), ...sourceFiles('shared', ['.ts'])]
 
-  it('leaves wordsDone only in the shared read projection select list', () => {
-    const mentions = sourceFiles('server/api/tasks', ['.ts']).filter((file) =>
-      code(file).includes('wordsDone')
-    )
+  it('can see the words column that survived, so the absences below are findings', () => {
+    // The positive control for this whole block. A scan that could not see projectWordCount would
+    // report exactly the same clean result for wordsDone whether the name were there or not, and an
+    // absence proved by a broken instrument is not a finding.
+    const carriers = SCANNED.filter((file) => code(file).includes('projectWordCount'))
 
-    expect(mentions).toEqual(['server/api/tasks/handlers/projection.ts'])
+    expect(carriers.length).toBeGreaterThan(0)
   })
 
-  it('is not writable through the request schemas either (AC29)', () => {
+  it('mentions wordsDone in no executable line under server/ or shared/', () => {
+    expect(SCANNED.filter((file) => code(file).includes('wordsDone'))).toEqual([])
+  })
+
+  it('names the words_done column in no executable line either', () => {
+    expect(SCANNED.filter((file) => code(file).includes('words_done'))).toEqual([])
+  })
+
+  it('is absent from the writable schema base, so a body carrying it is an unknown key (AC29)', () => {
     const source = code('server/models/tasks.ts')
     const writable = source.slice(source.indexOf('const TaskWritableSchema'))
 
     expect(writable).not.toContain('wordsDone')
+
+    // The absence above only produces a 422 rather than a silent drop because both bodies stay
+    // strict(), so the two halves of that argument are asserted together.
+    expect(source).toContain('TaskWritableSchema.strict()')
+    expect(source).toContain('}).strict()')
   })
 })
 
