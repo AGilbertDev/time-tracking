@@ -17,10 +17,8 @@ import { assertStatusFitsCategory, nextSortOrder, toTaskColumns } from './write'
 //
 // Two things this deliberately does not write. actual_minutes is left alone unless the user sent it,
 // so a create carrying only an estimate stores NULL and the read path resolves the fallback through
-// effectiveDuration. And words_done is never written at all: the user already gives that figure as
-// projectWordCount, nothing reads words_done for a statistic, and mirroring it would make a
-// brand-new task print as fully done in the words column, which is the misreading that column was
-// built to avoid.
+// effectiveDuration. And estimated_minutes is stored verbatim and never derived from a word count
+// and a quota, which is PLAN-12's job and needs a per-category quota that does not exist yet.
 export async function createTask(event: H3Event, body: TaskCreateInput): Promise<TaskListItem> {
   const { user } = await requireUserSession(event)
   const db = useDb()

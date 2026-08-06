@@ -3,6 +3,8 @@ import type { Client } from '@libsql/client'
 import { TaskCreateSchema } from '~~/server/models/tasks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { DEFAULT_CATEGORY_ID } from '#shared/categories'
+
 import type { TaskTestDb } from '../../../../helpers/taskTestDb'
 
 import {
@@ -18,10 +20,12 @@ import {
 // createTask, the handler behind POST /api/tasks.
 //
 // Derived from docs/specs/planning/task-write-api.md acceptance criteria AC5, AC10, AC11, AC16,
-// AC18, AC23, AC26, AC30, AC31, AC40 and AC43, plus the "Do not store the fallback",
-// "estimated_minutes is stored, not derived" and "The words_done question" sections.
+// AC18, AC23, AC26, AC40 and AC43, plus the "Do not store the fallback" and "estimated_minutes is
+// stored, not derived" sections. Its AC30 and AC31 were about the words_done mirror; migration 0008
+// dropped the column, so those two are replaced per docs/specs/planning/task-inline-editor.md AC8
+// rather than deleted, and the replacements are marked as such where they sit.
 //
-// Two criteria insist on being verified against the stored database row rather than against the
+// One criterion insists on being verified against the stored database row rather than against the
 // response, because the response resolves the estimate fallback for display and would look right
 // either way. So the seam here is `useDb`, which returns a genuine Drizzle instance over an
 // in-memory SQLite database with the shipped tasks DDL. Column defaults, NOT NULL constraints and
@@ -88,11 +92,11 @@ describe('createTask', () => {
         'delivery_date',
         'delivery_time',
         'project_word_count',
-        'words_done',
         'quota_wph_override',
         'estimated_minutes',
         'actual_minutes',
         'status',
+        'notes',
         'split_group_id'
       ]) {
         expect(stored?.[column]).toBeNull()
@@ -106,9 +110,53 @@ describe('createTask', () => {
       expect(Number(stored?.created_at)).toBeGreaterThan(0)
       expect(Number(stored?.updated_at)).toBeGreaterThan(0)
     })
+
+    // -------------------------------------------------------------------------------------------
+    // UC20 and UC21. The smallest legal add is now a day, because the write boundary defaults the
+    // category. The `body` helper parses through the real TaskCreateSchema, so this exercises the
+    // default rather than a fixture that happens to contain the value.
+    //
+    // The stored row is read rather than only the parse result, because the criterion is about what
+    // the database ends up holding. A save with no category choice stores `other`, which is what lets
+    // the create form stop blocking on a dropdown nobody touched.
+    // -------------------------------------------------------------------------------------------
+    it('creates a task from only a date and stores the defaulted category', async () => {
+      const created = await createTask(event, body({ date: '2026-07-20' }))
+      const stored = await readStoredRow(client, created.id)
+
+      expect(created).toMatchObject({ date: '2026-07-20', category: DEFAULT_CATEGORY_ID })
+      expect(stored?.category).toBe('other')
+      expect(await countTasks(client)).toBe(1)
+    })
+
+    // UC21 again, from the response side. The defaulted row comes back resolved exactly as any other
+    // create does, and it carries the pair of facts that made the two flags necessary. Its words reach
+    // no quota and it does carry a status, so a fresh unclassified row is immediately usable.
+    it('returns a defaulted create as a fully resolved row', async () => {
+      const created = await createTask(event, body({ date: '2026-07-20' }))
+
+      expect(created.trackable).toBe(false)
+      expect(created.deliverable).toBe(true)
+      // No status was sent and none is stored, so this is the ordinary no-status reading rather than
+      // the not-applicable one a break would get.
+      expect(created.status).toBeNull()
+      expect(created.statusKey).toBe('na')
+    })
+
+    // UC12 and UC19 on the create endpoint. An explicit `other` with a status is legal, which is the
+    // half a rule keyed on trackability would have refused.
+    it('creates an other task carrying a status', async () => {
+      const created = await createTask(
+        event,
+        body({ date: '2026-07-20', category: 'other', status: 'Terminé' })
+      )
+
+      expect((await readStoredRow(client, created.id))?.status).toBe('Terminé')
+      expect(created.statusKey).toBe('termine')
+    })
   })
 
-  describe('the two columns a create must never fill', () => {
+  describe('the column a create must never fill', () => {
     // -------------------------------------------------------------------------------------------
     // AC16. DO NOT MAKE THIS PASS BY AUTO-FILLING actual_minutes FROM estimated_minutes.
     //
@@ -158,38 +206,41 @@ describe('createTask', () => {
     })
 
     // -------------------------------------------------------------------------------------------
-    // AC30 and AC31. DO NOT MAKE THIS PASS BY MIRRORING project_word_count INTO words_done.
+    // PLAN-11 AC6 and AC8, replacing the two guards that used to assert the words_done mirror was
+    // never written. Migration 0008 dropped the column, so the mirror has nowhere left to go and
+    // `SELECT words_done` is now a SQL error rather than an assertion.
     //
-    // Route B in the spec's "The words_done question, and how it was settled". A later implementer
-    // reading the line in overview.md that says "the app should set it rather than ask twice" is
-    // meant to hit this test before they ship the mirror. It was rejected for two reasons. It is the
-    // same defect as auto-filling actual_minutes, storing a value the app assumed in a column meant
-    // for a value the user supplied. And it is actively wrong on screen: TaskRow.vue prints
-    // "words done / project total", so a brand-new 12 000-word task would render 12 000 / 12 000 and
-    // read as finished before it had been started, which is the misreading that column was built to
-    // avoid. The column is scheduled for removal in PLAN-33 and nothing reads it for a statistic.
+    // The guards are replaced rather than deleted. Deleting them would leave nothing asserting that
+    // a body carrying wordsDone is still an error, and it is: the write API's AC29 refused it as a
+    // named exclusion from the writable list, and strict() now refuses it as an unknown key, so the
+    // criterion still holds for a different reason. Deleting them would also leave nothing here
+    // noticing if a later hand re-added the column and the mirror with it.
     // -------------------------------------------------------------------------------------------
-    it('stores project_word_count and leaves words_done NULL (AC30, AC31)', async () => {
+    it('refuses a body carrying wordsDone, now as an unknown key (AC8)', () => {
+      const result = TaskCreateSchema.safeParse({
+        date: '2026-07-20',
+        category: 'translation',
+        wordsDone: 500
+      })
+
+      expect(result.success).toBe(false)
+    })
+
+    it('stores project_word_count and writes no words_done column at all', async () => {
       const created = await createTask(
         event,
         body({ date: '2026-07-20', category: 'translation', projectWordCount: 12_000 })
       )
 
       const stored = await readStoredRow(client, created.id)
+      const columns = Object.keys(stored ?? {})
+
+      // Positive control first. The row really was read and the surviving words column really is
+      // visible, so the absence asserted below is a finding rather than an empty read.
       expect(stored?.project_word_count).toBe(12_000)
-      expect(stored?.words_done).toBeNull()
-    })
+      expect(columns).toContain('project_word_count')
 
-    it('leaves words_done NULL on every row it creates', async () => {
-      await createTask(event, body({ date: '2026-07-20', category: 'breaks' }))
-      await createTask(
-        event,
-        body({ date: '2026-07-21', category: 'translation', projectWordCount: 500 })
-      )
-
-      const rows = await client.execute('SELECT words_done FROM tasks')
-      expect(rows.rows).toHaveLength(2)
-      for (const row of rows.rows) expect(row.words_done).toBeNull()
+      expect(columns).not.toContain('words_done')
     })
   })
 
@@ -389,6 +440,7 @@ describe('createTask', () => {
           'estimatedMinutes',
           'excludeFromStats',
           'id',
+          'notes',
           'project',
           'projectWordCount',
           'quotaWphOverride',
@@ -397,7 +449,7 @@ describe('createTask', () => {
           'status',
           'statusKey',
           'trackable',
-          'wordsDone'
+          'deliverable'
         ].sort()
       )
 
@@ -407,7 +459,6 @@ describe('createTask', () => {
         deliveryDate: '2026-07-25',
         deliveryTime: '17:00',
         projectWordCount: 12_000,
-        wordsDone: null,
         quotaWphOverride: 500,
         estimatedMinutes: 1_600,
         actualMinutes: null,
@@ -494,5 +545,70 @@ describe('createTask', () => {
 
       expect((await readStoredRow(client, created.id))?.delivery_date).toBe('2026-07-01')
     })
+  })
+})
+
+// The notes column, from docs/specs/planning/task-inline-editor.md rather than from the write-API
+// spec above. AC11 says a create accepting notes stores it, and AC12 says a whitespace-only note
+// stores NULL rather than a whitespace string and a multiline note keeps its newline. Both are claims
+// about what lands in the column, so they are read back with raw SQL rather than off the response.
+describe('createTask and the notes column (AC11, AC12)', () => {
+  it('stores a note the request carried', async () => {
+    const created = await createTask(
+      event,
+      body({ date: '2026-07-20', category: 'translation', notes: 'Relire le glossaire.' })
+    )
+
+    expect((await readStoredRow(client, created.id))?.notes).toBe('Relire le glossaire.')
+    expect(created.notes).toBe('Relire le glossaire.')
+  })
+
+  it('stores NULL for a note made of nothing but whitespace', async () => {
+    const created = await createTask(
+      event,
+      body({ date: '2026-07-20', category: 'translation', notes: '   ' })
+    )
+
+    expect((await readStoredRow(client, created.id))?.notes).toBeNull()
+  })
+
+  it('stores NULL rather than an empty string for a cleared note', async () => {
+    const created = await createTask(
+      event,
+      body({ date: '2026-07-20', category: 'translation', notes: '' })
+    )
+
+    const stored = await readStoredRow(client, created.id)
+    expect(stored?.notes).toBeNull()
+    expect(stored?.notes).not.toBe('')
+  })
+
+  it('stores both lines of a multiline note with the newline intact', async () => {
+    const created = await createTask(
+      event,
+      body({ date: '2026-07-20', category: 'translation', notes: 'ligne un\nligne deux' })
+    )
+
+    expect((await readStoredRow(client, created.id))?.notes).toBe('ligne un\nligne deux')
+  })
+
+  it('stores a 2000-character note whole', async () => {
+    const created = await createTask(
+      event,
+      body({ date: '2026-07-20', category: 'translation', notes: 'a'.repeat(2000) })
+    )
+
+    expect(String((await readStoredRow(client, created.id))?.notes)).toHaveLength(2000)
+  })
+
+  // A note on a meeting or a break is one of the cases the field exists for, so trackability has
+  // nothing to do with it.
+  it('stores a note on a non-trackable task', async () => {
+    const created = await createTask(
+      event,
+      body({ date: '2026-07-20', category: 'meetings', notes: 'Ordre du jour envoyé.' })
+    )
+
+    expect((await readStoredRow(client, created.id))?.notes).toBe('Ordre du jour envoyé.')
   })
 })

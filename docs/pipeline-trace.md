@@ -39,3 +39,5 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | 14  | 2026-07-29 | The nine default categories | yes | yes             | [spec](specs/planning/nine-task-categories.md) | [#21](https://github.com/AGilbertDev/time-tracking/pull/21) |
 | 15  | 2026-07-29 | The category column with coloured names | yes | no              | [spec](specs/planning/category-column-coloured-names.md), [design](specs/planning/category-column-coloured-names-design.md) | [#22](https://github.com/AGilbertDev/time-tracking/pull/22) |
 | 16  | 2026-07-30 | The task write API | yes | no              | [spec](specs/planning/task-write-api.md) | [#30](https://github.com/AGilbertDev/time-tracking/pull/30) |
+| 17  | 2026-07-31 | The inline task editor | yes | no              | [spec](specs/planning/task-inline-editor.md), [design](specs/planning/task-inline-editor-design.md) | [#36](https://github.com/AGilbertDev/time-tracking/pull/36) |
+| 18  | 2026-07-31 | The tenth category, Autre | yes | no              | [spec](specs/planning/other-category.md), [design](specs/planning/other-category-design.md) | [#36](https://github.com/AGilbertDev/time-tracking/pull/36) |

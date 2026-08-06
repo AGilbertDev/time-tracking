@@ -2,8 +2,8 @@ import { z } from 'zod'
 
 import type { StatusKey } from '#shared/planning'
 
-import { DEFAULT_CATEGORY_IDS } from '#shared/categories'
-import { TASK_STATUSES } from '#shared/planning'
+import { DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_IDS } from '#shared/categories'
+import { normalizeFreeText, TASK_NOTES_MAX, TASK_STATUSES, TASK_TEXT_MAX } from '#shared/planning'
 
 import { quotaWphSchema } from './work-settings'
 
@@ -84,13 +84,17 @@ export type TaskListItem = {
   category: string
   deliveryDate: string | null
   deliveryTime: string | null
+  // This row's own words total, which is the whole project's total only when the work is not split
+  // across days. There is no second words figure: words_done was dropped by migration 0008.
   projectWordCount: number | null
-  wordsDone: number | null
   quotaWphOverride: number | null
   estimatedMinutes: number | null
   actualMinutes: number | null
   status: string | null
   excludeFromStats: boolean
+  // Free multiline text. Null rather than '' when cleared, which normalizeFreeText guarantees on the
+  // way in, so a reader has one absent case rather than two.
+  notes: string | null
   splitGroupId: string | null
   sortOrder: number
   // Derived, not stored. The resolved status the row draws, including the 'retard' pseudo-status the
@@ -104,6 +108,13 @@ export type TaskListItem = {
   // uncoerced, because PLAN-11 round-trips it on save and a coerced value would silently rewrite a
   // stale category the user never touched.
   trackable: boolean
+  // Derived, not stored, and a second field rather than a reuse of `trackable` above. Whether this
+  // task is a piece of work that can be in progress, so whether a status and a word count mean
+  // anything on it. The two flags answer different questions and disagree on `other`, which
+  // contributes nothing to a quota and does carry a status, so a reader that wants the N/A rule
+  // takes this one. Also resolved server-side from the same contract, in the same place, so the two
+  // can never be decided from different values of the same row's category.
+  deliverable: boolean
 }
 
 // --- the write boundary (PLAN-09) -----------------------------------------------------------------
@@ -118,9 +129,14 @@ export type TaskListItem = {
 // the user confirmed and a duration the app assumed into identical rows, and nothing downstream
 // could tell them apart afterwards. The fallback is resolved at read time by effectiveDuration.
 //
-// words_done is in neither body. The user already gives that figure as projectWordCount, nothing
-// reads words_done for a statistic, and the column is scheduled for removal, so keeping it out of
-// the request contract makes that removal an internal cleanup rather than a breaking change.
+// Nothing here derives estimated_minutes from a word count and a quota either. That derivation is
+// PLAN-12's and it needs a per-category quota that does not exist yet, and because the estimate is
+// frozen by definition a value derived from today's wrong global quota would never self-correct.
+//
+// wordsDone is in neither body and no longer exists as a column: migration 0008 dropped it, which
+// keeping it off the request contract is exactly what made an internal cleanup rather than a
+// breaking change. The key is still a 422 on both endpoints, now as an unknown key refused by
+// strict() rather than as a named exclusion.
 
 // A clock time is 'HH:MM' on a 24-hour clock, matching what tasks.delivery_time stores. The pattern
 // pins the ranges as well as the widths, so 24:00 and 12:60 are refused without any parsing.
@@ -137,13 +153,34 @@ export function isValidClockTime(value: string): boolean {
 // ends up holding a cleared field in two forms, and a row with client = '' renders as a blank cell
 // where a row with client = NULL renders as missing, which are the same thing to the user and two
 // different things to every reader.
-const FREE_TEXT_MAX = 200
-
+//
+// Neither the bound nor the trim-and-empty-to-null step is declared here. TASK_TEXT_MAX and
+// normalizeFreeText both come from shared/planning.ts, because the editor needs the same two facts,
+// the bound for its character counter and its own `{max}` copy and the normalization to decide
+// whether a typed value differs from the loaded row. Both sides importing one declaration is the
+// conventions' single acceptable form of sharing a pure rule. A second copy on the client would go
+// stale the moment this bound was tightened, and nothing would fail to reveal it, because the counter
+// would simply keep quoting a number the server no longer enforces. The trim() before max() is what
+// measures the bound after trimming rather than before.
 const freeTextSchema = z
   .string()
   .trim()
-  .max(FREE_TEXT_MAX, { message: `Must be at most ${FREE_TEXT_MAX} characters.` })
-  .transform((value) => (value === '' ? null : value))
+  .max(TASK_TEXT_MAX, { message: `Must be at most ${TASK_TEXT_MAX} characters.` })
+  .transform(normalizeFreeText)
+  .nullable()
+
+// A note on a task. Its own bound, TASK_NOTES_MAX, rather than TASK_TEXT_MAX, and the reasoning for
+// the two being separate lives with them in shared/planning.ts rather than twice.
+//
+// Same trimming and same emptied-to-null rule as the free-text fields above, read from the same
+// shared function, so a note of nothing but whitespace and newlines is a cleared note and stores
+// NULL. Interior newlines survive, because trim() only touches the ends, so a multiline note is
+// stored with its lines intact. The bound is measured after trimming.
+const notesSchema = z
+  .string()
+  .trim()
+  .max(TASK_NOTES_MAX, { message: `Must be at most ${TASK_NOTES_MAX} characters.` })
+  .transform(normalizeFreeText)
   .nullable()
 
 const clockTimeSchema = z
@@ -162,13 +199,13 @@ const projectWordCountSchema = z.number().int().min(0).max(MAX_PROJECT_WORDS)
 
 const durationMinutesSchema = z.number().int().min(0).max(MAX_DURATION_MINUTES)
 
-// The category must be one of the nine the contract declares, read from there rather than retyped,
+// The category must be one of the ten the contract declares, read from there rather than retyped,
 // so adding a category makes it writable with no change here. This validates and deliberately does
 // not call coerceCategory. That function defends the read path against ids already sitting in the
 // database, left behind by a renamed or retired category. At the write boundary the client picked
 // from a list the server gave it, so an unknown id is a client bug or a hostile request rather than
-// history, and silently storing admin on a task the user labelled as translation would be data
-// corruption dressed as robustness. PLAN-30 turns this static set into a per-user lookup.
+// history, and silently storing some other category on a task the user labelled as translation would
+// be data corruption dressed as robustness. PLAN-30 turns this static set into a per-user lookup.
 const categorySchema = z.enum(DEFAULT_CATEGORY_IDS)
 
 // The stored status vocabulary, read from the shared tuple so the write boundary, the late
@@ -177,8 +214,8 @@ const categorySchema = z.enum(DEFAULT_CATEGORY_IDS)
 const storedStatusSchema = z.enum(TASK_STATUSES)
 
 // Every writable field, all optional. This is the update body on its own, and the create body is
-// this with date and category made required. One declaration rather than two, because two field
-// lists drift and the copy further from the schema is the one that goes stale.
+// this with date made required and category given a default. One declaration rather than two,
+// because two field lists drift and the copy further from the schema is the one that goes stale.
 //
 // Nullable is not decoration on a patch. An absent field leaves its column alone and an explicit
 // null clears it, and that distinction is the only way back from a wrong actualMinutes to
@@ -208,21 +245,49 @@ const TaskWritableSchema = z.object({
   estimatedMinutes: durationMinutesSchema.nullable().optional(),
   actualMinutes: durationMinutesSchema.nullable().optional(),
   status: storedStatusSchema.nullable().optional(),
-  excludeFromStats: z.boolean().optional()
+  excludeFromStats: z.boolean().optional(),
+  // Writable on both endpoints, and it has to be declared here rather than on either body, because
+  // both bodies are strict(): a field absent from this base is an unknown key and every request
+  // carrying it would be a 422. Optional and nullable like client and project, so an absent notes on
+  // a PATCH leaves the column alone and an explicit null clears it.
+  notes: notesSchema.optional()
 })
 
-// POST /api/tasks. Only date and category are required, because they are the only two NOT NULL
-// columns without a default, so the smallest legal request is a day and a kind of work. That matches
-// the product as well as the schema: adding a break or a meeting should cost the user nothing more.
+// POST /api/tasks. Only date is required, so the smallest legal request is a day. Category is no
+// longer required because the boundary supplies it, which is the single place that decision is made.
+//
+// The rule this follows is the one already written above, that a field is required when its column
+// is NOT NULL and has no default. Category still has a NOT NULL column, and what changed is that it
+// now has a default, supplied here rather than by the DDL. So it stops being required by the rule
+// already in force rather than by an exception to it.
+//
+// The default is declared rather than branched. There is no `if (!body.category)` in create.ts and
+// no nullish coalescing anywhere down the write path, because the value is attached to the schema
+// both endpoints already draw from. It is read from DEFAULT_CATEGORY_ID rather than retyped as a
+// literal, so the fallback id and the create default cannot drift apart, and this feature is itself
+// the proof that the fallback id can change.
+//
+// The default lives here and not in the database on purpose. SQLite cannot add a default to an
+// existing column, so a DDL default would mean a create-copy-drop-rename rebuild of the app's main
+// table for a behaviour difference of zero. It would also be a second copy of the fallback id in a
+// file that cannot import the contract, which is exactly the drift the shared module exists to
+// prevent. tasks.category therefore stays text NOT NULL with no DDL default and this feature adds no
+// migration.
+//
+// A default applies to an absent key and not to an explicit null, which is the behaviour wanted
+// here. Omitting category means "you decide" and is a 201 storing `other`. Sending category: null
+// means "store nothing" against a NOT NULL column and stays a 422, because only the first of those
+// is a question the server can answer.
 //
 // strict() is the mass-assignment protection, and an unknown or server-owned key is an error rather
 // than a silent drop on purpose. A client that sends userId and gets a 201 has been told its write
 // succeeded as sent, which is false. The owning user always comes from the session regardless of
-// what the body claims, and id, createdAt, updatedAt, sortOrder, splitGroupId, and wordsDone are all
-// refused the same way, each owned by the server or by another feature.
+// what the body claims, and id, createdAt, updatedAt, sortOrder, and splitGroupId are all refused
+// the same way, each owned by the server or by another feature. wordsDone is refused too, now for
+// the plainer reason that the column no longer exists.
 export const TaskCreateSchema = TaskWritableSchema.extend({
   date: calendarDaySchema,
-  category: categorySchema
+  category: categorySchema.default(DEFAULT_CATEGORY_ID)
 }).strict()
 
 // PATCH /api/tasks/[id]. A genuine partial patch, so every writable field is optional, but it must

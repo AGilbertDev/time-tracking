@@ -1,0 +1,30 @@
+# Agent scratch space, including the throwaway git worktrees agents create as a matter of course.
+# This branch already excluded `.claude/**` from Vitest and ESLint, for the reason recorded in
+# pipeline.md: the copies are untracked local pollution, they are not this repository's code, and a
+# gate that fails on them is a gate nobody can act on. Prettier was missed in that pass and was still
+# reading 280 files in there, so `bun run format` failed on a clean checkout. Same exclusion, same
+# reason.
+.claude/
+
+# Vendored and generated. `.recipes` is a submodule and belongs to another repository, so its
+# formatting is decided there. The rest is build output and coverage, none of it hand-edited.
+.recipes/
+.nuxt/
+.output/
+.data/
+coverage/
+bun.lock
+
+# The pipeline trace is an append-only ledger, so Prettier must not touch it.
+#
+# AGENTS.md requires one row per landed feature and forbids rewriting existing rows, because the
+# ledger's value is that a past row reads today exactly as it read when it was written. Prettier
+# formats Markdown tables by re-padding every column to the widest cell, so appending one wider row
+# rewrites all the rows above it. That is a whitespace-only change and it still defeats the rule: it
+# turns a one-line append into a whole-table diff, which is noise in review, a conflict magnet on any
+# branch that also appends, and an audit trail that cannot be read as untouched.
+#
+# Excluding the file is what makes the append-only rule enforceable rather than aspirational. Rows are
+# written by hand in the existing style and the columns do not need to line up, since Markdown renders
+# a ragged table identically to a padded one.
+docs/pipeline-trace.md

@@ -16,12 +16,15 @@ import {
   getWeekDays,
   getWeekRange,
   isWorkDay,
+  normalizeFreeText,
   nowInZone,
   resolveSchedule,
   statusKey,
   sumEffectiveDuration,
+  TASK_NOTES_MAX,
   TASK_STATUS_DONE,
   TASK_STATUSES,
+  TASK_TEXT_MAX,
   todayInZone
 } from '#shared/planning'
 
@@ -1017,5 +1020,96 @@ describe('TASK_STATUS_DONE', () => {
     expect(statusKey(TASK_STATUS_DONE, true, true)).toBe('termine')
     expect(statusKey('Accepté', true, true)).toBe('retard')
     expect(statusKey('En cours', true, true)).toBe('retard')
+  })
+})
+
+// --- the inline task editor's shared contract (docs/specs/planning/task-inline-editor.md) --------
+//
+// normalizeFreeText and the two bounds arrived with the inline task editor and are the part of that
+// feature both sides genuinely share. The server's free-text and notes schemas read them, so they are
+// what actually lands in a column, and the editor reads them to decide whether a typed value differs
+// from the loaded row and to say in its counter how long a value may be. The criteria below are AC11,
+// AC12, AC13, AC62 and AC63, plus the "Why it is trimmed and emptied to null" decision.
+//
+// The reason one shared copy matters is stated in the spec as a failure rather than as a preference.
+// If the two sides disagreed about what a cleared field is, typing a space into an empty box and
+// saving would read as a change on the client and as no change in the database, so the editor would
+// send a patch the server had nothing to do with.
+
+describe('normalizeFreeText', () => {
+  // A field the user never filled and a field the user emptied are the same absence, so both are
+  // null. Storing a cleared field as '' as well as NULL would give every reader two absent cases.
+  it('treats an absent value as absent', () => {
+    expect(normalizeFreeText(null)).toBeNull()
+    expect(normalizeFreeText(undefined)).toBeNull()
+  })
+
+  it('turns an empty string into null, which is what a cleared field is', () => {
+    expect(normalizeFreeText('')).toBeNull()
+  })
+
+  // AC12: notes of '  ' store NULL rather than a whitespace string. A note made of nothing but
+  // whitespace and newlines is a cleared note.
+  it.each(['   ', '\t', '\n', ' \n\t ', '\r\n'])(
+    'turns the whitespace-only value %j into null',
+    (value) => {
+      expect(normalizeFreeText(value)).toBeNull()
+    }
+  )
+
+  it('strips surrounding whitespace off a real value', () => {
+    expect(normalizeFreeText('  Acme  ')).toBe('Acme')
+  })
+
+  it('leaves a value that needs no trimming alone', () => {
+    expect(normalizeFreeText('Acme')).toBe('Acme')
+  })
+
+  // AC12: a multiline note stores both lines with the newline intact, so only the ends are trimmed.
+  it('keeps the newlines inside a multiline value', () => {
+    expect(normalizeFreeText('ligne un\nligne deux')).toBe('ligne un\nligne deux')
+  })
+
+  it('trims the ends of a multiline value without touching its interior newlines', () => {
+    expect(normalizeFreeText('\n  ligne un\n\nligne deux  \n')).toBe('ligne un\n\nligne deux')
+  })
+
+  it('keeps the interior whitespace of a one-line value', () => {
+    expect(normalizeFreeText('  Acme  Corp  ')).toBe('Acme  Corp')
+  })
+
+  // Content that a falsy check would mistake for emptiness. A zero the user typed into a text field
+  // is a value, and '0' surviving as '0' is what says the rule tests for an empty string rather than
+  // for a falsy one.
+  it('keeps a value that only looks empty to a falsy check', () => {
+    expect(normalizeFreeText('0')).toBe('0')
+    expect(normalizeFreeText(' 0 ')).toBe('0')
+  })
+
+  it('is stable when applied twice, since a normalized value is already normalized', () => {
+    for (const value of ['  Acme  ', 'ligne un\nligne deux', '   ', '', '0']) {
+      const once = normalizeFreeText(value)
+      expect(normalizeFreeText(once)).toBe(once)
+    }
+  })
+})
+
+describe('the two free-text bounds', () => {
+  // The spec names both figures, and they live here rather than on either side because the server
+  // enforces them and the editor quotes them in its counter and its {max} copy. A second copy on the
+  // client would quote a number the server no longer enforces, and nothing would fail to reveal it.
+  it('bounds the one-line identity fields at 200 characters', () => {
+    expect(TASK_TEXT_MAX).toBe(200)
+  })
+
+  // 2000 rather than 200, because a note is a paragraph and 200 characters would cut it mid-sentence.
+  it('bounds a note at 2000 characters', () => {
+    expect(TASK_NOTES_MAX).toBe(2000)
+  })
+
+  // Two constants rather than one, so tightening a client name never tightens a note.
+  it('keeps the two bounds independent of each other', () => {
+    expect(TASK_NOTES_MAX).not.toBe(TASK_TEXT_MAX)
+    expect(TASK_NOTES_MAX).toBeGreaterThan(TASK_TEXT_MAX)
   })
 })

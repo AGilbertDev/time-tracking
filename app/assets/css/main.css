@@ -232,6 +232,17 @@ input:-webkit-autofill:active {
   color: oklch(var(--planning-cat-l) var(--planning-cat-c) var(--planning-cat-hue));
 }
 
+/* The same category colour on a border rather than on text, for the inline editor's left edge. It */
+/* reads the same three custom properties as .planning-cat-name above, so lightness and chroma stay */
+/* fixed in one place and the hue still arrives as --planning-cat-hue set inline from categoryHue in */
+/* the shared contract. This is a second reader of one contract, not a second copy of the mapping. */
+/* A border is decorative reinforcement here (the selected category is printed as a word one control */
+/* away), so 1.4.11 does not bind it, and it inherits the text tuning anyway. Unlayered, exactly as */
+/* .planning-cat-name is, so it wins over the layered border-accented utility with no !important. */
+.planning-cat-edge {
+  border-left-color: oklch(var(--planning-cat-l) var(--planning-cat-c) var(--planning-cat-hue));
+}
+
 /* Five deliberate, subject-grounded themes. Each block overrides the primary and */
 /* neutral PALETTE scales; Nuxt UI derives every surface, border (muted < default */
 /* < accented), text and hover shade from these, for both light and dark under one */

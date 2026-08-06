@@ -16,8 +16,10 @@ export type PlanningTask = {
   category: string
   deliveryDate: string | null
   deliveryTime: string | null
+  // The words to do on this row's own day, which is the whole project's total only when the work is
+  // not split across days. There is no second words figure: the done-over-total pair the row used to
+  // print lost its numerator when migration 0008 dropped words_done.
   projectWordCount: number | null
-  wordsDone: number | null
   quotaWphOverride: number | null
   estimatedMinutes: number | null
   actualMinutes: number | null
@@ -26,6 +28,11 @@ export type PlanningTask = {
   // mode 'boolean' rather than as the raw SQLite 0 or 1. It takes the task out of the quota numerator
   // and moves its duration into the denominator's subtraction (PLAN-22); the row only marks it.
   excludeFromStats: boolean
+  // The user's own free multiline text on this task. A cleared note is null rather than an empty
+  // string, which is what normalizeFreeText below guarantees on the way in, so a reader has one
+  // absent case to handle rather than two. The collapsed row shows only that a note is present and
+  // never the text itself.
+  notes: string | null
   splitGroupId: string | null
   sortOrder: number
   // The resolved presentation key for the row's status, decided by the server rather than here. It is
@@ -38,10 +45,16 @@ export type PlanningTask = {
   // rather than reading the category contract itself, which is the same reason statusKey arrives
   // resolved. The raw `category` above stays on the contract uncoerced for PLAN-11 to round-trip.
   trackable: boolean
+  // Whether the task is a piece of work that can be in progress, so whether a status and a word
+  // count mean anything on it. Also resolved by the server from the PLAN-02 contract and also not a
+  // stored column. It is a second field rather than a reuse of `trackable` because the two answer
+  // different questions and disagree on `other`, which is trackable: false and deliverable: true.
+  // A row reading N/A or printing an em dash for not-applicable keys on this one.
+  deliverable: boolean
 }
 
-// The colour and CSS key a status maps to. A non-trackable task is always 'na'. 'retard' is the
-// pseudo-status for a task that is not finished and whose delivery deadline has passed; no task ever
+// The colour and CSS key a status maps to. A non-deliverable task is always 'na'. 'retard' is the
+// pseudo-status for a task that is not finished and whose delivery deadline has passed. No task ever
 // stores it, and it outranks whatever the stored status says.
 export type StatusKey = 'accepte' | 'encours' | 'termine' | 'na' | 'retard'
 
@@ -87,6 +100,47 @@ export type WeekLabelParts = {
   prefix: string
   separator: string
   months: readonly string[]
+}
+
+// --- free text on a task: the bounds and what a cleared value is ---------------------------------
+
+// How long a task's free-text fields may be, measured after trimming. Both bounds live here for the
+// same reason normalizeFreeText below does, which is that both sides genuinely need the same pure
+// rule and the conventions allow exactly one form of sharing for that, a single declaration in the
+// contract layer that both import. The server reads them inside its Zod schemas, so they are what
+// actually refuses a request, and the editor reads them for its character counter and for the `{max}`
+// its own validation copy interpolates. A second copy on the client would go stale the moment a bound
+// was tightened server-side, and nothing would fail to reveal it: the counter and the message would
+// simply quote a number the server no longer enforces.
+//
+// TASK_TEXT_MAX is for the one-line identity fields, so a client name and a project number, where 200
+// characters is already generous.
+//
+// TASK_NOTES_MAX is deliberately its own bound rather than the same one. A note is a paragraph, often
+// pasted out of an instruction in an email, and 200 characters would cut it mid-sentence. Both are
+// anti-garbage bounds rather than policy bounds, far past any honest entry and there only so a runaway
+// paste cannot land in a column. Keeping them separate means tightening a client name never tightens
+// a note.
+export const TASK_TEXT_MAX = 200
+export const TASK_NOTES_MAX = 2000
+
+// What a cleared free-text field is, decided once for both sides. Surrounding whitespace is stripped
+// and anything left empty becomes null, so a value made of nothing but spaces and newlines is a
+// cleared value rather than a stored blank. Interior newlines survive untouched, which is what makes
+// this usable for a multiline note as well as for a one-line client name.
+//
+// It lives here rather than on either side because both sides genuinely need the same pure rule and
+// two copies would drift. The server reads it inside the free-text and notes schemas, so it is what
+// actually lands in a column, and the client reads it when deciding whether a field differs from the
+// loaded row. Without one shared copy, typing a space into an empty field and saving would look like
+// a change to the client and like no change to the database, so the editor would send a patch the
+// server had nothing to do with. null and undefined both normalize to null, because a field the user
+// never filled and a field the user emptied are the same absence.
+export function normalizeFreeText(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+
+  const trimmed = value.trim()
+  return trimmed === '' ? null : trimmed
 }
 
 // --- internal date utilities ---------------------------------------------------------------------
@@ -300,25 +354,34 @@ export function formatDeadline(
   return { date, timeSuffix: deliveryTime ? ` ${deliveryTime}` : '' }
 }
 
-// The colour and CSS key for a stored status. A trackable task maps the three confirmed status names
-// to their keys and an unknown value to `na`. A non-trackable task is always `na`, so a stray status
-// left on a meeting or a break never colours the row.
+// The colour and CSS key for a stored status. A deliverable task maps the three confirmed status
+// names to their keys and an unknown value to `na`. A non-deliverable task is always `na`, so a
+// stray status left on a meeting or a break never colours the row.
+//
+// The second parameter is `deliverable` and not `trackable`, and the distinction is load-bearing
+// rather than a rename. This guard asks whether the row can be in progress, which is the question
+// `deliverable` answers, and it has never asked whether the row's words reach a quota. The two were
+// the same boolean until `other` arrived, and `other` is trackable: false with deliverable: true, so
+// passing `trackable` here would resolve `na` on a row carrying a real stored status and hide it
+// from the user. Both are plain booleans, so a caller that passes the wrong one still compiles and
+// the mistake shows up only as a status quietly reading N/A. Check the call site rather than the
+// type when this looks ambiguous.
 //
 // `isOverdue` carries the late decision, which the server makes in the query because it needs the
 // current instant in the user's timezone. When it is set the row reads `retard`, outranking the
 // stored status, because a task being late is the more urgent fact about it. The three guards are
-// ordered deliberately: a non-trackable task is `na` before lateness is even considered, since a
+// ordered deliberately. A non-deliverable task is `na` before lateness is even considered, since a
 // break or a meeting has no delivery to miss, and a finished task is never late however long ago it
 // was delivered, so `Terminé` is checked before the flag is honoured. That makes the flag safe to
 // pass for any row, and the function stays pure, total, and DB-free.
 export function statusKey(
   status: string | null | undefined,
-  trackable: boolean,
+  deliverable: boolean,
   isOverdue = false
 ): StatusKey {
   const [accepted, inProgress] = TASK_STATUSES
 
-  if (!trackable) return 'na'
+  if (!deliverable) return 'na'
   if (isOverdue && status !== TASK_STATUS_DONE) return 'retard'
   switch (status) {
     case accepted:

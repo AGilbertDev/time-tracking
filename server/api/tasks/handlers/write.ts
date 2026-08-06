@@ -1,6 +1,6 @@
 import { and, eq, max } from 'drizzle-orm'
 
-import { isTrackableCategory } from '#shared/categories'
+import { isDeliverableCategory } from '#shared/categories'
 
 import type { TaskWritableInput } from '../../../models/tasks'
 
@@ -12,8 +12,8 @@ import { tasks } from '../../../db/schema'
 // copies of any of them would drift the moment one endpoint changed.
 
 // The columns a write may set. It is deliberately not the full insert shape. id, userId, createdAt,
-// wordsDone, and splitGroupId have no entry here at all, so no request can reach them however the
-// body is shaped, and sortOrder and updatedAt are present but are only ever filled by the server.
+// and splitGroupId have no entry here at all, so no request can reach them however the body is
+// shaped, and sortOrder and updatedAt are present but are only ever filled by the server.
 export type TaskColumnValues = {
   date?: string
   client?: string | null
@@ -27,6 +27,10 @@ export type TaskColumnValues = {
   actualMinutes?: number | null
   status?: string | null
   excludeFromStats?: boolean
+  // Already trimmed and emptied-to-null by the schema, so what lands here is either real text or a
+  // deliberate NULL. Nothing further is done to it: the app does not warn about, reformat, or police
+  // what the user writes in a note.
+  notes?: string | null
   // Server-assigned, never mapped from a body. Reordering is PLAN-15 and gets its own endpoint,
   // which it needs regardless because moving one row renumbers others.
   sortOrder?: number
@@ -60,42 +64,51 @@ export function toTaskColumns(body: TaskWritableInput): TaskColumnValues {
   if (body.actualMinutes !== undefined) values.actualMinutes = body.actualMinutes
   if (body.status !== undefined) values.status = body.status
   if (body.excludeFromStats !== undefined) values.excludeFromStats = body.excludeFromStats
+  if (body.notes !== undefined) values.notes = body.notes
 
   return values
 }
 
 // The message a contradicting body gets back. Developer-facing English, like every other message
-// from this API, because nothing here is shown to a user: the client renders its own copy keyed off
+// from this API, because nothing here is shown to a user. The client renders its own copy keyed off
 // the status code and the field name.
-const STATUS_NOT_TRACKABLE = 'A task in a non-trackable category cannot carry a status.'
+const STATUS_NOT_DELIVERABLE = 'A task in a category that carries no status cannot carry a status.'
 
 // Refuses a request whose resulting row would carry a status its category cannot hold. The three
-// stored statuses apply to trackable categories only, and a non-trackable task reads as N/A
-// everywhere, so a status stored on one would contradict what every reader reports about it.
+// stored statuses apply to categories that are a piece of work capable of being in progress, and a
+// non-deliverable task reads as N/A everywhere, so a status stored on one would contradict what
+// every reader reports about it.
 //
-// Only an asserted status is refused. A body that moves a task to a non-trackable category and says
-// nothing about status is not an error, and update.ts clears the stored value itself as part of the
-// same write. Refusing that case instead would force the editor to know which categories are
-// trackable in order to compose a valid request, which is the backend rule leaking into the frontend
+// The rule reads `deliverable` and not `trackable`, and that is the whole point of the two flags
+// being separate. A status is refused when the category cannot be in progress, never when the
+// category simply contributes nothing to the quota. `other` is non-trackable and does carry a
+// status, so { category: 'other', status: 'Terminé' } is a legal write on both endpoints. Keying
+// this on `trackable` would refuse the most ordinary thing a user will do with an unclassified row,
+// which is mark it finished.
+//
+// Only an asserted status is refused. A body that moves a task to a non-deliverable category and
+// says nothing about status is not an error, and update.ts clears the stored value itself as part of
+// the same write. Refusing that case instead would force the editor to know which categories carry a
+// status in order to compose a valid request, which is the backend rule leaking into the frontend
 // that the conventions forbid.
 //
 // The check runs against the resulting row rather than against the body, which is why it is here and
 // not in Zod. An update sending only { category: 'breaks' } on a task holding 'En cours' has a
 // perfectly valid body and produces an invalid row, and Zod only ever sees the request.
 //
-// Trackability is read from the shared contract rather than from a list of category ids written out
+// The flag is read from the shared contract rather than from a list of category ids written out
 // again, so a category whose flag changes changes here too.
 export function assertStatusFitsCategory(
   category: string,
   status: string | null | undefined
 ): void {
   if (status === null || status === undefined) return
-  if (isTrackableCategory(category)) return
+  if (isDeliverableCategory(category)) return
 
   throw createError({
     statusCode: 422,
-    statusMessage: STATUS_NOT_TRACKABLE,
-    data: { status: STATUS_NOT_TRACKABLE }
+    statusMessage: STATUS_NOT_DELIVERABLE,
+    data: { status: STATUS_NOT_DELIVERABLE }
   })
 }
 

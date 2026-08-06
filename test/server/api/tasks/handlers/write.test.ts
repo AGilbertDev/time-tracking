@@ -195,12 +195,25 @@ describe('assertStatusFitsCategory (AC23, AC25)', () => {
     }
   )
 
-  // Trackability is read from isTrackableCategory, so every non-trackable id in the contract is
-  // refused rather than a hand-written subset of them.
+  // The rule is read from isDeliverableCategory, so every id the contract says carries no status is
+  // refused rather than a hand-written subset of them. These five are the kinds of consumed time,
+  // which is a narrower set than the six non-trackable ids, because `other` is non-trackable and does
+  // carry a status.
   it.each(['terminology', 'meetings', 'breaks', 'admin', 'dtp'])(
-    'refuses a status on the non-trackable category %s',
+    'refuses a status on the non-deliverable category %s',
     (category) => {
       expect(() => assertStatusFitsCategory(category, 'En cours')).toThrow()
+    }
+  )
+
+  // UC12, and the case the two flags were split to get right. `other` is not trackable and it does
+  // carry a status, so a body naming both is legal on either endpoint. Marking an unclassified row
+  // finished is the most ordinary thing a user will do with it, and refusing that would make the app
+  // charge a category for the use of the status field, which is policing.
+  it.each(['Accepté', 'En cours', 'Terminé'])(
+    'accepts the status %s on other, which is non-trackable and does carry a status',
+    (status) => {
+      expect(() => assertStatusFitsCategory('other', status)).not.toThrow()
     }
   )
 
@@ -218,10 +231,18 @@ describe('assertStatusFitsCategory (AC23, AC25)', () => {
     })
   })
 
-  // An unknown id coerces to the non-trackable admin default, so it can never be reported as
-  // trackable and a status asserted on it is refused rather than quietly stored.
-  it('refuses a status on an unknown category id', () => {
-    expect(() => assertStatusFitsCategory('revision', 'En cours')).toThrow()
+  // This assertion inverted with the other-category feature, and the inversion is the intended
+  // behaviour rather than a regression, so it is rewritten rather than deleted.
+  //
+  // It used to read "refuses a status on an unknown category id", because an unknown id coerced to
+  // admin, which carried no status. The fallback is now `other`, which does carry one, so a status on
+  // a stale id is accepted. That is the point. A legacy row holding the retired revision with a stored
+  // Terminé had its status hidden behind an N/A the user never asked for, and it now reads as finished,
+  // which is what it is. Nothing about the quota changed, because the fallback is still non-trackable
+  // and isTrackableCategory('revision') is still false, asserted in the contract test.
+  it('accepts a status on an unknown category id, which now coerces to a deliverable default', () => {
+    expect(() => assertStatusFitsCategory('revision', 'En cours')).not.toThrow()
+    expect(() => assertStatusFitsCategory('does-not-exist', 'Terminé')).not.toThrow()
   })
 })
 

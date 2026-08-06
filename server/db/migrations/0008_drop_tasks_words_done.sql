@@ -1,0 +1,60 @@
+-- Drop the words_done column from tasks.
+--
+-- The words column on the planning row becomes one figure. The row used to print a
+-- done-over-total pair and the owner asked for the total alone, so the column
+-- behind the first half of that pair leaves the schema. The reason is reliability
+-- rather than tidiness: a per-row progress figure the user will not reliably enter
+-- produces worse statistics than no figure, and the surviving project_word_count
+-- carries the words actually done on that day, which is what the quota engine will
+-- sum. Work spanning several days is several rows, each with its own total, so
+-- nothing is lost that the split (PLAN-18) does not express better.
+--
+-- Nothing real is destroyed. The write boundary never accepted the field and
+-- toTaskColumns never had an entry for it, so the only writer that has ever set
+-- this column is the dev seed, which does not run against production. Any
+-- production row that exists therefore holds NULL here.
+--
+-- SQLite has supported ALTER TABLE DROP COLUMN since 3.35, and words_done is not a
+-- primary key, not unique, not indexed, and not referenced by a constraint or a
+-- generated column, so the drop is permitted rather than needing the
+-- create-copy-swap dance.
+--
+-- Expand-then-contract note. This is the contract half. The read projection selects
+-- this column on the build that is live before this feature deploys, so the
+-- planning week stops loading the moment this is applied and starts again when the
+-- new build lands. The order is: apply the migrations, then deploy. The schema is
+-- then in its final state and the deploy is the single last step whose success ends
+-- the window, where deploying first and failing the migration needs a rollback to
+-- recover. The window this order leaves breaks a read, which the page's existing
+-- error state and its Réessayer control already handle, where the reverse order
+-- breaks a write, and a failed save is where typed work can be lost.
+--
+-- Undo. If this is applied and the old build has to come back, one statement
+-- restores a working old build:
+--   ALTER TABLE `tasks` ADD `words_done` integer;
+-- The contents are gone, which costs nothing for the reason given above, and a dev
+-- database recovers fully with `bun run seed`.
+--
+-- DO NOT renumber or rename this file once it has been applied anywhere. The
+-- runner's ledger (_applied_migrations) is keyed on the filename alone with no
+-- checksum, so a name already recorded is skipped whatever the file now says, and a
+-- name that is not recorded runs. Renaming this file after it has landed in any
+-- environment therefore replays this DROP COLUMN against a table that no longer has
+-- the column. The runner tolerates no error, so that re-run throws, the file is not
+-- recorded, and the loop stops before every later migration.
+--
+-- This drop matches how 0000 through 0007 are authored in this project, as plain
+-- statement-broken SQL applied by hand rather than by a snapshot-diffing runner,
+-- because the project keeps no drizzle-kit meta snapshot directory.
+--
+-- Idempotency note. SQLite does not support IF EXISTS on ALTER TABLE DROP COLUMN,
+-- so re-running this file is guarded by the ledger rather than by the statement,
+-- which is the same arrangement 0007 relies on and is why the renaming note above
+-- matters.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso
+-- database, matching 0000 through 0007. It must not be pointed at a live database
+-- by CI, a deploy hook, or a dev-boot migration runner.
+
+ALTER TABLE `tasks` DROP COLUMN `words_done`;
