@@ -44,7 +44,31 @@ Confirmed with the user. The review uses this availability quota, words over sch
 
 Decided 2026-07-28. Translation and revision are not the same work and do not run at the same speed, so a single global words-per-hour number cannot describe both. The quota becomes a property of the category rather than a single user setting, and the stats report a row per category rather than one blended figure.
 
-The trackable set grows past the two we shipped. The direction is translation, internal revision, external revision, and proofreading, with the user able to add their own on top and each carrying its own default quota. `PLAN-30` already lets the user's create categories, so this makes the quota one more field on a category the user owns rather than a new mechanism.
+The trackable set grows past the two we shipped. The direction is translation, internal revision, external revision, and proofreading, with the user able to add their own on top and each carrying its own default quota. `PLAN-30` already lets the user create categories, so this makes the quota one more field on a category the user owns rather than a new mechanism.
+
+**This change came from the user, not from research.** The global words-per-hour setting was already
+shipped and already defaulted to 450, a figure taken from published throughput norms, and nothing in
+the code was asking to be changed. What changed it was the user describing how they actually work,
+which is that they hold a separate target for each kind of work and read each of those targets on its
+own. A single blended number answers a question they never ask. So the setting was wrong in shape
+rather than wrong in value, and tuning the default could not have fixed it, which is why `PLAN-32b`
+retires the column instead of editing the number in it.
+
+**The follow-up question the same feedback opened is what produced the section below.** Once the
+targets are per category, they are no longer measured against one shared pool, and that reopened the
+denominator a day later on 2026-07-29. So the two decisions are one piece of feedback and its
+consequence rather than two independent changes of mind, and reading them in that order is what makes
+the availability quota's retirement legible.
+
+**The feedback arrived after the global setting shipped, and that is the whole cost of it.**
+`settings.quota_wph` sits in the schema, in onboarding, on the settings page, and in `work-settings`,
+so retiring it is a migration plus four readers rather than a one-line default edit. A researched
+estimate that ships before the user has described their own practice is cheap to write and expensive
+to remove. This is the second time that pattern has cost something here, since the six researched
+categories from `PLAN-02` were replaced by nine for the same reason, recorded in [the category
+set](#the-category-set-and-the-real-quotas-from-the-user). Both were reasonable calls when they were
+made and both were still guesses, so the lesson is about when a default is worth shipping rather than
+about either estimate being careless.
 
 ### The quota is buckets, one per category, measured against time spent
 
@@ -58,9 +82,9 @@ quota_wph(category, period) = words in that category / hours spent in that categ
 
 Each trackable category is a bucket with its own target. A non-trackable category is a bucket with no target, consuming time and producing no words. The three ways out listed under the old open problem are resolved by this, and per-category throughput is the one chosen, which is the second of them. It was previously set aside for being the CAT-tool metric rather than the review metric, and the correction is that the review targets are themselves per kind of work, so the two are not in conflict after all.
 
-**Unaccounted time is a derived bucket, never an entered one.** Scheduled minutes minus everything logged that day is the leftover, and it is computed rather than typed. Asking the user's to log idle time is exactly the manual entry that killed `words_done`. Under the old availability model that gap silently dragged every number down with no explanation, and as a visible bucket it becomes the same penalty made diagnosable. It is worth more as a data-quality signal than as a time figure, because a large leftover means the logging is incomplete rather than that the user was idle.
+**Unaccounted time is a derived bucket, never an entered one.** Scheduled minutes minus everything logged that day is the leftover, and it is computed rather than typed. Asking the user to log idle time is exactly the manual entry that killed `words_done`. Under the old availability model that gap silently dragged every number down with no explanation, and as a visible bucket it becomes the same penalty made diagnosable. It is worth more as a data-quality signal than as a time figure, because a large leftover means the logging is incomplete rather than that the user was idle.
 
-**The buckets are dynamic.** `PLAN-30` lets the user's create categories, so the number of buckets is not fixed and no layout may assume it is. This is the same constraint `PLAN-23` already carries.
+**The buckets are dynamic.** `PLAN-30` lets the user create categories, so the number of buckets is not fixed and no layout may assume it is. This is the same constraint `PLAN-23` already carries.
 
 ### Estimated plans the day, actual measures it, and the ratio is the attainment
 
@@ -357,7 +381,7 @@ Depends on `PLAN-02`. Amends it. Shared contract, i18n, and the dev seed. No mig
 
 **`AC3`'s no-history finding expired on 2026-07-30, when `PLAN-09` landed.** The decision to build it was taken on 2026-07-29 and the feature landed the next day, which is the date [the ledger](../../pipeline-trace.md) records, and the landing date is the one that matters here because that is when real rows became possible. It held only while no task write path existed, and the write API is that path, so the re-check it names has fallen due rather than sitting in the future. Every feature that touches `tasks` from here counts the rows the seed did not write, against production, rather than reusing the finding below. The evidence carries its own expiry note in [nine-task-categories.md](nine-task-categories.md) and the reasoning is in [task-write-api.md](task-write-api.md). The bullets are kept as written, because they record what was true and how it was checked at the time.
 
-- Replaces the six shipped categories with the nine in [the category set](#the-category-set-and-the-real-quotas-from-the-primary-user). `proofreading` and `dtp` are new, `revision` is replaced by `revision_internal` and `revision_external`.
+- Replaces the six shipped categories with the nine in [the category set](#the-category-set-and-the-real-quotas-from-the-user). `proofreading` and `dtp` are new, `revision` is replaced by `revision_internal` and `revision_external`.
 - Carries the ids, the `trackable` flags, and the FR / EN copy only. The quota field is `32b` and the colours are `32c`, so this feature changes the set without changing what a category holds beyond its name.
 - AC1. The nine defaults are present with the correct trackable flags, `translation`, `revision_internal`, `revision_external`, and `proofreading` trackable and the other five not. AC2. The FR and EN strings are the confirmed ones above, in i18n keyed by id rather than in the contract. AC3. Existing `revision` rows are handled, and the claim that no user history exists is verified rather than inherited from this document. The check is done and the finding is recorded in the spec's `AC3`, which is that no write path has ever existed and every `revision` row in the dev database came from one seed pass. The finding stops being true once `PLAN-09` ships, so a later feature has to re-check rather than reuse it. AC4. `coerceCategory` validates the nine and still falls back to `admin`, so a stored `revision` resolves to a non-trackable id rather than reaching the UI raw. AC5. The dev seed is rewritten to the new ids.
 
@@ -365,7 +389,7 @@ Depends on `PLAN-02`. Amends it. Shared contract, i18n, and the dev seed. No mig
 Depends on `PLAN-32a`. Shared, backend, a migration, and the settings and onboarding UI. The migration is real here where `32a` has none, because `32b` drops the `settings.quota_wph` column, which is a structural change, while `32a` only changed stored values the seed owns.
 
 - A trackable category carries its own quota, so `settings.quota_wph` retires as a global. See [one quota per category](#one-quota-per-category-not-one-quota-for-everything).
-- The four defaults are translation 240, internal revision 1000, external revision 1300, proofreading 2000. Note that external is the faster number; [the category set](#the-category-set-and-the-real-quotas-from-the-primary-user) explains why that is not a transposition.
+- The four defaults are translation 240, internal revision 1000, external revision 1300, proofreading 2000. Note that external is the faster number; [the category set](#the-category-set-and-the-real-quotas-from-the-user) explains why that is not a transposition.
 - The shipped 450 default is wrong and goes with the global setting. `quota_wph_override` on a task stays as the per-task exception.
 - AC1. Each trackable category resolves its own quota and each non-trackable one has none. AC2. The quota is effective-dated, so editing it never restates a past period (`PLAN-30` AC6 covers the same ground for user-created categories). AC3. `settings.quota_wph` is gone from the schema, onboarding, the settings page, and `work-settings`, with no reader left behind. AC4. The research note that justified 450 is demoted to context rather than left reading as evidence.
 - Settled before this feature rather than inside it. A per-category quota is measured against the time spent in that category, per [the quota is buckets](#the-quota-is-buckets-one-per-category-measured-against-time-spent), so there is no shared pool left to divide and nothing here is left open.
@@ -649,7 +673,7 @@ Depends on PLAN-09. Frontend plus backend. Higher priority than its phase sugges
 Grounding for the decisions above. Full sources at the end.
 
 - **CAT tools measure throughput, not availability.** memoQ's editing time report divides source words by the _actual editing time_ recorded per segment, grouped by match rate. Trados reports word counts and analysis but leans on translation-memory leverage rather than a clock-time quota. Both answer "how fast while working", which is a different question from "words per paid hour". This is why our headline quota divides by scheduled hours, and why the CAT number would look higher.
-- **Industry norms.** A professional translator produces roughly 400 to 600 finished words per hour and about 2000 to 3000 words per day, and many full-time translators work only 5 to 6 effective hours a day because the work is mentally taxing. **This no longer supports the 450 default, and the claim that it did was wrong.** The configured translation quota is 240 (see [the category set and the real quotas](#the-category-set-and-the-real-quotas-from-the-primary-user)), well under the published range. The numbers are not comparable: published norms measure throughput while working, and this quota divides by scheduled availability, which is a larger denominator, so the same translator scores lower here by construction. Read this as context for what a CAT tool would report, never as evidence for a default. It does still support the rest, that effective hours are fewer than clock hours and that the buffer earns its place.
+- **Industry norms.** A professional translator produces roughly 400 to 600 finished words per hour and about 2000 to 3000 words per day, and many full-time translators work only 5 to 6 effective hours a day because the work is mentally taxing. **This no longer supports the 450 default, and the claim that it did was wrong.** The configured translation quota is 240 (see [the category set and the real quotas](#the-category-set-and-the-real-quotas-from-the-user)), well under the published range. The numbers are not comparable: published norms measure throughput while working, and this quota divides by scheduled availability, which is a larger denominator, so the same translator scores lower here by construction. Read this as context for what a CAT tool would report, never as evidence for a default. It does still support the rest, that effective hours are fewer than clock hours and that the buffer earns its place.
 - **View design.** Agenda-style vertical lists let users find the next item faster and hold temporal context better than time grids, with much less visual noise, though a grid is better for seeing free space. Best practice is to offer day, week, and month and let the user switch. Sunsama is the reference for a calm, low-overwhelm daily planner. This backs the calm-day-list default with view toggles.
 - **Category charts.** Toggl and Clockify both present time-by-category as pie and bar charts in daily and weekly reports, which is the model for `PLAN-31`.
 
