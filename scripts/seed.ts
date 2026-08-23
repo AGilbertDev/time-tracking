@@ -2,8 +2,19 @@ import { createClient } from '@libsql/client'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
 
-import { allowedEmails, settings, tasks, users, workSchedule } from '../server/db/schema'
-import { type DefaultCategoryId, isTrackableCategory } from '../shared/categories'
+import {
+  allowedEmails,
+  categoryQuotas,
+  settings,
+  tasks,
+  users,
+  workSchedule
+} from '../server/db/schema'
+import {
+  DEFAULT_CATEGORIES,
+  type DefaultCategoryId,
+  isTrackableCategory
+} from '../shared/categories'
 import {
   addDays,
   DEFAULT_SCHEDULE,
@@ -12,8 +23,8 @@ import {
   todayInZone
 } from '../shared/planning'
 
-// The one dev seed. It sets up the owner account, then wipes the owner's task and work-schedule rows
-// and repopulates seven weeks, the current week plus the three before and the three after, so
+// The one dev seed. It sets up the owner account, then wipes the owner's task, work-schedule, and
+// category-quota rows and repopulates seven weeks, the current week plus the three before and the three after, so
 // `bun dev` shows a populated week and the week switcher has somewhere to go in both directions. It
 // is meant to be re-run at the start of a session: the span is computed from today, so the data is
 // always current, and the wipe means a second run replaces rather than accumulates.
@@ -41,8 +52,9 @@ const ownerEmail = process.env.NUXT_OWNER_EMAIL
 if (!ownerEmail) throw new Error('NUXT_OWNER_EMAIL is not set.')
 
 console.warn(
-  `seed deletes every task and work_schedule row for ${ownerEmail} in the database that .env ` +
-    `points at, then reseeds seven weeks. Confirm it is a development database, never production.`
+  `seed deletes every task, work_schedule, and category_quotas row for ${ownerEmail} in the ` +
+    `database that .env points at, then reseeds seven weeks. Confirm it is a development database, ` +
+    `never production.`
 )
 
 const client = createClient({
@@ -560,11 +572,12 @@ weeks.forEach((weekDays, weekIndex) => {
 // --- write ---------------------------------------------------------------------------------------
 
 // Wipe first, so a re-run replaces the whole picture rather than merging into a stale one and never
-// leaves a half-seeded span. Both deletes are scoped to the owner by user id, so another user's rows
+// leaves a half-seeded span. Every delete is scoped to the owner by user id, so another user's rows
 // in a shared dev database are untouched, and no account, settings, or preference row is touched, so
 // the owner stays able to sign in.
 const deletedTasks = await db.delete(tasks).where(eq(tasks.userId, ownerId))
 const deletedSchedule = await db.delete(workSchedule).where(eq(workSchedule.userId, ownerId))
+const deletedQuotas = await db.delete(categoryQuotas).where(eq(categoryQuotas.userId, ownerId))
 
 // Insert in chunks. A single statement binds one parameter per column per row, and the whole span is
 // well over a hundred rows, so chunking keeps the statement under any SQLite variable limit rather
@@ -590,16 +603,42 @@ await db.insert(workSchedule).values({
   effectiveFrom
 })
 
+// One category_quotas row per trackable category (PLAN-32b), at the same effective date as the
+// work-schedule record so every seeded day resolves through the stored-row branch of the resolver. The
+// figures are the shipped defaults from the contract rather than invented numbers, so no figure enters
+// the dev database that the app does not already carry, and the API's `source` field is what shows the
+// difference between a stored row and a default on screen. That stored branch is the one production
+// uses the moment the user saves once, so it should be the branch a developer sees.
+// Selected and mapped in one flatMap rather than a filter followed by a map, so the null check that
+// makes the figure safe is the check the compiler reads. A filter narrows nothing for the map that
+// follows it, which is why the map used to need a non-null assertion, and an assertion is exactly
+// what stops telling the truth the day the filter changes.
+const quotaRows = DEFAULT_CATEGORIES.flatMap((category) =>
+  category.trackable && category.defaultQuotaWph !== null
+    ? [
+        {
+          userId: ownerId,
+          categoryId: category.id,
+          quotaWph: category.defaultQuotaWph,
+          effectiveFrom
+        }
+      ]
+    : []
+)
+
+await db.insert(categoryQuotas).values(quotaRows)
+
 const from = weeks[0]![0]!
 const to = weeks.at(-1)![6]!
 
 console.log(
-  `Deleted ${deletedTasks.rowsAffected} task(s) and ${deletedSchedule.rowsAffected} ` +
-    `work_schedule row(s) for ${ownerEmail}.`
+  `Deleted ${deletedTasks.rowsAffected} task(s), ${deletedSchedule.rowsAffected} ` +
+    `work_schedule row(s), and ${deletedQuotas.rowsAffected} category_quotas row(s) for ${ownerEmail}.`
 )
 console.log(
   `Seeded ${rows.length} tasks across ${weeks.length} weeks, ${from} to ${to} (today ${today}, ` +
-    `timezone ${timezone}), plus one work_schedule record effective ${effectiveFrom}.`
+    `timezone ${timezone}), plus one work_schedule record and ${quotaRows.length} ` +
+    `category_quotas row(s) effective ${effectiveFrom}.`
 )
 
 client.close()

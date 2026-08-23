@@ -90,6 +90,23 @@ export type Category = {
   // explicitly, including a PLAN-30 custom category, because a default would silently guess.
   deliverable: boolean
   hue: number
+  // The words-per-hour figure this category starts at, or null when the category carries no quota at
+  // all. It is an ordinary configurable default rather than a constant, so this number is only what a
+  // user with no stored row resolves to, and their own saved figure wins over it from the moment they
+  // save one. The stored figures live in the category_quotas table and the server resolves the two
+  // together, so nothing here is a ceiling, a floor, or a rule about anybody's work.
+  //
+  // Every descriptor declares it explicitly, including a PLAN-30 user-created category, for the same
+  // reason `deliverable` is declared on all ten. A lookup that special-cased the four trackable ids
+  // would be a special case a user-created category cannot inherit, so it would have to be edited
+  // again the first time the set grows.
+  //
+  // It is not a substitute for `trackable` and neither is derived from the other. `trackable` answers
+  // whether words reach a quota, and this is a number. The two agree across the ten defaults, and
+  // that agreement is asserted as a consistency check on the contract rather than turned into a
+  // derivation, because a user-created trackable category has no shipped number and still has to be
+  // trackable.
+  defaultQuotaWph: number | null
 }
 
 // The ten defaults with their locked flags and their designed hues, in the same order as
@@ -122,17 +139,26 @@ export type Category = {
 // because Autre is the shortest label of the ten and shares no prefix with any other, so the word
 // resolves the row on its own and the colour is doing almost no scanning work, unlike the two
 // revision labels that differ only in their last word.
+//
+// The four quota numbers are the starting values for the four trackable categories, and the other six
+// carry null because a category with no quota has no number rather than a zero.
+//
+// EXTERNAL REVISION IS DELIBERATELY THE FASTER NUMBER. 1300 for revision_external against 1000 for
+// revision_internal reads like a transposition and it is not one, so do not swap them. Revising work
+// that came from outside is expected to move quicker than revising work from inside, which is the
+// whole reason the two are separate categories. Any change that puts the larger number on the
+// internal side is undoing a decision rather than correcting a typo.
 export const DEFAULT_CATEGORIES: readonly Category[] = [
-  { id: 'translation', trackable: true, deliverable: true, hue: 195 },
-  { id: 'revision_internal', trackable: true, deliverable: true, hue: 140 },
-  { id: 'revision_external', trackable: true, deliverable: true, hue: 115 },
-  { id: 'proofreading', trackable: true, deliverable: true, hue: 230 },
-  { id: 'terminology', trackable: false, deliverable: false, hue: 20 },
-  { id: 'meetings', trackable: false, deliverable: false, hue: 340 },
-  { id: 'breaks', trackable: false, deliverable: false, hue: 265 },
-  { id: 'admin', trackable: false, deliverable: false, hue: 305 },
-  { id: 'dtp', trackable: false, deliverable: false, hue: 60 },
-  { id: 'other', trackable: false, deliverable: true, hue: 90 }
+  { id: 'translation', trackable: true, deliverable: true, hue: 195, defaultQuotaWph: 240 },
+  { id: 'revision_internal', trackable: true, deliverable: true, hue: 140, defaultQuotaWph: 1000 },
+  { id: 'revision_external', trackable: true, deliverable: true, hue: 115, defaultQuotaWph: 1300 },
+  { id: 'proofreading', trackable: true, deliverable: true, hue: 230, defaultQuotaWph: 2000 },
+  { id: 'terminology', trackable: false, deliverable: false, hue: 20, defaultQuotaWph: null },
+  { id: 'meetings', trackable: false, deliverable: false, hue: 340, defaultQuotaWph: null },
+  { id: 'breaks', trackable: false, deliverable: false, hue: 265, defaultQuotaWph: null },
+  { id: 'admin', trackable: false, deliverable: false, hue: 305, defaultQuotaWph: null },
+  { id: 'dtp', trackable: false, deliverable: false, hue: 60, defaultQuotaWph: null },
+  { id: 'other', trackable: false, deliverable: true, hue: 90, defaultQuotaWph: null }
 ] as const
 
 // A descriptor lookup keyed by id so both flags are read from one place rather than re-derived at
@@ -218,4 +244,21 @@ export function isDeliverableCategory(id: unknown): boolean {
 // than two copies that can drift.
 export function categoryHue(id: unknown): number {
   return CATEGORY_BY_ID[coerceCategory(id) as DefaultCategoryId].hue
+}
+
+// The words-per-hour figure a category starts at, or null when it carries no quota. It coerces the id
+// first like its siblings, so an unknown or stale value resolves to the default and therefore to
+// null, which is the fail-closed direction for a number that will end up as a divisor. The function
+// is total, so every input returns either a number or null and nothing throws.
+//
+// This is the last step of the server's resolution order rather than the whole of it. A user's own
+// stored figure for the date being resolved wins over this, and a non-trackable category has no quota
+// whatever this returns. Both of those live in server/utils/resolveCategoryQuota.ts, which is where
+// the order is written down once. Read this on its own only to ask what a fresh user starts with.
+//
+// A user-created category from PLAN-30 returns null here, because no shipped number can describe a
+// kind of work nobody has described yet. PLAN-30 collects a quota when the user creates a trackable
+// category, or decides its own default at that moment.
+export function defaultQuotaWph(id: unknown): number | null {
+  return CATEGORY_BY_ID[coerceCategory(id) as DefaultCategoryId].defaultQuotaWph
 }

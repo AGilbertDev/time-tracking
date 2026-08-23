@@ -58,11 +58,24 @@ const timezones = computed(() => {
     <UFormField :label="t('onboarding.work.dailyHours')">
       <div class="flex items-end gap-3">
         <div class="flex items-center gap-1.5">
-          <UInputNumber v-model="hours" class="w-24" :max="23" :min="0" />
+          <UInputNumber
+            v-model="hours"
+            :aria-label="t('onboarding.work.hoursLabel')"
+            class="w-24"
+            :max="23"
+            :min="0"
+          />
           <span class="text-sm text-muted">{{ t('onboarding.work.unitHours') }}</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <UInputNumber v-model="minutes" class="w-24" :max="59" :min="0" :step="5" />
+          <UInputNumber
+            v-model="minutes"
+            :aria-label="t('onboarding.work.minutesLabel')"
+            class="w-24"
+            :max="59"
+            :min="0"
+            :step="5"
+          />
           <span class="text-sm text-muted">{{ t('onboarding.work.unitMinutes') }}</span>
         </div>
       </div>
@@ -84,10 +97,6 @@ const timezones = computed(() => {
           {{ t(`onboarding.work.dayShort.${day}`) }}
         </UButton>
       </div>
-    </UFormField>
-
-    <UFormField :hint="t('onboarding.work.unitWph')" :label="t('onboarding.work.quota')">
-      <UInputNumber v-model="form.quotaWph" class="w-full" :max="10000" :min="1" />
     </UFormField>
 
     <UFormField :label="t('onboarding.work.timezone')">

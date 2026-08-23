@@ -1,0 +1,82 @@
+-- Drop the quota_wph column from settings (PLAN-32b).
+--
+-- This is the contract half of retiring the global quota. The column held one
+-- words-per-hour figure per user, and a quota belongs to a kind of work rather than
+-- to the person doing it, so the setting was wrong in shape rather than wrong in
+-- value. Its replacement is the category_quotas table that 0010 creates, plus the
+-- shipped starting figures on the category descriptors in shared/categories.ts. The
+-- column therefore retires instead of getting a better default.
+--
+-- The stored value is discarded rather than migrated into any category_quotas row.
+-- Three reasons, and the first is sufficient on its own. It is the global 450
+-- default, which the planning overview records as wrong rather than merely stale, so
+-- carrying it forward would put a rejected figure into the new table on day one and
+-- make it look like a decision. One number covering four kinds of work carries no
+-- information about any one of them, so attributing it to a category would be an
+-- invention. And zero rows is a working state, because the shipped defaults resolve
+-- for every trackable category, so there is nothing for a backfill to rescue.
+--
+-- Read the value out before applying this, and write it down in the pull request.
+-- `SELECT quota_wph FROM settings;` costs one query, and the production row cannot
+-- be read from the container this was built in, so if it holds something other than
+-- 450 the owner is the only one who can see it. The discard still stands on the
+-- second reason whatever it turns out to be, and the owner can type a remembered
+-- figure into whichever category it belonged to on the new settings section in a few
+-- seconds.
+--
+-- SQLite has supported ALTER TABLE DROP COLUMN since 3.35, and quota_wph is not a
+-- primary key, not unique, not indexed, and not referenced by a constraint or a
+-- generated column, so the drop is permitted rather than needing the
+-- create-copy-swap dance.
+--
+-- Expand-then-contract note. This is the contract half and it is the last of the
+-- three steps. Apply 0010, then deploy the new build, then apply this. The middle
+-- step succeeds while this column still exists because it is NOT NULL with a
+-- database-level DEFAULT 450 and the new build's settings and onboarding inserts
+-- never name it, which is what makes the window zero rather than merely short. That
+-- database-level default is worth confirming rather than assuming, with
+-- `PRAGMA table_info(settings);` against the target database, since the settings
+-- table predates the migration files and no tracked migration created this column.
+-- The evidence for it is that 0000 inserts settings rows naming only id, user_id,
+-- and locale, which can only succeed if every other NOT NULL column carries a
+-- default.
+--
+-- The runner does not enforce that order. `bun run apply-migrations --yes` applies
+-- every pending file in filename order in one pass, so running it once between the
+-- two deploys applies 0010 and this file together. That is not wrong, it just
+-- reintroduces a window in which the old build's settings read and settings save
+-- both fail, the same window 0008 accepted. The read side is already covered by the
+-- settings page's error state and its Réessayer control, and the save is the side
+-- that can lose typed work, which is why the three-step order is the instruction.
+--
+-- Undo. If this is applied and the old build has to come back, one statement
+-- restores a working old build:
+--   ALTER TABLE `settings` ADD `quota_wph` integer NOT NULL DEFAULT 450;
+-- SQLite permits a NOT NULL ADD COLUMN when a non-null default is given, which this
+-- has. The contents are gone, which costs nothing for the reason given above.
+--
+-- DO NOT renumber or rename this file once it has been applied anywhere. The
+-- runner's ledger (_applied_migrations) is keyed on the filename alone with no
+-- checksum, so a name already recorded is skipped whatever the file now says, and a
+-- name that is not recorded runs. Renaming this file after it has landed in any
+-- environment therefore replays this DROP COLUMN against a table that no longer has
+-- the column. The runner tolerates no error, so that re-run throws, the file is not
+-- recorded, and the loop stops before every later migration.
+--
+-- Idempotency note. SQLite does not support IF EXISTS on ALTER TABLE DROP COLUMN, so
+-- re-running this file is guarded by the ledger rather than by the statement, which
+-- is the same arrangement 0007 and 0008 rely on and is why the renaming note above
+-- matters.
+--
+-- Authored as plain statement-broken SQL with this comment header to match how 0000
+-- through 0010 are maintained in this project, applied by hand rather than by a
+-- snapshot-diffing runner, because the repo keeps no drizzle-kit meta snapshot
+-- directory or _journal.json.
+--
+-- DO NOT auto-run this against production. There is one real user, and this
+-- migration is applied manually by the owner against the production Turso database,
+-- matching 0000 through 0010. It must not be pointed at a live database by CI, a
+-- deploy hook, or a dev-boot migration runner. There are no database credentials in
+-- this environment.
+
+ALTER TABLE `settings` DROP COLUMN `quota_wph`;

@@ -43,7 +43,7 @@
       },
       "work": {
         "title": "Travail",
-        "subtitle": "Vos heures, vos journées et votre quota."
+        "subtitle": "Vos heures, vos journées et votre fuseau horaire."
       }
     },
     "nav": {
@@ -64,7 +64,6 @@
       "unitHours": "h",
       "unitMinutes": "min",
       "workDays": "Jours travaillés",
-      "quota": "Quota de base",
       "unitWph": "mots/heure",
       "timezone": "Fuseau horaire",
       "timezoneSearch": "Rechercher un fuseau…",
@@ -269,7 +268,7 @@
         "statusNone": "Aucun",
         "statusUnavailable": "Cette catégorie ne porte pas de statut.",
         "quota": "Quota",
-        "quotaHint": "Vide : votre quota par défaut.",
+        "quotaHint": "Vide : le quota de la catégorie.",
         "excludeFromStats": "Exclure des stats",
         "excludeHint": "La tâche reste au calendrier, mais ses mots ne comptent pas dans le quota.",
         "notes": "Notes",
@@ -400,6 +399,20 @@
       "success": "Vos paramètres de travail ont été enregistrés.",
       "loadError": "Vos paramètres de travail n'ont pas pu être chargés.",
       "retry": "Réessayer",
+      "errors": {
+        "generic": "Une erreur est survenue. Veuillez réessayer."
+      }
+    },
+    "quotas": {
+      "heading": "Quotas",
+      "subtitle": "Votre objectif de mots à l'heure pour chaque catégorie.",
+      "submit": "Enregistrer",
+      "success": "Vos quotas ont été enregistrés.",
+      "loadError": "Vos quotas n'ont pas pu être chargés.",
+      "retry": "Réessayer",
+      "defaultBadge": "Valeur par défaut",
+      "userSince": "Votre valeur, en vigueur depuis le {date}.",
+      "empty": "Aucune catégorie ne porte de quota pour le moment.",
       "errors": {
         "generic": "Une erreur est survenue. Veuillez réessayer."
       }

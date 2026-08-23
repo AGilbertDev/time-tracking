@@ -42,7 +42,6 @@ export const settings = sqliteTable(
     userId: text('user_id').notNull(),
     dailyWorkMinutes: integer('daily_work_minutes').default(450),
     workDays: text('work_days').notNull().default('[1,2,3,4,5]'),
-    quotaWph: integer('quota_wph').notNull().default(450),
     // Preference columns. The theme defaults match DEFAULT_THEME_ID in shared/theme.ts,
     // and the locale default matches the i18n defaultLocale. Locale lives here now rather
     // than on users so a single settings row holds every user preference.
@@ -88,8 +87,12 @@ export const tasks = sqliteTable(
     deliveryTime: text('delivery_time'),
     // Plain integer counts and whole-minute durations. The schema stores raw
     // facts only; the quota math (PLAN-22) and the frozen estimate (PLAN-12)
-    // live in their own features. quotaWphOverride NULL means use
-    // settings.quota_wph.
+    // live in their own features. quotaWphOverride NULL means the row takes its
+    // category's quota, which is the user's own category_quotas row effective on
+    // this task's date and otherwise the category's shipped default. The global
+    // settings.quota_wph this used to name retired in migration 0011, because a
+    // quota belongs to a kind of work rather than to a person. The resolution
+    // order lives in server/utils/resolveCategoryQuota.ts and nowhere else.
     //
     // project_word_count is this row's own total, which is the whole project's
     // total only when the work is not split across days. The name reads as a
@@ -222,5 +225,73 @@ export const workSchedule = sqliteTable(
     // WHERE user_id = ? AND effective_from <= ? ORDER BY effective_from DESC.
     // user_id first for the equality match, effective_from second for the range.
     uniqueIndex('work_schedule_user_id_effective_from_idx').on(table.userId, table.effectiveFrom)
+  ]
+)
+
+// The effective-dated per-category quota history (PLAN-32b). A quota is a property of a kind of work
+// rather than a property of the person doing it, so the one global settings.quota_wph could not
+// describe four kinds of work at once and retired in migration 0011. This table holds the user's own
+// figure per category instead, and the shipped starting figures stay in shared/categories.ts as
+// defaultQuotaWph, so a user with no rows here still resolves a working quota for every trackable
+// category and there is no bootstrap step.
+//
+// It is a standalone table keyed by a free-text category_id rather than a quota column on a
+// categories record, and that is deliberate twice over. There is no per-user categories record to put
+// a column on, since the categories are still a code contract with no table behind them, so a quota
+// column on the category would mean building that table first and that table is its own feature
+// (PLAN-30). And free text means this table already accepts an id that does not exist yet, so a quota
+// for a user-created category is an insert rather than a migration. That is the same seam
+// CategoryId = DefaultCategoryId | (string & {}) keeps open in the type, expressed in the database
+// rather than only in TypeScript. The cost is that a stored row can name a category the app no longer
+// knows, which the resolver handles by never selecting it rather than by preventing it, and such a row
+// is left in place so its quota comes back if its category does.
+//
+// The effective dating copies work_schedule above rather than inventing a second arrangement for the
+// same problem. Editing a quota must not restate a period that has already been reported, so this is
+// SCD Type 2, one row per effective date, effective_from held as 'YYYY-MM-DD' text so lexicographic
+// order equals chronological order, and resolution is an index-friendly range scan.
+export const categoryQuotas = sqliteTable(
+  'category_quotas',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id').notNull(),
+    // Free-text category id, the shared ten today and any user-created id later. No CHECK and no
+    // enum here on purpose, for the reason given in the header. The write boundary validates the id
+    // against the contract's trackable set, and the read path is asked about one category at a time
+    // so a row naming an unknown id simply never participates.
+    categoryId: text('category_id').notNull(),
+    // The user's target words per hour for that category under this record. NOT NULL because a row
+    // with no figure would say nothing that the row's absence does not already say better, and the
+    // write boundary keeps it at 1 or above because the quota is a divisor.
+    quotaWph: integer('quota_wph').notNull(),
+    // 'YYYY-MM-DD', the calendar day this record takes effect. Text so lexicographic order equals
+    // chronological order, matching work_schedule and tasks.date.
+    effectiveFrom: text('effective_from').notNull(),
+    // True lifecycle instants, Unix-seconds mode 'timestamp', matching users, tasks, and
+    // work_schedule exactly (no .notNull(), defaulted through $defaultFn).
+    createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date())
+  },
+  (table) => [
+    // Deleting a user deletes their quotas. They are the user's own configuration with no reason to
+    // outlive the account, so cascade leaves no orphans. It fires for the same reason the tasks
+    // foreign key does, Turso's server default rather than anything the libSQL client sets, and the
+    // check behind that statement and the limits on it are recorded on that key rather than three
+    // times. The purge endpoint deletes this table explicitly as well, precisely because the pragma
+    // is unverified on the one database where a failed erasure would matter.
+    foreignKey({ columns: [table.userId], foreignColumns: [users.id] }).onDelete('cascade'),
+    // A unique index on (user_id, category_id, effective_from) forbids two records for the same user,
+    // category, and effective date, which would make resolution ambiguous, and it is the conflict
+    // target the write upserts on so saving twice in a day updates that day's row rather than piling
+    // up rows. It also serves the resolution query
+    // WHERE user_id = ? AND category_id = ? AND effective_from <= ? ORDER BY effective_from DESC,
+    // with the two equality columns first and the range column last.
+    uniqueIndex('category_quotas_user_id_category_id_effective_from_idx').on(
+      table.userId,
+      table.categoryId,
+      table.effectiveFrom
+    )
   ]
 )

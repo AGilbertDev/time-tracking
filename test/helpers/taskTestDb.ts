@@ -36,16 +36,16 @@ const USERS_DDL = `
   )
 `
 
-// The settings table as 0000 through 0002 leave it. loadWorkSettings reads it for the timezone the
-// overdue comparison is made in, and it is left real rather than mocked so the projection resolves
-// its instant the way it does in production. No row means the coded defaults, America/Toronto.
+// The settings table as 0000 through 0002 leave it, minus 0011's dropped quota_wph. loadWorkSettings
+// reads it for the timezone the overdue comparison is made in, and it is left real rather than mocked
+// so the projection resolves its instant the way it does in production. No row means the coded
+// defaults, America/Toronto.
 const SETTINGS_DDL = `
   CREATE TABLE settings (
     id text PRIMARY KEY NOT NULL,
     user_id text NOT NULL,
     daily_work_minutes integer DEFAULT 450,
     work_days text DEFAULT '[1,2,3,4,5]' NOT NULL,
-    quota_wph integer DEFAULT 450 NOT NULL,
     light_theme text DEFAULT 'pastel' NOT NULL,
     dark_theme text DEFAULT 'pastel' NOT NULL,
     locale text DEFAULT 'fr' NOT NULL,
@@ -123,6 +123,29 @@ const WORK_SCHEDULE_DDL = `
   )
 `
 
+// The category_quotas table as 0010 leaves it. Present so the erasure path can be tested against a
+// real table rather than a mock, since the purge endpoint names this table too and a cascade it cannot
+// rely on is not what clears it.
+const CATEGORY_QUOTAS_DDL = `
+  CREATE TABLE category_quotas (
+    id text PRIMARY KEY NOT NULL,
+    user_id text NOT NULL,
+    category_id text NOT NULL,
+    quota_wph integer NOT NULL,
+    effective_from text NOT NULL,
+    created_at integer,
+    updated_at integer,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE cascade
+  )
+`
+
+// The unique index the write upserts on, so a test exercising the upsert conflicts the way production
+// does rather than inserting a second row for the same day.
+const CATEGORY_QUOTAS_INDEX_DDL = `
+  CREATE UNIQUE INDEX category_quotas_user_id_category_id_effective_from_idx
+    ON category_quotas (user_id, category_id, effective_from)
+`
+
 export type TaskTestDb = {
   client: Client
   db: ReturnType<typeof drizzle>
@@ -183,6 +206,8 @@ export async function createTaskTestDb(options: TaskTestDbOptions = {}): Promise
     SETTINGS_DDL,
     TASKS_DDL,
     WORK_SCHEDULE_DDL,
+    CATEGORY_QUOTAS_DDL,
+    CATEGORY_QUOTAS_INDEX_DDL,
     MAGIC_LINK_TOKENS_DDL,
     ALLOWED_EMAILS_DDL
   ]) {
@@ -256,16 +281,17 @@ export async function seedTask(client: Client, row: TaskRowSeed): Promise<string
   return row.id
 }
 
-// Inserts a settings row so a test can pin the timezone the overdue comparison is made in.
+// Inserts a settings row so a test can pin the timezone the overdue comparison is made in. There is no
+// quota argument, because the global quota_wph column retired in migration 0011 and a quota is now one
+// row per category in category_quotas.
 export async function seedSettings(
   client: Client,
   userId: string,
-  timezone: string,
-  quotaWph = 450
+  timezone: string
 ): Promise<void> {
   await client.execute({
-    sql: 'INSERT INTO settings (id, user_id, timezone, quota_wph) VALUES (?, ?, ?, ?)',
-    args: [`settings-${userId}`, userId, timezone, quotaWph]
+    sql: 'INSERT INTO settings (id, user_id, timezone) VALUES (?, ?, ?)',
+    args: [`settings-${userId}`, userId, timezone]
   })
 }
 
@@ -281,6 +307,29 @@ export async function seedWorkSchedule(
     sql: `INSERT INTO work_schedule (id, user_id, work_minutes, effective_from)
           VALUES (?, ?, ?, ?)`,
     args: [`schedule-${userId}`, userId, workMinutes, effectiveFrom]
+  })
+}
+
+// Inserts a category_quotas row. The erasure path has to clear this table as well, and the resolver's
+// stored-row branch needs a real row to resolve, so both kinds of test seed one from here rather than
+// through the write path they are checking.
+export async function seedCategoryQuota(
+  client: Client,
+  userId: string,
+  categoryId = 'translation',
+  quotaWph = 240,
+  effectiveFrom = '2026-07-01'
+): Promise<void> {
+  await client.execute({
+    sql: `INSERT INTO category_quotas (id, user_id, category_id, quota_wph, effective_from)
+          VALUES (?, ?, ?, ?, ?)`,
+    args: [
+      `quota-${userId}-${categoryId}-${effectiveFrom}`,
+      userId,
+      categoryId,
+      quotaWph,
+      effectiveFrom
+    ]
   })
 }
 

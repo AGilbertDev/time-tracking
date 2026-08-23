@@ -4,12 +4,7 @@ import { LOCALES, THEME_IDS } from '#shared/theme'
 
 import { PasswordSchema } from './password'
 import { nameFieldSchema } from './profile'
-import {
-  dailyWorkMinutesSchema,
-  quotaWphSchema,
-  timezoneSchema,
-  workDaysSchema
-} from './work-settings'
+import { dailyWorkMinutesSchema, timezoneSchema, workDaysSchema } from './work-settings'
 
 // The onboarding wizard persists identity, appearance, and work settings atomically on the
 // single Finish submit. Every field validator is imported from the shared model that owns it,
@@ -26,9 +21,10 @@ export const CompleteOnboardingSchema = z.object({
   lightTheme: z.enum(THEME_IDS),
   darkTheme: z.enum(THEME_IDS),
   locale: z.enum(LOCALES),
-  // Work settings, from the shared work-field validators.
+  // Work settings, from the shared work-field validators. The wizard asks no quota, because a quota
+  // is per category now and four numbers before the user has seen a single task is a worse first run
+  // than four sensible defaults they can change on the settings page whenever they like.
   dailyWorkMinutes: dailyWorkMinutesSchema,
-  quotaWph: quotaWphSchema,
   workDays: workDaysSchema,
   timezone: timezoneSchema
 })

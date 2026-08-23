@@ -248,7 +248,7 @@ describe('createTask', () => {
     // The derivation needs a per-category quota that does not exist yet, and because the estimate is
     // frozen by definition a value derived from today's wrong global quota would never self-correct.
     it('stores NULL when no estimate is sent, even with a word count and a quota override present', async () => {
-      await seedSettings(client, OWNER_ID, 'America/Toronto', 450)
+      await seedSettings(client, OWNER_ID, 'America/Toronto')
 
       const created = await createTask(
         event,

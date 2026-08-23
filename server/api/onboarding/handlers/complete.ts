@@ -58,7 +58,6 @@ export async function completeOnboarding(
     locale: body.locale,
     dailyWorkMinutes: body.dailyWorkMinutes,
     workDays: JSON.stringify(body.workDays),
-    quotaWph: body.quotaWph,
     timezone: body.timezone
   }
 

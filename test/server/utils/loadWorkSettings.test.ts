@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 // and the PATCH read-back). Every expected value below is derived from
 // docs/specs/settings/settings-page.md (the "GET /api/me/work-settings" contract and the "Corrupted
 // or legacy work_days text" edge case), not from the implementation. The spec fixes: the no-row
-// path returns the coded defaults { dailyWorkMinutes: 450, workDays: [1,2,3,4,5], quotaWph: 450,
+// path returns the coded defaults { dailyWorkMinutes: 450, workDays: [1,2,3,4,5],
 // timezone: 'America/Toronto' }; work_days is JSON text that the loader parses and coerces to a
 // clean number[], where a non-JSON or non-array value falls back to [1,2,3,4,5] and every entry
 // that is not an integer 0-6 is dropped and duplicates are de-duped; an empty array is a valid
@@ -31,14 +31,12 @@ function row(
   overrides: {
     workDays?: string
     dailyWorkMinutes?: number | null
-    quotaWph?: number
     timezone?: string
   } = {}
 ) {
   return {
     dailyWorkMinutes: overrides.dailyWorkMinutes ?? 450,
     workDays: overrides.workDays ?? '[1,2,3,4,5]',
-    quotaWph: overrides.quotaWph ?? 450,
     timezone: overrides.timezone ?? 'America/Toronto'
   }
 }
@@ -56,7 +54,6 @@ describe('loadWorkSettings', () => {
       await expect(loadWorkSettings('user-1')).resolves.toEqual({
         dailyWorkMinutes: 450,
         workDays: [1, 2, 3, 4, 5],
-        quotaWph: 450,
         timezone: 'America/Toronto'
       })
     })
@@ -136,13 +133,12 @@ describe('loadWorkSettings', () => {
 
     it('returns the row values for the numeric and timezone fields', async () => {
       getMock.mockReturnValue(
-        row({ dailyWorkMinutes: 480, quotaWph: 600, timezone: 'Europe/Paris', workDays: '[1,2]' })
+        row({ dailyWorkMinutes: 480, timezone: 'Europe/Paris', workDays: '[1,2]' })
       )
 
       await expect(loadWorkSettings('user-1')).resolves.toEqual({
         dailyWorkMinutes: 480,
         workDays: [1, 2],
-        quotaWph: 600,
         timezone: 'Europe/Paris'
       })
     })

@@ -4,6 +4,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { useDb } from '../../db/index'
 import {
   allowedEmails,
+  categoryQuotas,
   magicLinkTokens,
   settings,
   tasks,
@@ -79,15 +80,16 @@ export default defineEventHandler(async (event) => {
   // and the outcome never depends on a cascade. A deactivated account is normally already off the
   // allowlist, but any lingering row is removed defensively by email.
   //
-  // DO NOT remove the tasks or work_schedule deletes as redundant. They look redundant, because both
-  // tables declare onDelete('cascade') in server/db/schema.ts, and they are load-bearing anyway. That
-  // cascade only fires when PRAGMA foreign_keys is ON, nothing in this repo issues that pragma, and
-  // the schema comment on the tasks foreign key records honestly that it was probed against the
-  // development database on 2026-07-29 and that production was never probed. So on the one database
-  // where a failed erasure actually matters, the cascade is unverified. This endpoint's entire job is
-  // erasure, and a reader seeing four named deletes would reasonably conclude those are all the
-  // tables involved, which was false. Naming all six removes the dependency on an unverified platform
-  // default rather than adding behaviour, and it stays correct whether the pragma is on or off.
+  // DO NOT remove the tasks, work_schedule, or category_quotas deletes as redundant. They look
+  // redundant, because all three tables declare onDelete('cascade') in server/db/schema.ts, and they
+  // are load-bearing anyway. That cascade only fires when PRAGMA foreign_keys is ON, nothing in this
+  // repo issues that pragma, and the schema comment on the tasks foreign key records honestly that it
+  // was probed against the development database on 2026-07-29 and that production was never probed.
+  // So on the one database where a failed erasure actually matters, the cascade is unverified. This
+  // endpoint's entire job is erasure, and a reader seeing only some of the tables named would
+  // reasonably conclude those are all the tables involved, which was false. Naming all seven removes
+  // the dependency on an unverified platform default rather than adding behaviour, and it stays
+  // correct whether the pragma is on or off.
   //
   // The stakes went up in the same change that left the mechanism unverified, which is why this was
   // fixed here rather than filed as a follow-up. The tasks table now carries a free-text notes column
@@ -95,6 +97,10 @@ export default defineEventHandler(async (event) => {
   // exactly the kind of personal data the purge exists to destroy.
   await db.delete(tasks).where(inArray(tasks.userId, ids))
   await db.delete(workSchedule).where(inArray(workSchedule.userId, ids))
+  // A quota is the user's own configuration of how they want their work measured, so it has no reason
+  // to outlive the account either. Its table arrived after the other six, which is why this delete
+  // reads as an addition rather than as part of the original list.
+  await db.delete(categoryQuotas).where(inArray(categoryQuotas.userId, ids))
   await db.delete(settings).where(inArray(settings.userId, ids))
   await db.delete(magicLinkTokens).where(inArray(magicLinkTokens.email, emails))
   await db.delete(allowedEmails).where(inArray(allowedEmails.email, emails))

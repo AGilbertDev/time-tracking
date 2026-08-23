@@ -12,10 +12,16 @@ import { describe, expect, it } from 'vitest'
 // PATCH /api/me/work-settings. Every bound, message, and rule below is derived from
 // docs/specs/settings/settings-page.md (the "Shared validator extraction", the "PATCH
 // /api/me/work-settings" contract, and acceptance criteria 5, 6, 7, 8, 21), not from the
-// implementation. The spec fixes: dailyWorkMinutes int 1-1440, quotaWph int 1-10000 (the column is
-// quota_wph, default 450), workDays an array of ints 0-6 with no duplicates and max length 7 (empty
-// array explicitly allowed), timezone a valid IANA zone, every field optional (partial PATCH), and
-// a .refine rejecting an empty object. A drift from any of these fails here.
+// implementation. The spec fixes: dailyWorkMinutes int 1-1440, workDays an array of ints 0-6 with no
+// duplicates and max length 7 (empty array explicitly allowed), timezone a valid IANA zone, every
+// field optional (partial PATCH), and a .refine rejecting an empty object. A drift from any of these
+// fails here.
+//
+// quotaWphSchema is still here and still bounded at int 1-10000, and it is no longer a work setting of
+// its own. The global quota_wph column retired with PLAN-32b, and the validator stayed because two
+// live boundaries reuse it, the per-task quota override and the per-category quota write. Its bounds
+// are asserted here because this is where it is declared. WorkSettingsPatchSchema no longer carries a
+// quotaWph field, so nothing below sends one.
 
 describe('dailyWorkMinutesSchema (int 1-1440)', () => {
   it('accepts the lower boundary of 1', () => {
@@ -44,8 +50,8 @@ describe('quotaWphSchema (int 1-10000)', () => {
     expect(quotaWphSchema.safeParse(1).success).toBe(true)
   })
 
-  // The column default is 450; it must be a valid quota.
-  it('accepts the default value of 450', () => {
+  // A mid-range figure, and the value the retired global column used to default to.
+  it('accepts a mid-range value of 450', () => {
     expect(quotaWphSchema.safeParse(450).success).toBe(true)
   })
 
@@ -142,10 +148,6 @@ describe('WorkSettingsPatchSchema', () => {
       expect(WorkSettingsPatchSchema.safeParse({ dailyWorkMinutes: 0 }).success).toBe(false)
     })
 
-    it('rejects an out-of-range quotaWph', () => {
-      expect(WorkSettingsPatchSchema.safeParse({ quotaWph: 10001 }).success).toBe(false)
-    })
-
     it('rejects a duplicate weekday', () => {
       expect(WorkSettingsPatchSchema.safeParse({ workDays: [1, 1, 2] }).success).toBe(false)
     })
@@ -174,7 +176,6 @@ describe('WorkSettingsPatchSchema', () => {
       const result = WorkSettingsPatchSchema.safeParse({
         dailyWorkMinutes: undefined,
         workDays: undefined,
-        quotaWph: undefined,
         timezone: undefined
       })
 
@@ -186,14 +187,13 @@ describe('WorkSettingsPatchSchema', () => {
     it.each([
       ['dailyWorkMinutes', { dailyWorkMinutes: 450 }],
       ['workDays', { workDays: [1, 2, 3] }],
-      ['quotaWph', { quotaWph: 450 }],
       ['timezone', { timezone: 'America/Toronto' }]
     ] as const)('accepts a body with only %s set', (_label, body) => {
       expect(WorkSettingsPatchSchema.safeParse(body).success).toBe(true)
     })
 
     it('accepts a multi-field subset', () => {
-      const body = { dailyWorkMinutes: 420, quotaWph: 500 }
+      const body = { dailyWorkMinutes: 420, workDays: [1, 2, 3] }
       const result = WorkSettingsPatchSchema.safeParse(body)
 
       expect(result.success).toBe(true)
