@@ -98,12 +98,16 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 - `user_id` — FK → users.id
 - `daily_work_minutes` — integer, default `450` (= 7h30). Stored as minutes for arithmetic simplicity.
 - `work_days` — text (JSON array of 0–6 day numbers, e.g. `[1,2,3,4,5]` for Mon–Fri)
-- `default_wph` — integer, default `450` (words per hour)
+- `default_wph` — integer, default `450` (words per hour). **Superseded**, see the per-category quota note below.
 - `timezone` — text, default `'America/Toronto'`
 - `light_theme` — text, default `'pastel'`. The chosen light atmosphere (one of the eight in `useTheme`). The default matches `DEFAULT_THEME` in `useTheme.ts`.
 - `dark_theme` — text, default `'pastel'`. The chosen dark atmosphere, independent of the light one.
 - `locale` — text, default `'fr'`. The persisted UI language, moved here from `users` so all user preferences live on one row. See [specs/settings/preference-persistence.md](specs/settings/preference-persistence.md).
 - TBD: default task category
+
+**Per-category quotas (decision)**: the single global `default_wph` is replaced by one quota per trackable category, decided 2026-07-28 and not yet built. It is `PLAN-32b` in the planning roadmap, which drops the column outright rather than changing its default.
+
+This came from the user rather than from research. The 450 default was drawn from published throughput norms and shipped before anyone had asked how the work is actually organised. The user then described holding a separate target for each kind of work and reading each of those targets on its own, so one blended number answers a question they never ask. That makes the field wrong in shape rather than wrong in value, which is why editing the default was never the fix. The same feedback is what retired the availability formula the planning overview had settled on, since separate targets cannot be measured against one shared pool of hours, and it is why §5 now reports a row per category rather than one blended number. The full reasoning and the cost of having shipped the global first are in [specs/planning/overview.md](specs/planning/overview.md) under "One quota per category".
 
 **Theme persistence (decision)**: the favorited light/dark atmospheres are **stored as user settings (`light_theme` / `dark_theme` on the `settings` row), not cookies**. They are part of the user's account and follow them across devices. `useTheme` should read from and write to the settings API. The current cookie implementation (`ui-theme-light`, `ui-theme-dark`) is an interim stand-in until the settings API exists, and at most stays as a pre-auth default for the sign-in/sign-up screens (where there is no user yet) — not as the source of truth.
 
@@ -179,6 +183,8 @@ Goal is to **match the WPH formula the user is measured by**, exactly. Whatever 
 We need to confirm the formula with the user. Working assumption (carried from the old app):
 
 > Group tasks by project, take each project's total word count once, divide total project-words by total actual time on those projects.
+
+**Superseded, and the reason is the per-category quota above.** The formula was confirmed with the user and it is not this one. Each trackable category is its own bucket, measured as the words in that category over the hours spent in that category, so a period reports a row per category rather than one corrected number. Time in a non-trackable category produces no words and belongs to no target, and the gap between the scheduled day and everything logged in it is derived rather than entered. The formula, the reasoning, and the availability model it replaced are in [specs/planning/overview.md](specs/planning/overview.md) under "The quota is buckets". The per-period list below still holds, with each period carrying a row per category instead of a single figure.
 
 Stats periods to surface:
 - **Daily** (new vs. old app)

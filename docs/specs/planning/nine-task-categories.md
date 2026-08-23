@@ -15,7 +15,7 @@ This feature changes the _set_ and its _names_. It changes nothing about what a 
 The per-category quota is `PLAN-32b` and the nine-colour palette is `PLAN-32c`, and both of those
 read the ids this feature declares, which is why it goes first. The reasoning behind each name, and
 why external revision is the faster quota rather than a transposition, is recorded in
-[`overview.md`](overview.md#the-category-set-and-the-real-quotas-from-the-primary-user) and is not
+[`overview.md`](overview.md#the-category-set-and-the-real-quotas-from-the-user) and is not
 re-argued here.
 
 The work reaches three places. `shared/categories.ts` gains three ids and loses one, the
@@ -31,7 +31,7 @@ No runtime inputs. This is a shared-contract change, so its inputs are the locke
 implements and the shipped code it amends.
 
 1. **The nine categories, their ids, their trackable flags, and their confirmed FR and EN copy.**
-   From [the category set](overview.md#the-category-set-and-the-real-quotas-from-the-primary-user),
+   From [the category set](overview.md#the-category-set-and-the-real-quotas-from-the-user),
    given by the user on 2026-07-29 and confirmed the same day. Reproduced in full below.
 2. **The shipped contract this amends.** `shared/categories.ts`, the only declaration site for a
    category id in the repo.
