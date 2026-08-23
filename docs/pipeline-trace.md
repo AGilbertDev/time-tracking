@@ -41,3 +41,4 @@ Add one row to the bottom of the ledger when a feature lands. Do not rewrite exi
 | 16  | 2026-07-30 | The task write API | yes | no              | [spec](specs/planning/task-write-api.md) | [#30](https://github.com/AGilbertDev/time-tracking/pull/30) |
 | 17  | 2026-07-31 | The inline task editor | yes | no              | [spec](specs/planning/task-inline-editor.md), [design](specs/planning/task-inline-editor-design.md) | [#36](https://github.com/AGilbertDev/time-tracking/pull/36) |
 | 18  | 2026-07-31 | The tenth category, Autre | yes | no              | [spec](specs/planning/other-category.md), [design](specs/planning/other-category-design.md) | [#36](https://github.com/AGilbertDev/time-tracking/pull/36) |
+| 19  | 2026-08-23 | Per-category quotas | yes | no | [spec](specs/planning/per-category-quotas.md), [design](specs/planning/per-category-quotas-design.md) | [#45](https://github.com/AGilbertDev/time-tracking/pull/45) |
