@@ -52,9 +52,15 @@ export async function createTask(event: H3Event, body: TaskCreateInput): Promise
   // defaults category to DEFAULT_CATEGORY_ID, which is `other`, and `other` is not trackable, so a task
   // created from the inline editor with no category chosen gets no figure here. It gets one from the
   // first patch that sets a real category, which is why update.ts carries the same rule.
+  //
+  // All three non-resolving outcomes behave identically here and that is correct on this endpoint,
+  // unlike on the update. There is no previous figure on a row being inserted, so declining to write is
+  // genuinely "no figure" rather than "the figure belonging to some other category", and a row with no
+  // figure resolves through the user's current setting and then the shipped default. update.ts has to
+  // tell the outcomes apart precisely because that premise does not hold there.
   if (values.quotaWphOverride === undefined) {
     const snapshot = await resolveQuotaSnapshot(user.id, body.category)
-    if (snapshot !== null) values.quotaWphOverride = snapshot
+    if (snapshot.outcome === 'resolved') values.quotaWphOverride = snapshot.quotaWph
   }
 
   // date and category are restated rather than left to the spread because their columns are NOT

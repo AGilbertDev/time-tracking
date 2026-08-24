@@ -865,7 +865,12 @@ describe('updateTask and the notes column (AC11, AC12)', () => {
       }
     )
 
-    it('brings the figure back when the task returns to a trackable category', async () => {
+    // Named for what it asserts rather than for what rule 4 promises. The figure the task left with was
+    // 400 and the figure it comes back holding is 240, so the round trip replaces the figure rather than
+    // returning it, and a case called "brings the figure back" read as though 400 survived. The 400 here
+    // is deliberately not a snapshot the server wrote, since no category resolves to it, which is what
+    // makes this the case where a hand-typed figure is lost.
+    it('replaces the figure when the task returns to a trackable category', async () => {
       await seedTask(client, {
         id: 'task-1',
         date: '2026-07-20',
@@ -881,6 +886,55 @@ describe('updateTask and the notes column (AC11, AC12)', () => {
       // the category's rather than the one the row was carrying, which is rule 3 applying to the return
       // leg exactly as it applied to the outbound one.
       expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(240)
+    })
+
+    // The fail-open branch, which had no coverage at all until this case and is the one behind the
+    // defect it asserts against. Removing the `else if` in update.ts leaves the previous category's
+    // figure on the row and fails here with `expected 240 to be null`.
+    //
+    // The read is made to fail for real rather than stubbed. Dropping the table means loadCategoryQuotas
+    // issues its actual query against a database that cannot answer it, so what runs is the genuine
+    // catch in resolveQuotaSnapshot rather than a mock standing in for it. A stubbed rejection would
+    // prove the branch is wired up and prove nothing about whether a real read failure reaches it.
+    it('writes NULL rather than the old category figure when the quota read fails', async () => {
+      await seedTask(client, {
+        id: 'task-control',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+
+      // The positive control, run first and against the same patch, so the assertion below is known to
+      // be caused by the failure rather than by a patch that does nothing. With the table intact this
+      // re-snapshots to proofreading's shipped figure.
+      await updateTask(event, 'task-control', patch({ category: 'proofreading' }))
+      expect((await readStoredRow(client, 'task-control'))?.quota_wph_override).toBe(2000)
+
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      await client.execute('DROP TABLE category_quotas')
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading' }))
+
+      const stored = await readStoredRow(client, 'task-1')
+
+      // The move happened, so the row is proofreading now and 240 is translation's number. Keeping it
+      // would measure proofreading work against the translation target with nothing on screen saying so.
+      expect(stored?.category).toBe('proofreading')
+      expect(stored?.quota_wph_override).toBeNull()
+
+      // Fail-open means the write is never refused, so the task survived the failure.
+      expect(await countTasks(client)).toBe(2)
+
+      // And the failure was logged rather than swallowed, which is the half of the fail-open bargain
+      // that makes a repeatedly failing read visible.
+      expect(logged).toHaveBeenCalledTimes(1)
+      logged.mockRestore()
     })
 
     // Rule 1. A request carrying a figure is the user stating what this task's figure is, so it wins

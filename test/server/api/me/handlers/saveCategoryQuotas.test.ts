@@ -10,7 +10,8 @@ import {
   OTHER_USER_ID,
   OWNER_ID,
   readStoredRow,
-  seedCategoryQuota
+  seedCategoryQuota,
+  seedTask
 } from '../../../../helpers/taskTestDb'
 
 // saveCategoryQuotas is the handler behind PATCH /api/me/category-quotas. This suite covers the
@@ -49,11 +50,35 @@ const { saveCategoryQuotas } = await import('~~/server/api/me/handlers/saveCateg
 // raw SQL would be asserting nothing about the mechanism.
 const { createTask } = await import('~~/server/api/tasks/handlers/create')
 const { TaskCreateSchema } = await import('~~/server/models/tasks')
+// The resolver and the read path behind it, imported so the AC2 cases can assert what the task
+// actually resolves to rather than only what its column holds. AC2's first property ends with
+// "resolve the task again", and a stored figure that has not moved is only half of that: the other
+// half is that resolution reads the task's own figure before it reads the category row, which is the
+// step an assertion on the column alone cannot see.
+const { loadCategoryQuotas } = await import('~~/server/utils/loadCategoryQuotas')
+const { resolveTaskQuota } = await import('~~/server/utils/resolveCategoryQuota')
 
 const event = { __event: true } as never
 
 let harness: TaskTestDb
 let client: Client
+
+// What a task actually resolves to, composed the way a reader will compose it: the row as the
+// database holds it, the user's current records, and the resolver over both. This is the assertion
+// AC2's requirement is written in terms of, so the cases below make it rather than stopping at the
+// column and inferring the rest.
+async function resolvedTaskQuota(taskId: string) {
+  const stored = await readStoredRow(client, taskId)
+  const records = await loadCategoryQuotas(OWNER_ID)
+
+  return resolveTaskQuota(
+    {
+      category: stored?.category,
+      quotaWphOverride: stored?.quota_wph_override as number | null
+    },
+    records
+  )
+}
 
 // The stored rows for one user, read with raw SQL.
 async function storedRows(userId = OWNER_ID) {
@@ -147,6 +172,13 @@ describe('saveCategoryQuotas', () => {
       // The setting moved and the task did not.
       expect(await storedRows()).toEqual([{ categoryId: 'translation', quotaWph: 999 }])
       expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(240)
+
+      // And the figure the task is measured against did not move either, which is the sentence the
+      // criterion actually ends on. Without this the case proves the column is stable and leaves the
+      // step from a stable column to a stable answer to a resolver tested in another file against
+      // hand-built records. A reordering that read the category row before the task's own figure
+      // would break AC2 and still pass every assertion above it.
+      expect(await resolvedTaskQuota(created.id)).toEqual({ quotaWph: 240, source: 'task' })
     })
 
     it('gives a task created after the save the new figure', async () => {
@@ -157,16 +189,32 @@ describe('saveCategoryQuotas', () => {
       expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(999)
     })
 
-    // AC2's third property. A task with no figure of its own follows the user's current row, so there
-    // is no gap for the rows described in "Existing tasks keep their NULL". This is the honest cost the
-    // spec records rather than an accident: such a task does move when the setting is edited, because
-    // the app has no record of what target that work was done against.
-    it('lets a task with no figure follow the current setting', async () => {
-      await seedCategoryQuota(client, OWNER_ID, 'translation', 300)
+    // AC2's third property, and it is asserted about a task because that is what the property is
+    // about. The version this replaced called loadResolvedCategoryQuotas and checked the category's
+    // own entry, which is a true statement about the settings endpoint and says nothing about a task,
+    // so a case named for a task with no figure contained no task at all.
+    //
+    // This is also the boundary of AC2's guarantee, so it is worth having as a test rather than only
+    // as prose. The snapshot protects a task that carries a figure. A task with NULL, which is every
+    // row written before AC12 shipped plus every figure a user deliberately cleared, still follows
+    // the current setting and therefore still moves when that setting is edited. "Existing tasks keep
+    // their NULL" records that as the honest cost; this asserts it, so the day someone reads AC2 as
+    // covering the whole table there is a green test showing exactly which rows it does not cover.
+    it('lets a task with no figure of its own follow the current setting, and move with it', async () => {
+      await seedTask(client, {
+        id: 'task-null',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: null
+      })
 
-      const entries = await loadResolvedCategoryQuotas(OWNER_ID)
+      // The shipped default, since the user has saved nothing and the row carries nothing.
+      expect(await resolvedTaskQuota('task-null')).toEqual({ quotaWph: 240, source: 'default' })
 
-      expect(entries[0]).toEqual({ categoryId: 'translation', quotaWph: 300, source: 'user' })
+      await saveCategoryQuotas(event, { quotas: [{ categoryId: 'translation', quotaWph: 300 }] })
+
+      // It moved. Unlike the task two cases above, which carried its own figure and did not.
+      expect(await resolvedTaskQuota('task-null')).toEqual({ quotaWph: 300, source: 'user' })
     })
   })
 

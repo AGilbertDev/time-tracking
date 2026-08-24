@@ -287,6 +287,20 @@ describe('the write path derives no estimate (AC19)', () => {
   // resolved number and computing with one are different things, and only the second is refused here.
   // Deleting the guard outright would have been weakening it, so it keeps its subject and loses only
   // the part that expired.
+  //
+  // What the narrower rule gives up, stated rather than smoothed over, the way the AC17 block above
+  // states its own residual hole. The check is on arithmetic performed on an identifier that still
+  // carries a quota-shaped name, so aliasing defeats it: `const q = resolved.quotaWph` followed by
+  // `words / q` passes both cases below. The old mention rule would have caught the alias on its first
+  // line, and it could not survive, because write.ts legitimately reads .quotaWph now and the mention
+  // rule forbade exactly that. So this is a cost of the narrowing rather than an oversight in it.
+  //
+  // It is accepted because the alias shape is visible in review in a way the direct division is not,
+  // and because the behavioural half is covered elsewhere: PLAN-12's estimate and PLAN-22's bucket are
+  // both absent from the response shapes create.test.ts and update.test.ts assert, so arithmetic here
+  // would have to reach a column or a field one of those suites already reads back. If a later feature
+  // does introduce a local alias for a quota in this directory, widen the pattern to the alias rather
+  // than concluding the guard still holds.
   // ---------------------------------------------------------------------------------------------
   const QUOTA_ARITHMETIC =
     /(?:quotaWph|quota_wph)[A-Za-z_]*\s*[*/%]|[*/%]\s*[\w.[\]]*(?:quotaWph|quota_wph)/
@@ -297,9 +311,14 @@ describe('the write path derives no estimate (AC19)', () => {
   // legal: storing a resolved figure, and importing the module that resolves it, whose path carries a
   // slash right next to a quota-shaped identifier.
   it('catches quota arithmetic written either way round, and passes a plain store', () => {
+    // Division with the quota as the divisor and as the dividend, then multiplication with the quota
+    // on each side. Four fixtures rather than three, because the regex is two alternatives and each
+    // operand position has to be shown to reach one of them. A multiplication fixtured only with the
+    // quota on the left proves the first alternative twice and the second one never.
     expect(QUOTA_ARITHMETIC.test('const minutes = words / quotaWph')).toBe(true)
-    expect(QUOTA_ARITHMETIC.test('const words = quotaWph * hours')).toBe(true)
     expect(QUOTA_ARITHMETIC.test('const rate = row.quota_wph / 60')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const words = quotaWph * hours')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const words = hours * quotaWph')).toBe(true)
 
     expect(QUOTA_ARITHMETIC.test('values.quotaWphOverride = resolved.quotaWph')).toBe(false)
     expect(QUOTA_ARITHMETIC.test("import { x } from '../../../utils/resolveCategoryQuota'")).toBe(
@@ -308,9 +327,24 @@ describe('the write path derives no estimate (AC19)', () => {
   })
 
   it('performs no quota arithmetic anywhere under server/api/tasks', () => {
-    const offenders = sourceFiles('server/api/tasks', ['.ts']).filter((file) =>
-      QUOTA_ARITHMETIC.test(code(file))
-    )
+    const scanned = sourceFiles('server/api/tasks', ['.ts'])
+
+    // The other half of the instrument, and the half the regex fixtures above cannot supply. They
+    // prove the pattern can see arithmetic in a string; this proves the scan is actually looking at
+    // the files that could carry it. An enumeration that came back empty satisfies the assertion
+    // below while reading nothing at all, which is a clean result from a blind search.
+    //
+    // The reachable version of that is narrower than it first looks, and saying so is the point of
+    // writing it down. A mistyped directory throws out of readdirSync rather than returning nothing,
+    // so it cannot produce this false clean. What can is the directory surviving while its contents
+    // leave it, which is what a move of the handlers one level up or into a renamed folder does, and
+    // it is the likelier of the two anyway. write.ts is named because it is the file the snapshot put
+    // a quota into, so it is where a real offence would most likely land and the first thing such a
+    // move would take with it.
+    expect(scanned).toContain('server/api/tasks/handlers/write.ts')
+    expect(scanned.filter((file) => code(file).includes('quotaWph')).length).toBeGreaterThan(0)
+
+    const offenders = scanned.filter((file) => QUOTA_ARITHMETIC.test(code(file)))
 
     expect(offenders).toEqual([])
   })

@@ -614,8 +614,28 @@ sent a past date, so what is lost is a capability the product did not actually o
 figure stays editable, so the recovery for the case that matters, which is one important task with a
 wrong number, is a field the user can already see and change.
 
-**What is not given up.** Nothing about the requirement itself. A past period still cannot be restated by
-an ordinary edit, which was the whole point.
+**What is not given up, and the one place the two mechanisms genuinely differ.** For a task that carries
+its own figure, nothing about the requirement is given up: a past period cannot be restated by an ordinary
+edit, which was the whole point, and the snapshot delivers it more directly than a dated lookup did.
+
+For a task whose figure is NULL the two mechanisms do not agree, and this criterion must not be read as
+claiming they do. Such a task resolves through the category's current row, so editing that row does move
+what the task is measured against. Under effective dating it would not have, because a row dated today
+does not apply to a task dated last month, and the task would have held the shipped default instead. The
+population is the one [existing tasks keep their NULL](#existing-tasks-keep-their-null) describes, which
+today is every task in the database, since nothing has been written through `AC12` yet.
+
+That is accepted for the reason recorded there, which is that the app has no record of what target the
+older work was done against and freezing a guess would be worse than resolving the current answer. It is
+recorded here as well because `AC2` is the criterion a reviewer checks the claim against, and a criterion
+saying "nothing is given up" a few lines from a section saying a cost is paid is the kind of contradiction
+that gets settled in the wrong direction later. The guarantee is real and it is forward-looking: it covers
+every task written from `AC12` onwards, with one exception that keeps the set growing rather than merely
+closing it. A resolve that fails leaves `NULL`, on the create and on a recategorising update alike, and a
+row with `NULL` is a row this guarantee does not cover. The three-way split in
+[the fail-open direction](#ac12-the-task-write-path-stores-the-quota-the-task-was-created-against) makes
+that outcome correct rather than wrong, since the alternative was holding another category's figure, but it
+does not stop it happening. Read the uncovered population as shrinking in proportion and not as sealed.
 
 ### AC3. `settings.quota_wph` is gone, with no reader left behind
 
@@ -1097,8 +1117,18 @@ named in [the new surface this brings](#the-new-surface-this-brings-named-rather
 than left in the diff.
 
 **On create.** `POST /api/tasks` resolves the quota for the resulting task's category and stores it in
-`tasks.quota_wph_override`. It stores nothing when the resulting category is not trackable, and nothing
-when the body supplied a figure of its own.
+`tasks.quota_wph_override`. **The snapshot** stores nothing when the resulting category is not trackable,
+and nothing when the body supplied a figure of its own.
+
+The subject of that second sentence is the snapshot rather than the endpoint, and the distinction is not
+pedantry. The snapshot is not the only writer of this column: `quotaWphOverride` is a writable field on
+both bodies, so a request carrying a figure stores it whatever the category, which is precedence rule 1
+below and is deliberate, because the editor shows the quota field for every category on purpose. A `PATCH`
+carrying a figure on a task in `meetings` therefore does store it. Nothing downstream is harmed by that,
+since the resolver gates on `trackable` before it reads the column, and
+[a task carrying a figure on a non-trackable category](#a-task-carrying-a-figure-on-a-non-trackable-category)
+covers the case. Read this paragraph as describing what the resolution writes, never as a claim that the
+column is unreachable by any other path.
 
 **On update.** `PATCH /api/tasks/[id]` re-snapshots when and only when the request changes the task's
 category. **Yes, changing a task's category re-snapshots it**, because a task recategorised from
@@ -1116,9 +1146,18 @@ measured against is the one in force for the kind of work it actually is.
 3. **Otherwise, a category change re-snapshots and anything else does not.** A change of date does not
    re-snapshot, because nothing in the resolution depends on the date any more. A change of word count,
    status, notes, or duration does not either.
-4. **A move to a non-trackable category leaves the stored figure alone rather than clearing it.** That is
-   the existing rule for this column, kept deliberately, so moving a task to a meeting and back brings its
-   figure with it. The trackable gate is what stops the figure being used in the meantime. This is
+4. **A move to a non-trackable category leaves the stored figure alone rather than clearing it.** This is the
+   `no-quota-for-category` outcome only, and it does not extend to a resolution that merely failed. That is
+   the existing rule for this column, kept deliberately, so the figure survives for as long as the task sits
+   in the non-trackable category rather than being destroyed on the way in. It does not survive the way back:
+   the return leg is a category change whose result is trackable, so rule 5 re-snapshots and what the task
+   ends up holding is the category's current figure rather than the one it left with. An earlier wording of
+   this rule promised that a task moved to a meeting and back "brings its figure with it", which rule 5
+   contradicts, and the round trip is worth understanding as a replacement rather than a preservation.
+   **The cost, since one column holds two facts.** A figure the user typed by hand is indistinguishable from
+   one the server snapshotted, so a hand-typed figure on a trackable task is silently replaced by the
+   category's when the task makes that round trip. Distinguishing the two would take a second column and is
+   not in this feature. The trackable gate is what stops the figure being used in the meantime. This is
    deliberately unlike the status-clearing rule in `update.ts`, which does clear, and the difference is that
    a status a category cannot hold is an invalid row while a stored figure a category does not use is merely
    an unused one.
@@ -1133,11 +1172,35 @@ default. So a task created without a category gets no snapshot on the `POST`, an
 `PATCH` that sets a real category. That is the normal flow through the app, and any implementation that only
 snapshots on create would leave most tasks with no figure at all.
 
-**A resolve that fails leaves NULL rather than failing the write.** The app records reality and never blocks,
-so a task must never be refused because a quota could not be read. NULL is the safe outcome, since the row
-then resolves through steps 3 and 4 like any pre-feature row, and the user can type a figure. This is the
-fail-open direction on purpose, and it is not in tension with the trackable gate's fail-closed direction,
-because that one is about never producing a wrong quota while this one is about never losing a record of work.
+**A resolve that fails leaves NULL rather than failing the write, and "no figure" is three different
+outcomes rather than one.** The app records reality and never blocks, so a task must never be refused
+because a quota could not be read. But the three reasons a resolution produces no figure do not all mean
+the same thing to a caller, so `resolveQuotaSnapshot` returns which one it is instead of a nullable number.
+
+| Outcome                 | What it means                                                                                                                                                 | On create     | On a category change                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------- |
+| `resolved`              | A figure was found                                                                                                                                            | Store it      | Store it                                       |
+| `no-quota-for-category` | The category is not trackable, so it has no quota by definition                                                                                               | Store nothing | Leave the stored figure alone, which is rule 4 |
+| `unresolved`            | Trackable, and still nothing resolved. No shipped category reaches this, since all four trackable ids carry a `defaultQuotaWph`. `PLAN-30` makes it reachable | Store nothing | Write `NULL`                                   |
+| `read-failed`           | The read threw. Logged, never rethrown                                                                                                                        | Store nothing | Write `NULL`                                   |
+
+**The principle behind the split.** A figure resolved for one category is never correct on a task in
+another. So the only question a failure leaves open is whether the row ends up holding a stale figure the
+trackable gate ignores, which is harmless, or one the gate will happily use, which is the defect. Rule 4
+earns its exemption because the gate closes behind it. A failed resolve onto a trackable category does not,
+because the gate is open and the resolver reads the old category's number as this task's own snapshot with
+`source: 'task'`.
+
+**Why the create can collapse all three and the update cannot.** On a create there is no previous figure, so
+declining to write is genuinely "no figure", the row resolves through steps 3 and 4 like any pre-feature row,
+and the user can type one. On a recategorising update the row already holds the number resolved for the
+category it is leaving, so declining to write is not "no figure" at all. `NULL` is not a perfect answer there
+and it is the right one, since the row then resolves through the _new_ category's current setting, which is
+approximately right, where keeping the old category's figure is definitely wrong.
+
+This fail-open direction is therefore not in tension with the trackable gate's fail-closed direction, but the
+reason is narrower than "one is about quotas and one is about records". It is that neither path is ever
+allowed to leave a usable figure belonging to a different kind of work.
 
 **The write-boundary guard is amended, not deleted.**
 `test/server/api/tasks/write-boundary-guards.test.ts` currently asserts that no file under
