@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 import { DEFAULT_CATEGORY_IDS, isTrackableCategory } from '#shared/categories'
 
-import { calendarDaySchema } from './calendar-day'
 import { quotaWphSchema } from './work-settings'
 
 // The request boundary for PATCH /api/me/category-quotas (PLAN-32b).
@@ -32,15 +31,12 @@ const CategoryQuotaEntrySchema = z
 // The PATCH body. It is partial by design, like the work-settings save: only the categories present
 // are written and the others are left exactly as they are.
 //
-// effectiveFrom is optional and defaults to today in the user's own timezone, which the handler
-// resolves rather than the schema, because a schema has no access to the user's stored zone and a
-// default computed here would silently use the server's idea of today. A past date is accepted on
-// purpose. It is a deliberate correction rather than a mistake to block, the app never backdates on
-// its own, and a user who explicitly asks to correct a past period gets to. A future date is accepted
-// for the same reason and simply resolves from that day onward.
+// There is no effectiveFrom. Under the snapshot model the table holds one current figure per category
+// and the save updates it in place, so a date on the body would be a parameter with nowhere to be
+// stored. What a past period was measured against is preserved on the task instead, which carries the
+// figure it was written against.
 export const CategoryQuotasPatchSchema = z
   .object({
-    effectiveFrom: calendarDaySchema.optional(),
     quotas: z
       .array(CategoryQuotaEntrySchema)
       .min(1, { message: 'At least one quota must be provided.' })

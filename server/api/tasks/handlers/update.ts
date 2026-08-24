@@ -9,7 +9,12 @@ import type { TaskListItem, TaskUpdateInput } from '../../../models/tasks'
 import { useDb } from '../../../db/index'
 import { tasks } from '../../../db/schema'
 import { readTaskForUser } from './projection'
-import { assertStatusFitsCategory, nextSortOrder, toTaskColumns } from './write'
+import {
+  assertStatusFitsCategory,
+  nextSortOrder,
+  resolveQuotaSnapshot,
+  toTaskColumns
+} from './write'
 
 // The message both not-found cases return. A missing id and another user's id are deliberately
 // indistinguishable from outside, same status and same body, so a caller holding a session cannot
@@ -62,6 +67,42 @@ export async function updateTask(
   // inherited. Moving a task to `other` leaves its status alone. Moving it to `breaks` still clears.
   if (body.status === undefined && existing.status !== null && !isDeliverableCategory(category)) {
     values.status = null
+  }
+
+  // The quota snapshot (AC12), re-taken when and only when this request changes the task's category. A
+  // task recategorised from translation to proofreading is measured against the wrong target otherwise,
+  // and the target it should be measured against is the one in force for the kind of work it actually
+  // is. This is the common path rather than the create: a task made from the inline editor starts on
+  // `other`, which is not trackable, so the first patch that sets a real category is where most tasks
+  // get their figure at all.
+  //
+  // The four precedence rules, in the order they are read off this condition.
+  //
+  // A figure in the body always wins, so a request carrying quotaWphOverride stores what was sent and
+  // does not re-snapshot, even when the same request also changes the category. An explicit null wins
+  // too and is not immediately overwritten, which is why the test is on `undefined` rather than on a
+  // value: clearing the field is the user asking this task to follow their category setting again, and
+  // re-snapshotting on the same request would make the clear a silent no-op.
+  //
+  // Only a category change re-snapshots. A change of date does not, because nothing in the resolution
+  // depends on the date any more, and neither does a change of word count, status, notes, or duration.
+  // The comparison is against the stored category rather than against the presence of the field, so
+  // sending the category the task already has changes nothing.
+  //
+  // A move to a non-trackable category leaves the stored figure alone rather than clearing it, because
+  // resolveQuotaSnapshot returns null there and null is not written. Moving a task to a meeting and back
+  // brings its figure with it, and the trackable gate in the resolver is what keeps the figure out of
+  // any numerator in the meantime. This is deliberately unlike the status-clearing rule above, which
+  // does clear: a status a category cannot hold is an invalid row, while a stored figure a category does
+  // not use is merely an unused one. The move in the other direction, from a non-trackable category to a
+  // trackable one, is a category change whose result is trackable, so it re-snapshots like any other.
+  if (
+    body.quotaWphOverride === undefined &&
+    values.category !== undefined &&
+    values.category !== existing.category
+  ) {
+    const snapshot = await resolveQuotaSnapshot(user.id, category)
+    if (snapshot !== null) values.quotaWphOverride = snapshot
   }
 
   // A task changing date is moving to another day, where its old sort_order was an ordinal in a

@@ -17,9 +17,13 @@ import { code, ROOT, sourceFiles, stripComments } from '../helpers/sourceScan'
 //
 // The rule this enforces is the project's logic-belongs-to-the-backend rule applied to one number.
 // The server resolves and the client is handed finished figures, which is also why AC6 has the API
-// send `source` and `effectiveFrom`. A page comparing a figure against a hardcoded default to decide
+// send `source` alongside the figure. A page comparing a figure against a hardcoded default to decide
 // what to label it would be a second copy of the resolution rule, and the second copy is the one that
 // goes stale.
+//
+// The snapshot model strengthens this rather than threatening it. The figure a client sees on a task
+// is now a stored column written by the server, so there is nothing left it could have been tempted to
+// work out for itself.
 //
 // The searches run over comment-stripped source, through the shared scanner in
 // test/helpers/sourceScan.ts. That matters more here than it looks: three shipped files under app/

@@ -6,6 +6,8 @@ import type { TaskWritableInput } from '../../../models/tasks'
 
 import { useDb } from '../../../db/index'
 import { tasks } from '../../../db/schema'
+import { loadCategoryQuotas } from '../../../utils/loadCategoryQuotas'
+import { resolveCategoryQuota } from '../../../utils/resolveCategoryQuota'
 
 // What create and update both need. One copy of each rule, because the two handlers apply the same
 // field mapping, the same status-against-category check, and the same sort-order rule, and two
@@ -110,6 +112,44 @@ export function assertStatusFitsCategory(
     statusMessage: STATUS_NOT_DELIVERABLE,
     data: { status: STATUS_NOT_DELIVERABLE }
   })
+}
+
+// The quota figure a task written into a given category is measured against, or null when there is
+// none to store (PLAN-32b AC12).
+//
+// This is the whole of the snapshot model's write side. A category quota is a current setting rather
+// than a dated history, so what keeps a past period accurate is the figure stored on the task itself,
+// the way an invoice line stores the price it was sold at. Both endpoints call this and store what it
+// returns in tasks.quota_wph_override, and after that an edit to the category setting can never move
+// a number on a task that already exists.
+//
+// It resolves rather than computes. Nothing here divides, multiplies, or rounds, because deriving an
+// estimate from a quota is PLAN-12's ground and summing a bucket is PLAN-22's, and neither of them is
+// this feature. One number is read and handed back.
+//
+// A failure leaves NULL rather than failing the write, and that direction is deliberate. The app
+// records reality and never blocks, so a task must never be refused because a quota could not be read.
+// A row with no figure resolves through the user's current setting and then the shipped default, like
+// any task written before this feature, and the user can type a figure in the editor. The error is
+// logged rather than swallowed, because a quota read failing repeatedly is worth seeing even though it
+// is not worth losing a task over. This fail-open direction is not in tension with the trackable gate's
+// fail-closed one: that gate is about never producing a wrong quota, this is about never losing a
+// record of work.
+export async function resolveQuotaSnapshot(
+  userId: string,
+  category: string
+): Promise<number | null> {
+  try {
+    const records = await loadCategoryQuotas(userId)
+    return resolveCategoryQuota(category, records)?.quotaWph ?? null
+  } catch (error) {
+    console.error('category quota read failed during a task write; storing no figure', {
+      userId,
+      category,
+      error
+    })
+    return null
+  }
 }
 
 // The sort_order a task takes at the end of a given day, so max + 1 across that user's tasks on that

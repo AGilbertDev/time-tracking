@@ -268,7 +268,7 @@
         "statusNone": "None",
         "statusUnavailable": "This category carries no status.",
         "quota": "Quota",
-        "quotaHint": "Empty means the category's quota.",
+        "quotaHint": "This task's own quota, taken from its category when it was created. Clear the field to follow the category again.",
         "excludeFromStats": "Exclude from stats",
         "excludeHint": "The task stays on the calendar, but its words do not count toward the quota.",
         "notes": "Notes",
@@ -411,7 +411,7 @@
       "loadError": "Your quotas could not be loaded.",
       "retry": "Try again",
       "defaultBadge": "Default value",
-      "userSince": "Your value, in effect since {date}.",
+      "userValue": "Your value.",
       "empty": "No kind of work currently carries a quota.",
       "errors": {
         "generic": "Something went wrong. Please try again."

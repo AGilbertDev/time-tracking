@@ -603,26 +603,27 @@ await db.insert(workSchedule).values({
   effectiveFrom
 })
 
-// One category_quotas row per trackable category (PLAN-32b), at the same effective date as the
-// work-schedule record so every seeded day resolves through the stored-row branch of the resolver. The
-// figures are the shipped defaults from the contract rather than invented numbers, so no figure enters
-// the dev database that the app does not already carry, and the API's `source` field is what shows the
-// difference between a stored row and a default on screen. That stored branch is the one production
-// uses the moment the user saves once, so it should be the branch a developer sees.
+// One category_quotas row per trackable category (PLAN-32b), holding the user's current figure. There
+// is no effective date on these rows: the table keeps one current figure per category and a save
+// updates it in place. The figures are the shipped defaults from the contract rather than invented
+// numbers, so no figure enters the dev database that the app does not already carry, and the API's
+// `source` field is what shows the difference between a stored row and a default on screen. That
+// stored branch is the one production uses the moment the user saves once, so it should be the branch
+// a developer sees.
+//
+// The seeded tasks keep their NULL quota figure and this writes no snapshot onto them, deliberately.
+// The seed inserts rows directly rather than through the write path, so it reaches the database the
+// same way a pre-feature row did, and leaving them NULL is what gives a developer real data exercising
+// the fallback steps of the resolution order. The snapshot branch is one click away, since creating a
+// task in the running app goes through POST /api/tasks and gets its figure.
+//
 // Selected and mapped in one flatMap rather than a filter followed by a map, so the null check that
 // makes the figure safe is the check the compiler reads. A filter narrows nothing for the map that
 // follows it, which is why the map used to need a non-null assertion, and an assertion is exactly
 // what stops telling the truth the day the filter changes.
 const quotaRows = DEFAULT_CATEGORIES.flatMap((category) =>
   category.trackable && category.defaultQuotaWph !== null
-    ? [
-        {
-          userId: ownerId,
-          categoryId: category.id,
-          quotaWph: category.defaultQuotaWph,
-          effectiveFrom
-        }
-      ]
+    ? [{ userId: ownerId, categoryId: category.id, quotaWph: category.defaultQuotaWph }]
     : []
 )
 
@@ -638,7 +639,7 @@ console.log(
 console.log(
   `Seeded ${rows.length} tasks across ${weeks.length} weeks, ${from} to ${to} (today ${today}, ` +
     `timezone ${timezone}), plus one work_schedule record and ${quotaRows.length} ` +
-    `category_quotas row(s) effective ${effectiveFrom}.`
+    `category_quotas row(s).`
 )
 
 client.close()

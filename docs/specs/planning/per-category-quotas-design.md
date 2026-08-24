@@ -5,6 +5,20 @@ the API, the resolution order, the copy table, and the removals, all approved. T
 `AC7` and `AC8` on the screen, which is the new Quotas section on the settings page and the shape of
 the strings it needs. It writes no Vue and edits no component.
 
+**Amended 2026-08-24 for the snapshot model.** The owner approved an architecture change after this
+blueprint was filed, recorded in the spec under
+[the snapshot model](per-category-quotas.md#the-snapshot-model-approved-2026-08-24). A category quota is
+now a plain current setting updated in place, and historical accuracy comes from the server writing the
+resolved figure onto each task as the task is written. So there is no `effective_from` column, no
+`effectiveFrom` field on the API, and no date anywhere on this screen. Every passage that change
+falsifies is marked **superseded** below and says what replaced it, rather than being deleted, because
+the reasoning that led here is part of what this document is for. One decision the change opens fresh is
+answered in
+[the task editor's quota field](#the-task-editors-quota-field-under-the-snapshot-model). Everything not
+marked as superseded is unchanged and still holds, which is the layout, the grid, the dynamic row count,
+the colour on the label, the props-not-slots assignment, the badge, the contrast measurements, and the
+advisory findings.
+
 The whole feature is one section on a page that already has two. So the governing constraint is that
 there is nothing new to invent here. `app/pages/settings.vue` and
 [`work-fields.vue`](../../../app/components/settings/work-fields.vue) already establish every part
@@ -144,8 +158,13 @@ provenance note reads as a precondition on the field rather than as a footnote t
 
 ## Expressing where a quota came from
 
-The API sends `source: 'user' | 'default'` and `effectiveFrom: string | null` per `AC6`, so the client
-is told and never infers. Two visible states.
+The API sends `source: 'user' | 'default'` per `AC6`, so the client is told and never infers. Two
+visible states.
+
+**Superseded.** This paragraph used to read `effectiveFrom: string | null` off the response as well.
+That field came off both the response and the request with the snapshot model, so `source` is the whole
+of what the screen is handed, and it is enough, because the only thing the screen has to tell apart is a
+figure the user set from one they never touched.
 
 **A shipped default the user has never touched.** The help region renders
 `UBadge color="neutral" variant="subtle" size="sm"` with `settings.quotas.defaultBadge` as its label.
@@ -153,8 +172,13 @@ No icon. That is the badge idiom already shipped in
 [`admin/users.vue`](../../../app/pages/admin/users.vue), which is `color`, `size="sm"`,
 `variant="subtle"` and a `label`, and matching it means this section introduces no new chip treatment.
 
-**A value the user has saved.** The help region renders plain text, `settings.quotas.userSince`, which
-names the date the value took effect. No badge, no icon, no colour.
+**A value the user has saved.** The help region renders plain text, `settings.quotas.userValue`, which
+takes no parameter of any kind. No badge, no icon, no colour.
+
+**Superseded.** This state used to render `settings.quotas.userSince`, naming the date the value
+took effect. The key is renamed and the date is gone, per `AC8`. The shape of the state is
+untouched, since it was plain text in the `help` region before and it is plain text in the `help`
+region now. Only the string got shorter.
 
 ### Why the two states are deliberately unequal in weight
 
@@ -170,15 +194,29 @@ mistaken for `warning` or `error`, which is what a primary or an amber chip on a
 have done.
 
 **Nothing about the distinction is carried by colour.** Both states are words. Remove all colour and
-the section still reads, because one row says a value is the default and the other says when the
-user's own value started. That satisfies the never-colour-alone rule by construction rather than by
-adding a redundant icon to a colour that was doing the work.
+the section still reads, because one row says a value is the shipped default and the other says the
+value is the user's own. That satisfies the never-colour-alone rule by construction rather than by
+adding a redundant icon to a colour that was doing the work. This held when the second state named a
+date and it holds now that it names nothing else, since what carries the distinction was always the
+words rather than the parameter inside them.
 
-**The date is the interesting half and it is the reason absence was not enough.** Marking only the
-defaults would have left the other state as an absence, and an absence cannot distinguish "this is
-mine" from "we have nothing to say about this row". A date is a positive fact the response already
-carries, it is strictly more informative, and it is the only place the effective dating becomes
-visible at all.
+**Both states say something, because an absence cannot.** Marking only the defaults would have left the
+other state as an absence, and an absence cannot distinguish "this is mine" from "we have nothing to say
+about this row". So the user state carries words of its own rather than being the row with nothing under
+it.
+
+**Superseded in its argument rather than in its conclusion.** This paragraph used to reach that same
+conclusion by way of the effective date, calling the date the interesting half, strictly more
+informative, and the only place the effective dating became visible at all. Every clause of that is
+void, because there is no effective dating left to make visible. The conclusion outlives the
+argument it was resting on, since the reason both states need words was never about dates. It was
+about an absence being unreadable.
+
+**And the pair got better rather than worse.** Two words against a badge is simpler than a date against
+a badge. There is no parameter to interpolate, no formatter, and no locale-dependent rendering, so there
+is no way for the line to be subtly wrong in one locale and right in the other. See
+[the date formatter that is no longer built](#the-date-formatter-that-is-no-longer-built) for the two
+concrete bugs the removal takes off the table.
 
 ### Why the provenance survives a partial save, and says something useful when it does not
 
@@ -189,19 +227,35 @@ without being told. That is a property of putting provenance on every row rather
 for the failure case, and it is worth naming because it is the reason a per-row marker beats a single
 line of text at the top of the card.
 
-### Formatting the date, and the trap in it
+### The date formatter that is no longer built
 
-`effectiveFrom` is a `'YYYY-MM-DD'` string. The shipped formatting idiom is
-`new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' })`, from `admin/users.vue`.
+**Superseded, and the finding in it stopped applying rather than turning out to be wrong.** This
+subsection specified how to format `effectiveFrom` for display, and it flagged a real bug in doing so.
+There is no date on this screen now, so the formatter is deleted rather than fixed, and none of what
+follows is work for the frontend stage.
 
-**`new Date('2026-08-23')` parses as UTC midnight**, so formatting it in `America/Toronto` renders the
-previous day. Every user of this app is in a negative offset by default, so this is a bug that shows
-up immediately rather than an edge case. Either build the `Date` from the three parts, or pass
-`timeZone: 'UTC'` to the formatter. Flagged here because the symptom is an off-by-one date that looks
-like a backend problem and is not.
+The finding was that `new Date('2026-08-23')` parses as UTC midnight, so formatting a `'YYYY-MM-DD'`
+string in `America/Toronto` renders the previous day. Every user of this app is in a negative offset
+by default, so it was a bug that showed up immediately rather than an edge case. The remedy was to
+build the `Date` from its three parts or to pass `timeZone: 'UTC'` to the formatter, and the shipped
+formatting idiom it applied to is `new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' })`
+in `admin/users.vue`. **That was correct and it caught the trap in shipped code before it cost
+anything**, so it is kept here as the record of a live hazard in this codebase rather than removed
+along with the paragraph that needed it. `AC7` keeps it in mind for the same reason, which is that
+nothing else in the app has learned it yet.
 
-Formatting a resolved value for display is presentation and stays in the component, per the narrow
-exception in the logic-belongs-to-the-backend rule. Nothing here decides which date to show.
+**A second bug the removal takes off the table, which this document had not reached.** A French date
+wants `1er` for the first of the month, and `Intl.DateTimeFormat` produces no French ordinal at any
+`dateStyle`. So the first of a month would have rendered as `1 septembre` where a reader expects
+`1er septembre`, and the only fix is hand-patching the formatter's output for one day in twelve, in
+one locale. The primary user is a professional translator, so that is the kind of small wrongness
+that costs trust rather than the kind nobody notices. Removing the date removes the problem instead
+of solving it, which is a genuine gain from the architecture change rather than a coincidence, and
+it is worth saying so plainly.
+
+So nothing in this section formats anything now. Both provenance states are static localized
+strings, and the only presentation logic left in the help region is choosing between two of them on
+`source`.
 
 ## Colour, the label is the carrier and it is reused
 
@@ -394,8 +448,10 @@ The page wrapper handles horizontal padding and the maximum width, and neither c
   The `lg:px-8` on the wrapper still applies and is inherited unchanged.
 
 The mobile case is the one the three-line field shape was chosen for. Putting the provenance under the
-input rather than beside the label means a long category name and a date never compete for the same
-270 pixel line, which is what a right-aligned provenance marker would have done.
+input rather than beside the label means a long category name and its provenance never compete for the
+same 270 pixel line, which is what a right-aligned provenance marker would have done. That was written
+when the provenance could be a formatted date, and it holds just as well now that the longest thing it
+can be is a short sentence, since a user-created category name is the half that can grow without limit.
 
 ## Motion
 
@@ -467,7 +523,7 @@ section inherits rather than introduces. There is nothing new here to gate.
             - #label -> span.planning-cat-name -> t('categories.' + categoryId)
             - hint prop -> onboarding.work.unitWph
             - UInputNumber (w-full, :min="1", :max="10000", tabular-nums)
-            - help prop -> settings.quotas.defaultBadge or settings.quotas.userSince
+            - help prop -> settings.quotas.defaultBadge or settings.quotas.userValue
             - #help -> UBadge color="neutral" variant="subtle" size="sm" (default source only)
         - div (flex justify-end)
           - UButton.btn-glow color="primary" icon="i-ph-check-bold" :loading -> settings.quotas.submit
@@ -514,6 +570,82 @@ the sentence has exactly one wrong word in it.
 than one sharing the other. That predates this feature, `AC3` lists both files, and it is not this
 design's to resolve.
 
+## The task editor's quota field under the snapshot model
+
+**New in this amendment, and the one thing the architecture change asks this stage to decide fresh
+rather than correct.** The frontend stage is researching the string itself in parallel, so what
+follows is the design intent behind it, meaning what the field now communicates and how it should
+read. No candidate copy is written here, for the reason given under
+[the FR strings](#the-fr-strings-and-why-none-of-them-is-written-here).
+
+**What actually changed about the field is the data and not the markup.** Field 11 of
+[`TaskEditor.vue`](../../../app/components/planning/TaskEditor.vue) keeps the same `UFormField`, the
+same `UInputNumber`, the same `:min="1"`, the same `onboarding.work.unitWph` hint, and the same
+`planning.editor.fields.quotaHint` help prop. What changed is what arrives in it. The field used to
+be normally empty, and empty meant "use the category's figure". Under `AC12` the server writes the
+resolved figure onto every task in a trackable category, so the field is now normally populated, and
+the number in it is this task's own target.
+
+**So the hint has a job it did not have before, which is to say what clearing the field does.** The
+old string described the empty state because empty was the resting state. Empty is now the
+exceptional state, and it is the only one the user can create deliberately, by clearing a number the
+server put there. So the hint describes the populated state as normal and names clearing as the
+action that has a consequence. `AC8` asks for the same thing in its copy table, and this is the
+reasoning under it.
+
+**Design intent, as three claims the string has to carry.**
+
+1. **The number is this task's target rather than a setting.** It was taken from the category when
+   the task was written and it belongs to the task from then on. The line should read as a fact
+   about this row, not as a pointer at a preference living somewhere else.
+2. **It is editable, and typing over it is ordinary.** Nothing about a server-written figure makes
+   it more precious than one the user typed, and the copy should not imply otherwise.
+3. **Clearing it hands the row back to the category setting.** That is the way back out of a
+   snapshot, and the spec's edge cases call it a legitimate thing to want, so it reads as an
+   available action rather than as a warning about losing something.
+
+**Does the field read as editable? Yes, and nothing needs adding to make it so.** It is a
+`UInputNumber` at the app's default `md` size, sitting in a grid of eleven other editable fields,
+with no `readonly`, no `disabled`, and no visual difference from the word count beside it. A
+populated number in an enabled input reads as editable to anyone who has used a form. The risk in
+this field was never that the user would think it was locked, so there is no case for a pencil
+affordance, an edit toggle, or a two-step reveal, all of which would make a plain number field
+ceremonial for nothing gained.
+
+**Should the screen distinguish a server-written figure from one the user typed? No, and that is a
+finding rather than a design.** The want is real, because a user in front of a populated field
+cannot tell whether they chose that number last week or the server wrote it, and those are different
+situations. But the spec records that
+[one column cannot hold both facts](per-category-quotas.md#the-field-the-snapshot-lives-in-and-why-it-is-the-existing-one).
+`tasks.quota_wph_override` stores a number and nothing about where the number came from, so the
+distinction is not in the data and no arrangement of pixels can render it. Raising it is the whole
+of what this stage can do about it.
+
+Three things follow, and they are why it is a finding rather than a complaint.
+
+- **No second column here, and no inference in the client.** The tempting workaround is to compare
+  the task's figure against the category's current setting and label them same or different. That is
+  a rule applied inside a component to decide a label, which is what the
+  logic-belongs-to-the-backend convention forbids, and it is wrong on its own terms as well, since a
+  user who types the number the category already held is indistinguishable from a user who touched
+  nothing. The spec names that same ambiguity in its own edge cases.
+- **The cost of not having it is small, which is why it must not force a column.** The number is
+  visible, it is editable, and getting it wrong costs one field edit. The spec's own reversal path
+  is a small `quota_wph_source` column if a later feature genuinely needs the provenance, and that
+  is cheaper than carrying two numeric columns from the start against the chance that one will.
+- **If a later stage decides the distinction is needed, the design already exists.** It is the same
+  two-state help region this document specifies for the settings section, a badge for the
+  server-written figure and plain words for a typed one, reading a `source` the response would have
+  to start carrying. So the screen is ready for the fact whenever the data can supply it, and
+  nothing in the current design has to be unpicked to get there.
+
+**One thing the field should not gain.** No copy explaining the snapshot model, no note naming which
+category setting the number came from, and no date. The editor is a grid of twelve fields inside a
+day row, the hint is one line of muted text under a small input, and a sentence about how historical
+accuracy works in this app neither fits there nor answers what the user is asking of the field. The
+settings section is where the category figure gets explained. This hint has room for what the number
+is and what clearing it does, and that is the whole budget.
+
 ## Copy
 
 Keys under `settings.quotas.*`, siblings of `settings.work.*`, following the shape of
@@ -539,13 +671,21 @@ Keys under `settings.quotas.*`, siblings of `settings.work.*`, following the sha
 
 | Key                         | EN intent                                  | FR           |
 | --------------------------- | ------------------------------------------ | ------------ |
-| `settings.quotas.userSince` | Your value, in effect since {date}.        | **RESEARCH** |
+| `settings.quotas.userValue` | Your value.                                | **RESEARCH** |
 | `settings.quotas.empty`     | No kind of work currently carries a quota. | **RESEARCH** |
 
-`userSince` exists because `AC8` names a marker for the default case and none for the user case, and
+`userValue` exists because `AC8` names a marker for the default case and none for the user case, and
 [the reasoning above](#why-the-two-states-are-deliberately-unequal-in-weight) argues that an absence
-cannot carry the other half. It takes a `{date}` parameter, already formatted by the component. It
-does not duplicate `defaultBadge`, it is the state `defaultBadge` is not.
+cannot carry the other half. It takes no parameter. It does not duplicate `defaultBadge`, it is the
+state `defaultBadge` is not.
+
+**Superseded.** This key was `settings.quotas.userSince`, reading "Your value, in effect since
+{date}." and taking a `{date}` parameter the component formatted. `AC8` renames it to the
+parameterless `settings.quotas.userValue`, which is exactly the fallback the last section of this
+document had already recorded against the possibility that the owner did not want a date on the
+screen, so the rename takes an option that was written down rather than inventing a string. If
+`userSince` has already landed in either locale file on this branch, `AC8` requires it renamed
+rather than left sitting beside the new key.
 
 `empty` exists for the zero-entry state, which cannot happen today. Both are recorded under
 [assumptions](#assumptions-taken-rather-than-asked).
@@ -563,7 +703,14 @@ Two mechanical points that do apply to whatever the researched strings turn out 
 
 - **A real U+00A0 before `? ! : ;`.** `test/i18n/locale-punctuation.test.ts` enforces it with its own
   positive controls, and a plain space is visually identical to a no-break space in an editor and in a
-  diff. `userSince` is the string most likely to want a colon, so it is the one to check.
+  diff. The string that used to carry this risk was `userSince`, and `userValue` replaces it with two
+  words and no punctuation to get wrong, so **the risk moves rather than going away and the sentence
+  needed rechecking rather than deleting.** In this feature it now sits on the reworded
+  `planning.editor.fields.quotaHint`, whose current FR string is "Vide : le quota de la catégorie." with
+  a real U+00A0 before the colon in [`fr.json`](../../../i18n/locales/fr.json), and whose replacement is
+  the one new string most likely to keep a colon. Check that one first. Then check the four researched
+  cells in the table above that are full sentences, which are `subtitle`, `success`, `loadError` and
+  `empty`, since any of them can come back from research carrying one of the four marks.
 - **FR and EN key sets are identical**, in both directions, enforced by the same test file. Every key
   in the two tables above lands in both locale files in the same commit.
 
@@ -571,8 +718,12 @@ Two mechanical points that do apply to whatever the researched strings turn out 
 what `AC8` says happens to it. Its namespace becomes a naming oddity once the onboarding step drops
 its quota, and `AC8` already records that as known and not worth the churn.
 
-`onboarding.work.quota`, `onboarding.steps.work.subtitle` and `planning.editor.fields.quotaHint` are
-`AC8`'s to remove or reword and this design adds nothing to them.
+`onboarding.work.quota` and `onboarding.steps.work.subtitle` are `AC8`'s to remove or reword and this
+design adds nothing to them. **`planning.editor.fields.quotaHint` is no longer one of those.** The
+snapshot model turned it into a hint on a different field, so the design intent behind its rewording is
+set out in
+[the task editor's quota field](#the-task-editors-quota-field-under-the-snapshot-model) rather than left
+to the copy alone.
 
 ## Accessibility, what is answered here and what is left
 
@@ -616,41 +767,53 @@ smaller of the options available.
 2. **The unit takes the `hint` prop and the provenance takes the `help` prop.** `AC7` requires the
    unit hint on each input and says a default must be marked, and it does not say where either goes.
    This split is the only arrangement where both are announced without an `aria-hidden` anywhere.
-3. **The provenance for a user-set value names its effective date**, using the `effectiveFrom` the
-   response already carries. This is read-only text and not a date control. See
-   [effective dating](#effective-dating-what-this-design-does-not-build).
+3. **The provenance for a user-set value is words and carries no parameter**, reading `source`,
+   which is the only field the response has left. **Superseded assumption**, since this used to say
+   the provenance names its effective date from `effectiveFrom`. What replaced it is smaller rather
+   than different in kind, because both versions are read-only text in the same place and neither is
+   a control. See [what the effective dating left behind](#what-the-effective-dating-left-behind).
 4. **The two provenance states are unequal in weight**, a badge for a default and plain text for a
    user value.
 5. **The category labels take their category colour**, which answers spec open question 4 in the
    affirmative with the contrast measured.
-6. **Two new i18n keys**, `settings.quotas.userSince` and `settings.quotas.empty`.
+6. **Two new i18n keys**, `settings.quotas.userValue` and `settings.quotas.empty`. The first was
+   `settings.quotas.userSince` and is renamed by `AC8`.
 7. **A zero-entry empty state**, which is unreachable today and reachable after `PLAN-30`.
 8. **The skeleton shows four placeholder cells**, which is a guess and not a count the layout depends
    on.
 
-## Effective dating, what this design does not build
+## What the effective dating left behind
 
-**No date control, anywhere in this section.** The spec's non-goals say so plainly, `AC2` says the UI
-never sends a past date, and `AC7` describes one numeric input per category and nothing else. So an
-edit is implicitly effective from today in the user's stored timezone, decided server-side with
-`todayInZone`, and the client sends no date at all.
+**Superseded in full, and kept because it is the record of what this section deliberately did not build
+while the architecture still had dates in it.** Under the snapshot model there is no effective dating
+anywhere, so nothing below constrains the build any more. It is left standing rather than cut so that a
+reader coming to the diff can see which restraints were decisions and which were only the absence of a
+feature.
 
-**The history exists in storage and there is no way to browse it.** `category_quotas` keeps one row
-per effective date and the resolver reads across them, so saving a figure today leaves every earlier
-period resolving what it always resolved. Nothing in this section shows that, and the one thing it
-does surface is the effective date of the value currently winning, which is a single date rather than a
-history.
+**What it said, and what is left of each part.**
 
-**So the next feature inherits a table with real history and no reader for it.** `PLAN-23` is where a
-past period's figure becomes visible, and it will be the first feature with a reason to show more than
-one row per category. When it does, this section is where a history affordance would most naturally
-hang, and the provenance line is the element it would hang from. That is a note for whoever picks it
-up and it is not designed here.
+- **No date control anywhere in the section.** Still true, and now true for a duller reason. It used
+  to be a deliberate restraint against a table that could have taken a backdated row. There is no
+  backdated row to take, so it is not a decision any more.
+- **An edit is implicitly effective from today, decided server-side with `todayInZone`.** Void. A
+  save updates the user's single row in place, and `AC6` takes `todayInZone` and the
+  `loadWorkSettings` call out of both handlers, because nothing in the resolution asks what day it
+  is.
+- **The history exists in storage with no way to browse it.** Void, and this is the sentence the
+  architecture change contradicts most directly. `category_quotas` now holds one row per user and
+  category, so there is no accumulated history in that table at all. What preserves a past period is
+  the figure sitting on each task, and that is not a history anybody browses either. It is just the
+  number that row was measured against.
+- **The next feature inherits a table with real history and no reader for it.** Void. `PLAN-23`
+  inherits a current setting plus a per-task figure, so nothing is piling up in that table for it to
+  read, and the provenance line here is no longer the element a history affordance would hang from.
+- **Two dates and no picker is a deliberate asymmetry.** Void, since there are no dates.
 
-Two dates and no picker is a deliberate asymmetry rather than an oversight. Showing the date the
-current value took effect costs one line of already-fetched data and makes the mechanism honest.
-Letting the user choose a date would be a second question on a settings form for a case the spec says
-the user does not have yet.
+**What replaced the guarantee, because the guarantee itself did not go anywhere.** `AC2` keeps the
+requirement word for word, which is that editing a quota never changes what an already-reported
+period was measured against, and the figure stored on the task is what delivers it now. So this
+subject moved off the settings screen and into the task write path, which is why this design has
+less to say about it than it did rather than more.
 
 ## What this leaves for later
 
@@ -665,8 +828,9 @@ Wishes this design generated and stopped at, per the boundary against absorbing 
 2. **A user-created category has no `categories.<id>` key.** The label here resolves from i18n by id
    per `AC7`, so an id with no key renders as a raw dotted string. Naming a user-created category is
    `PLAN-30`'s form and its storage, and how that name reaches this label is its call.
-3. **A quota history view**, which is `PLAN-23`'s if anything, and only once a stat reads a past
-   period.
+3. **A quota history view, which this amendment removes rather than defers.** There is no stored history
+   to view under the snapshot model, so the wish lost its subject rather than its priority. The nearest
+   thing left is a task's own figure, which the editor already shows and already lets the user change.
 4. **Per-field inline errors from the `422`.** The write goes through `sendZodError` with per-field
    data, and this section shows a generic toast, because the client-side bounds make a `422` nearly
    unreachable. Mapping the response's per-field data onto `UForm.setErrors` is a small improvement
@@ -676,6 +840,11 @@ Wishes this design generated and stopped at, per the boundary against absorbing 
    its own reasons.
 6. **`lg:grid-cols-3`**, if the settings page is ever widened past `max-w-xl`.
 7. **A category screen owning the quota**, which is the real answer if the list ever reaches twenty.
+8. **A `quota_wph_source` column**, if a screen ever needs to tell a server-written task figure from one
+   the user typed. Raised as a finding under
+   [the task editor's quota field](#the-task-editors-quota-field-under-the-snapshot-model), where the
+   spec's own reversal path is named. Not this feature's, and not designed here beyond the note that the
+   two-state help region this document already specifies is what would render it.
 
 ## What I think the spec got wrong
 
@@ -696,10 +865,13 @@ Four small things, none of which blocks anything.
    should assume the number. The prose is a shorthand rather than a requirement, so this design reads
    it as dynamic, and the phrase is flagged so a later stage does not build a four-field form from it.
 
-4. **The spec assumes the response's `source` is enough to mark a default, and does not mention
-   `effectiveFrom` reaching the screen at all.** `AC6` ships both fields and says both exist so the
-   client never infers, then assumption 3 says dropping both would cost "the default marker in the UI
-   and nothing else". Using the date costs nothing extra, is the only visible trace of the effective
-   dating this feature exists to introduce, and turns an absence into a fact. If the owner would rather
-   no date appeared, the fallback is a plain "your value" string in the same place with no `{date}`
-   parameter, and nothing else about the section changes.
+4. **Superseded, and it is the finding that resolved itself.** This item argued that the spec
+   shipped `effectiveFrom` without noticing it could reach the screen, and that putting the date on
+   the provenance line turned an absence into a fact. The architecture change removed the field, so
+   there is nothing left to disagree about. The part worth keeping is the item's last sentence,
+   because the fallback it named is what `AC8` went on to take. This document wrote the no-date
+   option down, the owner's change made it the only option, and the string it becomes is
+   `settings.quotas.userValue`. So the correction cost one key rename and nothing else about the
+   section moved, which is what that fallback promised it would cost.
+
+   The first three items above stand as written, and the snapshot model touches none of them.

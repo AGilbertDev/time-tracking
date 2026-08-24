@@ -1,15 +1,15 @@
 # Per-category quotas
 
-`PLAN-32b`. Depends on `PLAN-32a`. Shared contract, backend, two migrations, and the settings and
-onboarding UI.
+`PLAN-32b`. Depends on `PLAN-32a`. Shared contract, backend, two migrations, the task write path, and
+the settings and onboarding UI.
 
 ## Intent
 
 A quota is a property of a kind of work rather than a property of the user, so the single global
 `settings.quota_wph` cannot describe four kinds of work at once. This feature makes the quota a user
-setting tied to the category, stores it in its own effective-dated table, resolves it server-side,
-gives the settings page a section for editing it, and retires the global column and every reader of
-it.
+setting tied to the category, stores the current figure in its own table, snapshots that figure onto
+each task as the task is written, resolves it server-side, gives the settings page a section for
+editing it, and retires the global column and every reader of it.
 
 The owner's words, which are the shape this document records rather than reopens.
 
@@ -28,6 +28,50 @@ behind the numbers and behind the per-category shape is in
 [`overview.md`](overview.md#one-quota-per-category-not-one-quota-for-everything) and
 [the quota is buckets](overview.md#the-quota-is-buckets-one-per-category-measured-against-time-spent),
 and is not re-argued here.
+
+## The snapshot model, approved 2026-08-24
+
+**A category quota is a current setting rather than a dated history, and each task carries the figure
+it was created against.** This replaces the effective-dated lookup the first two commits on this branch
+built. It is an architecture change taken after this spec was approved and after the backend stage had
+run, so it is recorded here as a change rather than folded in as though it had always been the plan.
+
+### Where it came from
+
+Research into how tools built for freelance translators actually keep historical figures accurate. The
+leading one locks the figure onto the job. Its own documentation states that changing a price at the job
+level does not update the rate at the client level, and that changing a rate going forward leaves
+existing jobs holding whatever they were created with. A second tool models user-defined services, each
+carrying its own unit, which is the same per-category split this feature already builds.
+
+So the per-category shape matches how these tools work and the way this spec preserved history did not.
+The industry snapshots the figure onto the record. This spec looked the figure up by date. The owner
+read the comparison and chose the snapshot model.
+
+### What changes
+
+`category_quotas` loses `effective_from` and holds one row per user and category, so a save updates that
+row in place instead of appending a new one. When a task is written the server resolves the quota for
+the task's category and stores that number on the task, the way an invoice line stores the price it was
+sold at. Changing a category setting afterwards never moves a number on a task that already exists.
+
+### What does not change
+
+The per-category split, the free-text `category_id`, the four shipped defaults, the trackable gate, the
+retirement of `settings.quota_wph`, the settings section, the purge line, and the dev seed. Every one of
+those was decided on reasoning that was not about dates, so none of that reasoning is reopened here.
+
+### The new surface this brings, named rather than absorbed
+
+**The snapshot reaches `POST /api/tasks` and `PATCH /api/tasks/[id]`, which the approved spec did not
+touch at all.** That is new surface for this feature and it is stated here rather than left to be
+discovered in the diff. It is a direct consequence of the approved architecture rather than scope picked
+up along the way. A snapshot model with nothing writing the snapshot is not the model, it is the old
+model with a column removed, so the write path is the mechanism rather than an extension of it.
+
+It is also the smallest possible reach into that path. No arithmetic is performed, no new column is
+added, no request contract changes, and no field becomes required or forbidden. One number is resolved
+and stored on two endpoints. `AC12` is the whole of it.
 
 ## Inputs
 
@@ -52,6 +96,10 @@ and is not re-argued here.
    named requirement the design is measured against rather than a happy consequence. The section
    [the extensibility rule](#the-extensibility-rule-and-where-each-choice-satisfies-it) goes through
    them one by one.
+6. **The snapshot model**, approved by the owner 2026-08-24 and set out in
+   [the snapshot model](#the-snapshot-model-approved-2026-08-24). It arrived after the first two commits
+   on this branch, so parts of this document now describe work that has to be undone rather than work
+   that has not started. Where that is true it is said in the criterion itself.
 
 ### The design blueprint
 
@@ -62,13 +110,21 @@ amended after the design stage, and the fourth is a shorthand this spec now stat
 criterion below and the blueprint disagree, this document is what the review stage reads, so the
 correction lands here rather than only there.
 
+**The blueprint predates the snapshot model and is not amended.** Two of its decisions are overtaken by
+it, which are the date on the provenance line and the argument that the date was the interesting half of
+that line. There is no effective date left to show, so `AC7` and `AC8` below carry the corrected version
+and the rule in the paragraph above is what settles the disagreement. Everything else the blueprint
+decided still holds, including the colour on the label, the slot and prop assignment, the badge
+treatment, and the dynamic row count.
+
 ### The shipped code this changes
 
 - `shared/categories.ts`, the ten-member category contract. `DEFAULT_CATEGORY_IDS` (L57 to L68) and
   `DEFAULT_CATEGORIES` (L125 to L136) are the declaration site for every per-category fact, and the
   descriptor carries `trackable`, `deliverable`, and `hue` today.
-- `server/db/schema.ts`. `settings.quotaWph` at L45 is the column that retires, and `workSchedule` at
-  L189 onward is the effective-dated pattern the new table copies.
+- `server/db/schema.ts`. `settings.quotaWph` at L45 is the column that retires. `tasks.quotaWphOverride`
+  at L111 is the column this feature repurposes as the snapshot, and its comment block above it is
+  rewritten to say what it now holds.
 - `server/utils/loadWorkSettings.ts`, whose `WorkSettings` interface, `DEFAULT_QUOTA_WPH` constant,
   and select list all carry the global quota.
 - `server/models/work-settings.ts`, which owns `quotaWphSchema` and includes `quotaWph` in
@@ -80,16 +136,70 @@ correction lands here rather than only there.
   `app/components/settings/work-fields.vue`, `app/pages/onboarding.vue`,
   `app/components/onboarding/step-work.vue`, `app/composables/useOnboardingForm.ts`, and
   `app/composables/useCompleteOnboarding.ts`.
+- `server/api/tasks/handlers/create.ts`, `update.ts`, and `write.ts`, which gain the snapshot per
+  `AC12`, and `test/server/api/tasks/write-boundary-guards.test.ts`, whose quota guard this feature now
+  amends rather than leaving to `PLAN-22`.
 - `scripts/seed.ts`, `test/helpers/taskTestDb.ts`, and the four test files listed under `AC3`.
 
-### The surviving field this must not be confused with
+### The field the snapshot lives in, and why it is the existing one
 
-`tasks.quota_wph_override` stays exactly as it is. It is the per-task exception to the category's
-quota, it is written by the task editor
-([`TaskEditor.vue`](../../../app/components/planning/TaskEditor.vue) field 11), it is validated by
-`quotaWphSchema`, and it is the first step of the resolution order below. Every file that touches only
-the override keeps it unchanged, which is `server/api/tasks/handlers/write.ts`, `projection.ts`,
-`server/models/tasks.ts`, `app/utils/taskEditor.ts`, and `TaskEditor.vue`.
+**`tasks.quota_wph_override` becomes the snapshot rather than a new column being added beside it.**
+The column already exists, it is already nullable, it is already validated by `quotaWphSchema`, and it
+already holds exactly one thing, which is the words-per-hour figure this one task is measured against.
+
+The alternative was a second column, `quota_wph_snapshot`, with the override kept separate and winning
+over it. That is declined for three reasons.
+
+1. **Under this model the per-task figure is not an exception any more, it is the record.** The owner has
+   already questioned why a per-task exception exists on top of a per-category target, and the snapshot
+   model answers that question by making the per-task figure the primary fact. Two columns would keep
+   the exception alive and add the record beside it, which is the shape the question was about.
+2. **An invoice line stores one price.** It does not store a catalogue price plus an optional
+   override, and the analogy is the whole reason this model was chosen. A user asked why their task
+   carries two quotas has no good answer, and neither does the resolver, which would grow a third step
+   to break a tie that means nothing.
+3. **It needs no migration.** `0010` and `0011` are unapplied, so the branch would have to add a third
+   numbered file for a column whose only job is to duplicate the meaning of one that is already there.
+
+**What happens to the name. Nothing, and that is a deliberate refusal rather than an oversight.**
+`quota_wph_override` stops describing what it holds, because the normal case is now a server-written
+figure rather than a user's exception. The column and the `quotaWphOverride` request and response field
+keep their names anyway.
+
+- This project has already settled this exact trade once, on the column immediately above it.
+  `project_word_count` is recorded in `server/db/schema.ts` as "mildly misleading and it is kept rather
+  than renamed", because a rename means either `ALTER TABLE RENAME COLUMN` plus an edit to every reader
+  or a create-copy-swap, and it also renames a field on a request contract that has already shipped,
+  which turns an internal tidy into a breaking API change for no behaviour gained. Every word of that
+  applies here.
+- `quotaWphOverride` is on `POST /api/tasks`, on `PATCH /api/tasks/[id]`, and on the list projection,
+  with a live client reading all three. Renaming it is a breaking contract change, and this feature is
+  not the one that gets to make it.
+- `AC3`'s grep instruction and the shipped write-boundary guard both key on the literal strings
+  `quotaWphOverride` and `quota_wph_override`. A rename rewrites both, which is churn in the two places
+  this feature most needs to stay readable.
+
+**So the meaning lives in the comment rather than in the name, and a reviewer flagging the name is
+right and is declined on the grounds above.** The schema comment, the model comment, and this section
+say what the column holds. A rename belongs to whichever later feature is already changing that request
+contract, which today looks like `PLAN-12`, and it is a hand-off rather than scope here.
+
+**What this costs, stated plainly.** One column cannot record two facts, so after this change a NULL
+cannot distinguish a row written before this feature from a row whose figure the user deliberately
+cleared, and a number cannot distinguish a figure the server snapshotted from a figure the user typed.
+Both distinctions exist today and both are given up. Nothing shipped or specced reads either one.
+`PLAN-22` divides words by a quota and does not care where the number came from, and the editor renders
+a number the user can change either way. If a later feature does need the provenance, it adds a small
+`quota_wph_source` column rather than unpicking this, and that is a cheaper reversal than carrying two
+numeric columns from the start on the chance that it will.
+
+**The files that touch this column and now change.**
+`server/api/tasks/handlers/create.ts`, `update.ts`, and `write.ts` gain the snapshot per `AC12`.
+`server/models/tasks.ts` keeps `quotaWphSchema` on the field and gains a comment saying the field is now
+also server-written. `projection.ts`, `app/utils/taskEditor.ts`, and
+[`TaskEditor.vue`](../../../app/components/planning/TaskEditor.vue) field 11 keep their code unchanged,
+and the only client-visible difference is that the field usually arrives holding a number instead of
+empty. Only the field's hint copy changes, per `AC8`.
 
 ## The shape the owner decided
 
@@ -97,15 +207,19 @@ the override keeps it unchanged, which is `server/api/tasks/handlers/write.ts`, 
 
 ```
 category_quotas
-  id             text primary key
-  user_id        text not null -> users.id, on delete cascade
-  category_id    text not null, the shared ten today, any user-created id later
-  quota_wph      integer not null
-  effective_from text not null, 'YYYY-MM-DD', matching work_schedule
-  created_at     integer, Unix seconds
-  updated_at     integer, Unix seconds
-  unique (user_id, category_id, effective_from)
+  id           text primary key
+  user_id      text not null -> users.id, on delete cascade
+  category_id  text not null, the shared ten today, any user-created id later
+  quota_wph    integer not null
+  created_at   integer, Unix seconds
+  updated_at   integer, Unix seconds
+  unique (user_id, category_id)
 ```
+
+**`effective_from` is gone and the unique key is now `(user_id, category_id)`**, so a user has exactly
+one current quota per category and a save updates that row in place. This is the snapshot model applied
+to the table. The column and the third member of the unique key were both in the approved shape and both
+come out.
 
 The `id` primary key is the one addition to what was agreed, and it is a consistency choice rather
 than a change of shape. Every table in `server/db/schema.ts` carries a `text` primary key defaulted
@@ -135,18 +249,35 @@ database rather than only in the type.
 The cost of that freedom is that a stored row can name a category the app does not know, which the
 edge cases below handle rather than prevent.
 
-### Why the effective dating copies work_schedule
+### Why the task carries the figure rather than the table carrying a history
 
-`AC2` requires effective dating regardless of the table's shape, because editing a quota must not
-restate a period that has already been reported. The repo already has that pattern for exactly this
-purpose. `work_schedule` is SCD Type 2, one row per effective date, `effective_from` held as
-`'YYYY-MM-DD'` text so lexicographic order equals chronological order, and resolution is an
-index-friendly range scan over `(user_id, effective_from)`. The reasoning is written out in
-[`0005_add_work_schedule_table.sql`](../../../server/db/migrations/0005_add_work_schedule_table.sql)
-and it applies here unchanged.
+`AC2`'s requirement is unchanged, which is that editing a quota must never restate a period that has
+already been reported. Only the mechanism changes. Effective dating met that requirement by keeping every
+past figure and choosing between them by date. The snapshot meets it by writing the figure onto the task
+at the moment the task is written, so there is nothing left to choose between and no past figure to keep.
 
-Following it rather than inventing a second pattern is the whole point. A second arrangement for the
-same problem in the same database is two things to learn and two things to get wrong.
+**The snapshot is the stronger of the two and that is why it replaces the other.** Under effective dating
+a stored figure is correct only as long as the resolver, the task's date, and the row's date agree, so a
+task written on one day and moved to another day silently changes which figure it is measured against.
+Under the snapshot the figure is a stored fact on the row, so a task moving day, a category setting being
+edited, and a row being read a year later all leave it alone. It is the same reason the project already
+refuses to store a copy of the estimated duration in `actual_minutes`, which is that a stored fact and a
+derived one must not be confusable, read in the other direction. A quota in force at a moment is a fact
+about that task, so storing it is recording rather than copying.
+
+It is also what the tools this domain already uses do, per
+[where it came from](#where-it-came-from), and matching an established practice beats inventing a second
+one for the same problem. That argument was previously used the other way round, to justify copying
+`work_schedule`'s pattern, and it now points at the industry practice instead. The `work_schedule`
+comparison was never wrong about `work_schedule`. It was wrong that the two problems are the same one. A
+work schedule has to answer "how many hours was I available on this past day" for a day nothing was
+written down about, so it has nowhere to put the answer but a dated row. A quota has a task to write it
+on.
+
+**`work_schedule` keeps its effective dating and nothing about it changes here.** Two patterns now exist
+in this database for what looked like one problem, which is a cost, and it is paid down by the fact that
+`category_quotas` is no longer an effective-dated table at all, so there is one dated table rather than
+two.
 
 ### The four shipped defaults
 
@@ -177,26 +308,39 @@ bootstrap step, no seeding requirement, and no state in which a trackable catego
 
 ### The resolution order
 
-For a single task, server-side, in this order.
+For a single task, server-side, in this order. **Resolution loses its date logic and does not otherwise
+change.**
 
-1. `tasks.quota_wph_override`, when it is not null.
-2. The user's `category_quotas` row for that category whose `effective_from` is the latest date less
-   than or equal to the task's `date`.
-3. The shipped default for that category, from the contract.
-4. None, when the category is not trackable.
+1. None, when the category is not trackable. This is a gate and it fails closed first.
+2. The number stored on the task in `tasks.quota_wph_override`, when it is not null and is a usable
+   divisor.
+3. The user's current `category_quotas` row for that category.
+4. The category's shipped default, from `shared/categories.ts`.
 
-**Step 4 is a gate rather than a last resort, and the difference is real today.** Read as written, the
-list would hand a non-trackable task its override, because step 1 fires before step 4 is ever
-reached. The app can produce that row right now, since the editor shows the quota field for every
-category on purpose ([`TaskEditor.vue`](../../../app/components/planning/TaskEditor.vue) field 11,
-"Shown for every category rather than hidden on some"), so a user can type an override onto a meeting.
-The resolver therefore checks `isTrackableCategory` first and returns none for a non-trackable
-category whatever else the row holds. That is the same fail-closed direction the contract already
-documents for `isTrackableCategory`, which is that words must never reach a quota numerator by
-accident.
+**Step 1 is a gate rather than a last resort, and the difference is real today.** Written in the other
+order the list would hand a non-trackable task its stored number, because step 2 would fire before the
+gate was ever reached. The app can produce that row right now, since the editor shows the quota field for
+every category on purpose ([`TaskEditor.vue`](../../../app/components/planning/TaskEditor.vue) field 11,
+"Shown for every category rather than hidden on some"), so a user can type a figure onto a meeting. The
+resolver therefore checks `isTrackableCategory` first and returns none for a non-trackable category
+whatever else the row holds. That is the same fail-closed direction the contract already documents for
+`isTrackableCategory`, which is that words must never reach a quota numerator by accident.
 
-The stored override is left alone rather than cleared, so recategorizing the row to a trackable
-category brings the override back with it. Nothing is destroyed to enforce the gate.
+The stored number is left alone rather than cleared, so recategorizing the row to a trackable category
+brings it back with it. Nothing is destroyed to enforce the gate.
+
+**Steps 3 and 4 are the fallback for a task that carries no number, and that is a narrower set than it
+used to be.** After `AC12` ships, a task written through the API with a trackable category always carries
+its own figure, so steps 3 and 4 are reached by exactly three kinds of row. A task written before this
+feature, which is every task in the database today. A task whose figure the user deliberately cleared. And
+a task inserted by something other than the write path, which today means the dev seed. All three are
+real and none of them is broken, so the fallback stays rather than becoming dead code.
+
+**What is gone is the date.** No step compares the task's `date` to anything, no step reads
+`effective_from`, and the resolver takes no date argument. `resolveCategoryQuota(categoryId, records)`
+loses its `on` parameter, `CategoryQuotaRecord` loses `effectiveFrom`, `ResolvedCategoryQuota` loses
+`effectiveFrom`, and `resolveTaskQuota` stops reading `task.date`. The source union renames its per-task
+member from `'override'` to `'task'`, because the number is the record rather than an exception to one.
 
 **Nothing in this resolution happens in a Vue component.** The server resolves and the client is
 handed finished figures, per the project's logic-belongs-to-the-backend rule.
@@ -236,15 +380,15 @@ so each choice is listed here against the part of the rule it satisfies.
   without deleting the rows that reference it". A stale or unknown id resolves through
   `coerceCategory` to `other` and therefore to no quota, so a retired member leaves working code
   behind rather than a crash or a wrong number.
-- **The unique key is `(user_id, category_id, effective_from)`.** No ordinal, no positional index, and
-  no column named after a category. A fortieth category is more rows rather than a schema change.
+- **The unique key is `(user_id, category_id)`.** No ordinal, no positional index, and no column named
+  after a category. A fortieth category is more rows rather than a schema change.
   The shape this rule exists to prevent is the one being retired here, which is a fixed set of
   per-category columns on the settings row.
 - **The resolution order ends in a shipped default rather than in a required row.** A category with no
   stored quota still resolves, so growth never depends on a bootstrap step or a backfill.
 
 **What a user-created category inherits for free under this shape.** A storable quota with no
-migration, effective dating on it, a label resolved from i18n by its own id, a colour that is
+migration, the snapshot onto its tasks for free, a label resolved from i18n by its own id, a colour that is
 readable by construction anywhere on the hue circle (already guaranteed by `PLAN-32c`), the
 fail-closed unknown-id path, and erasure through both the purge and the cascade.
 
@@ -274,6 +418,7 @@ request.
 - The `defaultQuotaWph` field on the category descriptor and its accessor, in `shared/categories.ts`.
 - The `category_quotas` table, its Drizzle definition, and two migrations.
 - A server read path over the table and a pure resolver, both unit-tested.
+- The quota snapshot onto `tasks.quota_wph_override` on both task write endpoints, per `AC12`.
 - `GET` and `PATCH /api/me/category-quotas`.
 - A Quotas section on the settings page that edits one figure per trackable category.
 - The removal of `settings.quota_wph` and every reader of it, including the onboarding field.
@@ -300,43 +445,109 @@ needs decisions this feature does not take.
 
 **No quota on the task read projection.** See the consumer decision below.
 
-**No date picker in the settings UI.** The API accepts an explicit `effectiveFrom` and the UI does not
-send one, so an edit is always effective from today. The mechanism is there for a deliberate
-correction and for `PLAN-30`, and shipping a date control with it would be a second question to answer
-on a settings form for a case the user does not have yet.
+**No date anywhere in the quota API or the settings UI.** There is no `effectiveFrom` on the request,
+none on the response, and no date control on the form. This was previously a non-goal about a date
+picker on top of a dated mechanism. Under the snapshot model there is no date to pick, so the non-goal
+is now the stronger statement that the quota endpoints take and return no date at all.
 
-**No quota history view.** The table keeps the history and nothing displays it. `PLAN-23` is where a
-past period's figure becomes visible, and showing a list of past quotas before any stat reads them
-would be a screen with nothing to say.
+**No quota history, and no view of one.** The table holds the current figure and keeps no past figures,
+so there is nothing to display. What preserves the past is the number stored on each task, and reading
+those back as a history is `PLAN-23`'s job rather than this feature's.
 
-### The resolver's consumer, decided
+**No backfill onto existing tasks.** Every task in the database has `quota_wph_override` NULL today,
+including the seeded rows, and it stays NULL. See [the decision](#existing-tasks-keep-their-null) below.
 
-**The resolver ships with unit tests and no per-task consumer. The only shipped consumer of stored
-quota rows is the settings API's own read.** The task read projection gains no quota field.
+**No arithmetic on the snapshot.** The number is resolved and stored. Nothing divides by it, nothing
+rounds with it, and `estimated_minutes` is untouched. That is `PLAN-12` and the boundary is drawn in
+[how this differs from `PLAN-12`](#how-a-quota-snapshot-differs-from-plan-12s-frozen-estimate).
 
-Three reasons, and the smaller surface is the deciding one.
+### The resolver's consumer, decided under the snapshot model
 
-1. **Nothing would read it.** The row does not print a quota, the editor does not print one, and no
-   stat exists yet. A field on a shipped API contract that no client reads is a contract this feature
-   would have to keep correct for nobody's benefit.
-2. **`PLAN-22` may not want it per row.** A bucket is words in a category over hours in that category,
-   which is a period-level figure resolved once per category and date rather than once per task. A
-   per-row field shipped now would be built against a guess about a consumer that does not exist.
-3. **The shipped guard test forbids it, and that guard is correct.**
-   `test/server/api/tasks/write-boundary-guards.test.ts` asserts that no file under
-   `server/api/tasks/` mentions `quotaWph` beyond the override passthrough, and the reason recorded
-   there is that the only quota available was the wrong global one. Putting a resolved quota under
-   `server/api/tasks/` means amending that guard, so the smaller surface is also the one that leaves a
-   deliberate protection alone. `PLAN-22` amends it when it has a reader.
+**This section previously said the resolver ships with no runtime consumer. That is no longer true and
+the change is a consequence of the snapshot model rather than a change of mind.** The task write path
+resolves a category's quota in order to store it, so `resolveCategoryQuota` now has a production caller
+on both write endpoints.
 
-`AC1` is demonstrable either way, and here it is demonstrated by unit tests over the pure resolver
-plus the resolved figures the settings `GET` returns. That makes the resolver's tests a requirement of
-this feature rather than a nice-to-have, which `AC10` states.
+**What survives from the old decision.** The task read projection still gains no resolved quota field. It
+carries `quotaWphOverride`, which it already did, and that field now happens to hold the snapshot. So the
+response shape does not change, no new field goes onto a shipped contract, and reasons 1 and 2 below
+still hold for the field that was being considered.
 
-The honest cost is that `resolveTaskQuota` has no runtime caller until `PLAN-22`, so it is tested code
-with no production path through it. That is accepted deliberately. The resolution order is a decided
-rule, writing it once with tests now is what stops it being re-derived under pressure later, and the
-alternative costs a contract change plus a guard amendment to gain a field nothing reads.
+1. **Nothing would read a second resolved field.** No row prints a quota, no stat exists, and the number
+   the client can already see is the one on the task.
+2. **`PLAN-22` may not want a resolved figure per row.** A bucket is words in a category over hours in
+   that category, which is a period-level figure. That stays `PLAN-22`'s call.
+
+**What does not survive is reason 3, and this is the part review has to see.** The shipped guard in
+`test/server/api/tasks/write-boundary-guards.test.ts` asserts that no file under `server/api/tasks/`
+mentions `quotaWph` beyond the `quotaWphOverride` passthrough. `AC12` writes a resolved quota in exactly
+that directory, so **this feature amends that guard rather than leaving it to `PLAN-22`.**
+
+The amendment narrows the guard rather than deleting it. What the guard was protecting was that no wrong
+quota reaches a task, and the reason recorded in it is that the only quota available was the global one
+whose default the overview records as wrong. That reason is retired by this feature, and the protection
+worth keeping is a different one, which is that **no file under `server/api/tasks/` performs quota
+arithmetic**. So the guard becomes an assertion that nothing there divides by or multiplies a quota,
+which is `PLAN-12`'s and `PLAN-22`'s ground and is still not this feature's. Deleting the guard outright
+would be weakening it and is not what is specced. `AC12` states the replacement.
+
+`AC1` is demonstrated by unit tests over the pure resolver plus the resolved figures the settings `GET`
+returns, which is unchanged. `resolveTaskQuota` specifically still has no runtime caller, because the
+write path resolves a category rather than a task, so that function remains tested code with no
+production path until `PLAN-22`. That is accepted for the reason it always was, which is that the
+resolution order is a decided rule and writing it once with tests is what stops it being re-derived
+under pressure later.
+
+### Existing tasks keep their NULL
+
+**Every task that exists today keeps `quota_wph_override` NULL, and no migration backfills it.** That
+includes the dev seed's rows.
+
+1. **A backfill invents a number.** It would write today's category setting onto work done before any
+   per-category target was ever recorded, and it would then look like the figure that task was actually
+   created against. That is the same argument that stops `settings.quota_wph` being carried into
+   `category_quotas` at all, and the same argument that stops `PLAN-32a` writing a permanent `revision`
+   to `revision_internal` mapping. A snapshot of a target that did not exist is not a snapshot.
+2. **The fallback path is needed anyway.** Steps 3 and 4 of the resolution order have to work for a
+   deliberately cleared figure and for a row inserted outside the write path, so a backfill would buy
+   nothing that the fallback does not already provide, and it would remove the only real data exercising
+   it.
+3. **NULL is a working state.** Such a task resolves the user's current setting, and failing that the
+   shipped default, so nothing is blank and nothing is broken.
+
+**The honest cost.** Those tasks are still measured against a figure that moves when the user edits their
+category setting, which is exactly the behaviour the snapshot exists to end. That is correct rather than
+regrettable. The app has no record of what target that work was done against, so the best available
+answer is the current one, and pretending otherwise by freezing a guess would be worse. The set is also
+closed and shrinking, since every task written from now on carries its own figure.
+
+### How a quota snapshot differs from `PLAN-12`'s frozen estimate
+
+[`overview.md`](overview.md) records that `PLAN-12` owns derived values on tasks, specifically
+`estimated_minutes = round_to_5(words / quota x 60)` stored frozen. So this has to say why storing a
+quota on a task is not `PLAN-12` arriving early.
+
+**They are different kinds of fact.** The snapshot is a setting captured, which is the target that was in
+force for this kind of work when this task was written. The frozen estimate is a computation performed,
+which is a duration derived from that target and a word count. One is an input recorded, the other is an
+output produced. This feature records the input and performs no computation, so `estimated_minutes` stays
+stored verbatim and client-writable exactly as [`task-write-api.md`](task-write-api.md) settled it.
+
+**Every decision `PLAN-12` had, it still has.** Whether to derive the estimate at all, the rounding rule,
+whether editing the word count re-derives, whether editing the estimate decouples it, and whether to
+backfill estimates for existing rows. None of those is taken here and none of them is constrained by
+this.
+
+**`PLAN-12` is unblocked rather than pre-empted, and that is the useful part.**
+[`task-write-api.md`](task-write-api.md) refused to derive the estimate on the server for one stated
+reason, which is that the only quota available was the global `settings.quota_wph` whose default is
+recorded as wrong, and that because the estimate is frozen by definition it would never self-correct. The
+snapshot answers that objection directly. It also makes a frozen estimate reproducible, since the divisor
+it was derived from is stored on the same row, which it was not under either the global column or the
+effective-dated lookup.
+
+**And it satisfies an acceptance criterion `PLAN-12` already carries**, which is that changing the quota
+does not change a stored estimate. Under the snapshot that is true of the input as well as the output.
 
 ## Outputs and acceptance criteria
 
@@ -357,25 +568,54 @@ defaults the two agree, and a test asserts that agreement as a consistency check
 which is not the same as deriving one from the other.
 
 The resolver returns none, expressed as `null`, for every non-trackable category, whatever the stored
-rows or the task's override say. Verifiable by unit tests over all ten ids.
+rows or the task's own figure say. Verifiable by unit tests over all ten ids.
 
-### AC2. The quota is effective-dated, and an edit never restates a past period
+**`AC1` is unchanged by the snapshot model.** The contract field, the accessor, the coercion, the
+fail-closed direction, and the consistency assertion all stand exactly as approved. Nothing in this
+criterion was about dates.
 
-Editing a quota inserts or updates the row for the effective date being edited and never touches a row
-with an earlier `effective_from`. Resolving a date before the earliest stored row for a category
-returns the shipped default, so there is no discontinuity and no gap.
+### AC2. Editing a quota never restates a past period, and the task's stored figure is what guarantees it
 
-Verifiable by a resolver test that reads a category on three dates against a two-row history and gets
-the pre-history default, then the first value, then the second. The property to assert is that adding a
-row dated today changes nothing about what any earlier date resolves to.
+**This criterion is rewritten and it is a replacement of the mechanism rather than a relaxation of the
+requirement. Review must not read it as a criterion being dropped.** The requirement is word for word
+what it was, which is that editing a quota must never change what a period that has already been
+reported was measured against. What changes is how that is achieved. Effective dating was the mechanism.
+The snapshot is now the mechanism, and it delivers the same guarantee more directly.
 
-An `effectiveFrom` in the past is accepted by the API and is a deliberate correction rather than a
-mistake to block. The guarantee `AC2` makes is about the mechanism, which is that an ordinary edit
-writes a new dated row instead of mutating the old one. The app never backdates on its own, the UI
-never sends a past date, and the project's do-not-police rule means a user who explicitly asks to
-correct a past period gets to.
+**The requirement.** Editing a category quota changes what future tasks are measured against and changes
+nothing about any task that already exists.
 
-A future `effectiveFrom` is accepted for the same reason and resolves for dates from that day onward.
+**The mechanism.** A task written through the API with a trackable category carries its own resolved
+figure in `tasks.quota_wph_override`, per `AC12`. A save to `category_quotas` updates the user's single
+row for that category in place. Since resolution reads the task's own figure before it reads the
+category row, an edit to the category row cannot reach a task that already has one.
+
+**What is verifiable, and it is a stronger property than the old test asserted.**
+
+1. Create a task in a trackable category. Save a different quota for that category. Resolve the task
+   again and assert its figure is unchanged. The old criterion could only assert this about a date
+   comparison. This asserts it about the row.
+2. A save to `category_quotas` for a category that already has a row leaves one row rather than two, and
+   the row holds the new figure. Assert the row count as well as the value, because a stray second row is
+   the failure this table's unique key exists to prevent.
+3. A task with no stored figure resolves the user's current row, and failing that the shipped default,
+   so there is no gap and no discontinuity for the rows described in
+   [existing tasks keep their NULL](#existing-tasks-keep-their-null).
+
+**What the replacement gives up, stated so the trade is on the record and not discovered later.** A quota
+typed wrong cannot be corrected on tasks that were already created with it. Under effective dating the
+user could have written a backdated row and restated the period. Now they would have to edit each affected
+task's figure in the editor, which is possible one row at a time and impractical across fifty.
+
+That cost is accepted for three reasons. It is the trade the leading tool in this domain already makes,
+so it is the behaviour a user coming from that tool expects. The backdating path it removes was never
+reachable from the UI anyway, since the approved spec shipped no date control and the settings form never
+sent a past date, so what is lost is a capability the product did not actually offer. And the per-task
+figure stays editable, so the recovery for the case that matters, which is one important task with a
+wrong number, is a field the user can already see and change.
+
+**What is not given up.** Nothing about the requirement itself. A past period still cannot be restated by
+an ordinary edit, which was the whole point.
 
 ### AC3. `settings.quota_wph` is gone, with no reader left behind
 
@@ -461,13 +701,35 @@ note still supports what it always supported, which is that effective hours are 
 
 ### AC5. Two migrations, in the order the deploy needs
 
+**`0010` is edited in place rather than corrected by a later numbered file, and that is only true right
+now.** The file was written by the backend stage against the effective-dated shape and it has not been
+applied anywhere. There are no database credentials in this pipeline and none in the container, the
+production apply is the owner's own manual step, and the pull request is open rather than merged. So the
+file has never run, its filename is in no ledger, and editing it is editing something that has not
+happened yet rather than rewriting history.
+
+**This stops being true the moment the owner applies it.** Once `0010` has run against any database, its
+name is in `_applied_migrations` with no checksum, so the runner will skip it whatever the file then says,
+and a database created before the edit and one created after would disagree about the table's shape with
+nothing to detect the difference. From that point the correction arrives as a new numbered file on top,
+which for this change means dropping the index, rebuilding the table without `effective_from`, and
+recreating the index, since SQLite cannot drop a column that a unique index names. **If the owner has
+already applied `0010`, say so before this is built rather than editing the file.**
+
+The same applies to `0011`, which is unapplied and unchanged by this amendment.
+
 **Two numbered files, not one.**
 
-- `0010_create_category_quotas.sql`, the expand half. `CREATE TABLE IF NOT EXISTS category_quotas`
-  with the columns above and the cascading foreign key, then
-  `CREATE UNIQUE INDEX IF NOT EXISTS category_quotas_user_id_category_id_effective_from_idx ON category_quotas (user_id, category_id, effective_from)`.
-  Both statements are separated by the `--> statement-breakpoint` marker the runner splits on, and
-  both are idempotent through `IF NOT EXISTS`, matching `0005`.
+- `0010_create_category_quotas.sql`, the expand half, edited in place per the note above.
+  `CREATE TABLE IF NOT EXISTS category_quotas` with the columns above, no `effective_from`, and the
+  cascading foreign key, then
+  `CREATE UNIQUE INDEX IF NOT EXISTS category_quotas_user_id_category_id_idx ON category_quotas (user_id, category_id)`.
+  **The index is renamed as well as narrowed**, because its old name spells out the column that is gone
+  and a name that lies about its own columns is worse than a rename in a file that has never run. Both
+  statements are separated by the `--> statement-breakpoint` marker the runner splits on, and both are
+  idempotent through `IF NOT EXISTS`, matching `0005`. The comment header is rewritten to describe the
+  snapshot model, so its effective-dating and `work_schedule`-pattern paragraphs are replaced rather than
+  left standing next to a table that has no dates in it.
 - `0011_drop_settings_quota_wph.sql`, the contract half. `ALTER TABLE settings DROP COLUMN quota_wph`.
   SQLite has supported `DROP COLUMN` since 3.35 and `quota_wph` is not a primary key, not unique, not
   indexed, and not referenced by a constraint or a generated column, so the drop is permitted rather
@@ -554,27 +816,33 @@ category it belonged to on the new settings section in a few seconds.
 ### AC6. The API resolves and returns finished figures
 
 **`GET /api/me/category-quotas`.** Returns one entry per **trackable** category, in contract order,
-each already resolved for today in the user's stored timezone.
+each already resolved to the figure currently in force.
 
 ```
-[{ categoryId: string, quotaWph: number, source: 'user' | 'default', effectiveFrom: string | null }]
+[{ categoryId: string, quotaWph: number, source: 'user' | 'default' }]
 ```
 
 - Non-trackable categories are **absent** rather than present with a null quota. That is `AC1`
   expressed as absence, and it means the client renders what it is handed instead of filtering on
   `trackable` itself.
-- `source` says whether the figure came from a stored row or from the shipped default, and
-  `effectiveFrom` is the date of the winning row or `null` for a default. Both exist so the client
-  never infers either. A page comparing a figure against a hardcoded default to decide what to label
+- `source` says whether the figure came from a stored row or from the shipped default. It exists so the
+  client never infers it. A page comparing a figure against a hardcoded default to decide what to label
   it would be a second copy of the rule, which is the duplication the conventions forbid.
-- Today is computed with `todayInZone` from `shared/planning.ts` against the timezone from
-  `loadWorkSettings`, so no date arrives from the client and no client clock decides which quota is
-  current.
+- **`effectiveFrom` comes off the response.** It carried the date of the winning row, and there is no
+  winning row and no date any more. Keeping it as a permanent `null` would be a field that only ever says
+  nothing. `source` alone satisfies what `AC6` actually required, which is that the client is told rather
+  than left to work it out. `AC7` and `AC8` carry the consequence on screen, and `AC8` had already
+  recorded the no-date fallback string, so no new copy question opens here.
+- **The response is no longer date-dependent, so it no longer reads the timezone.** `todayInZone` and the
+  `loadWorkSettings` call both leave these handlers, since nothing in the resolution asks what day it is.
+  That removes a dependency rather than adding one.
 - The read is always scoped to the session user, never to an id from the request, matching
   `getWorkSchedule`. An unauthenticated request is a `401` through
   `defineAuthenticatedEventHandler`.
 
-**`PATCH /api/me/category-quotas`.** Body is `{ effectiveFrom?: 'YYYY-MM-DD', quotas: [{ categoryId, quotaWph }] }`.
+**`PATCH /api/me/category-quotas`.** Body is `{ quotas: [{ categoryId, quotaWph }] }`. **`effectiveFrom`
+comes off the request**, for the same reason it comes off the response. A date on the body would be a
+parameter with nowhere to be stored.
 
 - `quotas` holds at least one entry, no duplicate `categoryId`, each `categoryId` a trackable
   category id, each `quotaWph` validated by the existing `quotaWphSchema` (integer 1 to 10000). The
@@ -584,14 +852,15 @@ each already resolved for today in the user's stored timezone.
 - A non-trackable `categoryId` is rejected with a `422`. That is a data-validity rule rather than
   policing, because a non-trackable category has no quota by definition, so the row would be
   meaningless rather than unusual.
-- `effectiveFrom` is optional, validated by the `calendarDaySchema` the task write boundary already
-  uses so the shape and real-date rules cannot drift, and defaults to today in the user's timezone.
-  If reusing it from `server/models/tasks.ts` reads as the wrong import direction, extract it to a
-  shared server model rather than writing a second copy, which is exactly what the work fields did
-  when they moved into `models/work-settings.ts`.
-- The write upserts on `(user_id, category_id, effective_from)`, so saving twice on the same day
-  updates that day's row instead of piling up rows the resolver would have to disambiguate. The unique
-  index is the conflict target.
+- **The `calendarDaySchema` reuse this criterion asked for is no longer needed here**, because the body
+  carries no date. Wherever that schema currently lives is left exactly as it is, and if the backend
+  stage already extracted it into a shared server model for this feature's sake, that extraction is
+  harmless and can stay rather than being unpicked.
+- The write upserts on `(user_id, category_id)`, so saving twice updates the user's single row for that
+  category instead of piling up rows the resolver would have to disambiguate. The narrowed unique index
+  is the conflict target. The conflict branch sets `quotaWph` and sets `updatedAt` by hand, because
+  `$defaultFn` fires on insert only and an update that forgets it leaves a stale instant, which is the
+  mistake `update.ts` already avoids the same way.
 - Partial by design, like `saveWorkSettings`. Only the categories present in the body are written and
   the others are untouched.
 - The response is the same shape the `GET` returns, read back through the single read path, so the
@@ -601,8 +870,10 @@ each already resolved for today in the user's stored timezone.
 
 **The read path and the resolver.**
 
-- `server/utils/loadCategoryQuotas.ts` reads a user's rows ordered by `effective_from` ascending and is
-  the single read path behind both handlers, mirroring `loadWorkSchedule.ts`.
+- `server/utils/loadCategoryQuotas.ts` reads a user's rows and is the single read path behind both
+  handlers, mirroring `loadWorkSchedule.ts`. **Its `ORDER BY effective_from` goes with the column.** There
+  is one row per category now, so there is nothing to order and no ordering for the resolver to be
+  independent of.
 - The pure resolution lives in `server/utils/`, **not in `shared/`**, and is unit-tested directly.
   This is a deliberate departure from how `resolveSchedule` was done. That function is pure and lives
   in `shared/planning.ts`, and `app/pages/index.vue` calls it, so the client resolves the schedule
@@ -648,13 +919,19 @@ nothing about the page looks wrong. A slot may render the same value the prop ca
 default case gets its badge, but a slot may never be the only carrier. This is written here rather than
 left in the blueprint because this criterion is what the review stage reads.
 
-**The provenance has two states and neither is an absence.** A figure the user has never touched is
-marked as a default from the response's `source`, and a figure they saved says when it took effect from
-the response's `effectiveFrom`. Marking only the default would leave the other state as an absence, and
-an absence cannot distinguish a value the user set from a row the section has nothing to say about.
-Both values come from the response, so the page infers neither. Formatting the date for display is
-presentation and stays in the component, and the blueprint records the UTC-parse trap that makes a
-naive `new Date('2026-08-23')` render the previous day in a negative offset.
+**The provenance has two states, both read from `source`, and neither is an absence.** A figure the user
+has never touched is marked as a default. A figure they saved is marked as their own. **Both come from
+`source` alone, because `effectiveFrom` is off the response per `AC6` and there is no date to show.**
+Marking only the default would leave the other state as an absence, and an absence cannot distinguish a
+value the user set from a row the section has nothing to say about, so both states say something. The page
+still infers nothing, which is what this criterion was always about.
+
+**This is the one place the design blueprint is overtaken.** It put the effective date on the second state
+and argued the date was the interesting half. There is no effective date now, so the string is the plain
+one `AC8` already recorded as the fallback. The blueprint's badge treatment, its slot and prop assignment,
+and its reasoning about why the two states are deliberately unequal in weight all stand unchanged. So does
+the trap it recorded about `new Date('2026-08-23')` parsing as UTC midnight, which is worth keeping in mind
+even though this section no longer formats a date, because nothing else in the app has learned it yet.
 
 The category name is the label, so the coloured-name treatment from `PLAN-32c` applies here. The
 blueprint takes it, carrying the colour on a span inside the `#label` slot, which keeps reka-ui's
@@ -688,16 +965,19 @@ New keys, added to `i18n/locales/fr.json` and `en.json` with identical key sets 
 | `settings.quotas.retry`          | Try again                                         | Réessayer                                    |
 | `settings.quotas.errors.generic` | Something went wrong. Please try again.           | Une erreur est survenue. Veuillez réessayer. |
 | `settings.quotas.defaultBadge`   | Default value                                     | **research**                                 |
-| `settings.quotas.userSince`      | Your value, in effect since {date}.               | **research**                                 |
+| `settings.quotas.userValue`      | Your value.                                       | **research**                                 |
 | `settings.quotas.empty`          | No kind of work currently carries a quota.        | **research**                                 |
 
 **The last two keys were added after the design stage and both are corrections rather than
-additions.** `userSince` is the missing half of `defaultBadge`, for the reason in `AC7`, and it takes a
-`{date}` parameter the component formats. If the owner would rather no date appeared, the recorded
-fallback is a plain "your value" string in the same place with no parameter, and nothing else about the
-section changes. `empty` covers a section with no rows, which cannot happen against today's contract
-and is exactly the kind of count the extensibility rule says not to assume away, so the string exists
-rather than the state rendering blank.
+additions.** `userValue` is the missing half of `defaultBadge`, for the reason in `AC7`. **It was
+`settings.quotas.userSince`, taking a `{date}` parameter, and it becomes the parameterless
+`settings.quotas.userValue`.** The old key named an effective date that no longer exists. This is exactly
+the fallback the previous version of this paragraph had already recorded against the possibility that the
+owner did not want a date, so the change is taking a recorded option rather than inventing a string. If the
+backend or frontend stage has already added `userSince` on this branch, it is renamed rather than left
+beside the new key, because two keys for one state is how a locale file rots. `empty` covers a section with
+no rows, which cannot happen against today's contract and is exactly the kind of count the extensibility
+rule says not to assume away, so the string exists rather than the state rendering blank.
 
 `Enregistrer`, `Réessayer`, and the generic error are copied verbatim from the shipped
 `settings.work.*` keys, so those three are settled rather than researched. Every FR string marked
@@ -711,9 +991,14 @@ source text.
   reads it once the step loses the input.
 - `onboarding.steps.work.subtitle` reads "Vos heures, vos journées et votre quota." and the step no
   longer holds a quota. Reworded in both locales, FR **research**.
-- `planning.editor.fields.quotaHint` reads "Vide : votre quota par défaut." and there is no longer a
-  single default quota. It becomes a hint naming the category's quota, in both locales, FR
-  **research**. The French space before the colon is already correct there and stays.
+- `planning.editor.fields.quotaHint` reads "Vide : votre quota par défaut." and it is wrong twice over
+  now. There is no longer a single default quota, and under the snapshot model the field is not usually
+  empty either, because the server writes the category's figure onto every trackable task. So the hint
+  stops describing an empty field and describes what the number in the field is, which is this task's own
+  target, taken from the category when the task was written and editable here. It also has to say what
+  clearing the field does, which is to make the task follow the category setting again. Both locales, FR
+  **research**. The French space before the colon is already correct there and stays if the new string
+  keeps a colon.
 - `settings.quotas.*` is a sibling of `settings.work.*` rather than a replacement, and
   `settings.work.subtitle` still describes the hours, days, and timezone it keeps, so it does not
   change.
@@ -754,22 +1039,48 @@ are demonstrated in the absence of a UI consumer.
   number, and an object, all of which resolve through `coerceCategory` to `other` and therefore to
   `null`.
 - The consistency assertion that a default descriptor is trackable exactly when it carries a number.
-- The resolver, covering an empty history, a single row, a row not yet effective, several rows across
-  a boundary date, unordered input, a non-trackable category, a task override, a task override on a
-  non-trackable category, and a stored row for an id outside the contract.
+- The resolver, covering no stored rows, one stored row, a non-trackable category, a figure stored on the
+  task, a figure stored on the task in a non-trackable category, a stored row for an id outside the
+  contract, and a row for one category never answering for another.
 - The `PATCH` model, covering the bounds inherited from `quotaWphSchema`, a duplicate `categoryId`, a
-  non-trackable `categoryId`, an empty `quotas` array, a malformed `effectiveFrom`, and a
-  syntactically valid but impossible date such as `2026-02-31`.
+  non-trackable `categoryId`, and an empty `quotas` array.
+- The snapshot on both write endpoints, per `AC12`.
+
+**The effective-dating tests are replaced rather than deleted quietly, and this is the largest single
+piece of rework in the amendment.** Roughly seven cases in
+`test/server/utils/resolveCategoryQuota.test.ts` exist only to prove the date logic, which is the
+`a single stored row (AC2)` block and the `a history of several rows (AC2)` block, plus the boundary-day
+case, the not-yet-effective case, the unordered-input case, and the three-row case. They are **wrong now
+rather than merely redundant**, because they assert behaviour the resolver must no longer have, so leaving
+them would fail the suite and deleting them would leave `AC2` untested.
+
+What replaces them is the list under `AC2`, which is a task keeping its figure across a category-setting
+edit, a save leaving one row rather than two, and a task with no figure falling through. The count goes down
+and the coverage of the actual requirement goes up, since the old cases tested a date comparison and the new
+ones test the guarantee. The same applies to the `effectiveFrom` cases in the `PATCH` model tests and to any
+ordering assertion in `test/server/utils/loadCategoryQuotas.test.ts`, both of which lose their subject.
+
+**The unit-test stage owns this and it is not optional.** A stage that deletes the old cases without
+adding the new ones has weakened `AC2` while appearing to satisfy the suite.
 
 **Nothing in `app/` computes a quota.** Verifiable in the same style as the shipped write-boundary
 guard, by asserting that no file under `app/` resolves a quota from a category id or from a stored
-row. The client receives resolved figures and renders them.
+row. The client receives resolved figures and renders them. **The snapshot strengthens this rather than
+threatening it**, since the figure a client sees on a task is now a stored column rather than anything it
+could have been tempted to work out.
 
 ### AC11. The dev seed writes the table it now owns
 
 `scripts/seed.ts` deletes the owner's `category_quotas` rows alongside the task and work-schedule rows
-it already deletes, then inserts one row per trackable category at the same `effective_from` the
-work-schedule record uses, holding the four shipped defaults.
+it already deletes, then inserts one row per trackable category holding the four shipped defaults. **The
+`effective_from` value it used to write goes with the column.**
+
+**The seeded tasks keep their NULL figure and the seed writes no snapshot onto them.** That is the same
+decision as [existing tasks keep their NULL](#existing-tasks-keep-their-null) and it is deliberate here
+rather than an omission. The seed inserts rows directly rather than through the write path, so it reaches
+the database the same way a pre-feature row did, and leaving them NULL is what gives a developer real data
+exercising steps 3 and 4 of the resolution order. The snapshot branch is one click away, since creating a
+task in the running app goes through `POST /api/tasks` and gets its figure.
 
 The values are the shipped defaults rather than invented figures, so no number enters the dev database
 that the contract does not already carry. The point of seeding them is that the stored-row branch of
@@ -777,6 +1088,97 @@ the resolver is the branch production uses after the user saves once, so it shou
 developer sees, and the `source` field in the API response is what distinguishes it from the default
 branch on screen. Re-run safety is unchanged, since the seed deletes and rebuilds rather than
 appending.
+
+### AC12. The task write path stores the quota the task was created against
+
+**This criterion is new and it is the mechanism the whole amendment turns on.** It reaches
+`POST /api/tasks` and `PATCH /api/tasks/[id]`, which the approved spec did not touch, and that reach is
+named in [the new surface this brings](#the-new-surface-this-brings-named-rather-than-absorbed) rather
+than left in the diff.
+
+**On create.** `POST /api/tasks` resolves the quota for the resulting task's category and stores it in
+`tasks.quota_wph_override`. It stores nothing when the resulting category is not trackable, and nothing
+when the body supplied a figure of its own.
+
+**On update.** `PATCH /api/tasks/[id]` re-snapshots when and only when the request changes the task's
+category. **Yes, changing a task's category re-snapshots it**, because a task recategorised from
+translation to proofreading is measured against the wrong target otherwise, and the target it should be
+measured against is the one in force for the kind of work it actually is.
+
+**The precedence rules, because a single request can ask for two things.**
+
+1. **A figure in the body always wins.** A request that carries `quotaWphOverride` is the user stating what
+   this task's figure is, so the server stores what they sent and does not re-snapshot, whether or not the
+   same request also changes the category.
+2. **An explicit `null` in the body wins too, and is not immediately overwritten.** Clearing the field is
+   the user asking this task to follow their category setting again, which is a legitimate thing to want and
+   is the way back out of a snapshot. A re-snapshot on the same request would make the clear a silent no-op.
+3. **Otherwise, a category change re-snapshots and anything else does not.** A change of date does not
+   re-snapshot, because nothing in the resolution depends on the date any more. A change of word count,
+   status, notes, or duration does not either.
+4. **A move to a non-trackable category leaves the stored figure alone rather than clearing it.** That is
+   the existing rule for this column, kept deliberately, so moving a task to a meeting and back brings its
+   figure with it. The trackable gate is what stops the figure being used in the meantime. This is
+   deliberately unlike the status-clearing rule in `update.ts`, which does clear, and the difference is that
+   a status a category cannot hold is an invalid row while a stored figure a category does not use is merely
+   an unused one.
+5. **A move from a non-trackable category to a trackable one re-snapshots**, since it is a category change
+   whose resulting category is trackable. So a task that sat in `breaks` holding a stale figure gets a fresh
+   one when it becomes real work.
+
+**The common path is the update rather than the create, and this is worth stating because it looks like an
+edge case and is not.** `TaskCreateSchema` defaults `category` to `DEFAULT_CATEGORY_ID`, which is `other`,
+and `other` is not trackable. The inline editor creates a row from `emptyEditorState`, which holds that same
+default. So a task created without a category gets no snapshot on the `POST`, and it gets one on the first
+`PATCH` that sets a real category. That is the normal flow through the app, and any implementation that only
+snapshots on create would leave most tasks with no figure at all.
+
+**A resolve that fails leaves NULL rather than failing the write.** The app records reality and never blocks,
+so a task must never be refused because a quota could not be read. NULL is the safe outcome, since the row
+then resolves through steps 3 and 4 like any pre-feature row, and the user can type a figure. This is the
+fail-open direction on purpose, and it is not in tension with the trackable gate's fail-closed direction,
+because that one is about never producing a wrong quota while this one is about never losing a record of work.
+
+**The write-boundary guard is amended, not deleted.**
+`test/server/api/tasks/write-boundary-guards.test.ts` currently asserts that no file under
+`server/api/tasks/` mentions `quotaWph` beyond the `quotaWphOverride` passthrough. `AC12` writes a resolved
+quota there, so the guard becomes an assertion that **no file under `server/api/tasks/` performs quota
+arithmetic**, which keeps `PLAN-12`'s and `PLAN-22`'s ground out of this feature. Its comment is rewritten
+to say why the old form retired, which is that the wrong global quota it was protecting against is gone and
+the resolver it now calls is the right one. Deleting the guard would be weakening it and is not what is
+specced. See
+[the resolver's consumer](#the-resolvers-consumer-decided-under-the-snapshot-model) for the full reasoning.
+
+**Verifiable by handler tests.**
+
+- A create in a trackable category stores the resolved figure, and the response carries it.
+- A create in a non-trackable category stores NULL.
+- A create carrying its own `quotaWphOverride` stores what was sent.
+- A patch changing category from one trackable category to another replaces the figure with the new
+  category's.
+- A patch changing category while also sending `quotaWphOverride` stores the sent figure.
+- A patch sending `quotaWphOverride: null` while also changing category stores NULL.
+- A patch changing only the date leaves the figure untouched.
+- A patch moving a task to a non-trackable category leaves the figure untouched.
+- A create for a user with a stored `category_quotas` row uses that row rather than the shipped default.
+
+## Outputs and acceptance criteria that stand unchanged
+
+Recorded as a list so review can see at a glance what the amendment did not touch.
+
+- **`AC1`** stands. The contract field, the accessor, the coercion, and the consistency assertion were never
+  about dates.
+- **`AC3`** stands word for word. The retirement of `settings.quota_wph`, the exhaustive reader list, the
+  grep instruction, and the warning about the number 450 are all unchanged.
+- **`AC4`** stands. The research note and the retirement sentence are unaffected.
+- **`AC9`** stands. The purge still names `category_quotas`, the count still moves from six to seven, and the
+  cascade is still the second line of defence.
+- **`AC5`, `AC6`, `AC7`, `AC8`, `AC10`, and `AC11` are amended but not weakened.** `AC5` keeps two files, the
+  same apply order, the same undo, and the same headers. `AC6` still resolves server-side and returns finished
+  figures, still rejects a non-trackable id with a `422`, still scopes every read to the session user, and is
+  still partial. `AC7` keeps every requirement including the measured contrast. `AC8` keeps identical key sets
+  in both locales and the French typography rule. `AC10` keeps tests as a criterion and gains the write-path
+  cases. `AC11` still seeds the shipped defaults.
 
 ## Edge cases
 
@@ -801,20 +1203,21 @@ rather than at write time, so the row stops contributing the moment the category
 trackable, and starts again if it becomes trackable once more. Nothing has to be migrated and no row
 has to be rewritten.
 
-### A task carrying an override on a non-trackable category
+### A task carrying a figure on a non-trackable category
 
-Storable today, because the editor shows the quota field for every category deliberately. The resolver
-gates on `trackable` first, so the override never produces a quota for a meeting or a break. The value
-stays stored, so recategorizing the row to a trackable category brings it back. See the resolution
-order above for why this is a gate rather than the last step.
+Storable today, because the editor shows the quota field for every category deliberately, and now also
+reachable by moving a task that already carried a snapshot into a non-trackable category. The resolver gates
+on `trackable` first, so the figure never produces a quota for a meeting or a break. The value stays stored,
+and per `AC12` rule 4 the write path does not clear it either, so recategorising the row to a trackable
+category brings it back. See the resolution order above for why this is a gate rather than the last step.
 
 ### A partially completed edit
 
 The `PATCH` carries every changed category in one body and one statement per row, so a failure part way
 through can leave some rows written and some not. That state is not invalid and not stranded. Every
-row that landed is a complete, correctly dated row, every row that did not is still resolving its
-previous value or the shipped default, and the recovery is to save again, which upserts on the same
-`(user_id, category_id, effective_from)` key and converges.
+row that landed is a complete row, every row that did not is still resolving its previous value or the
+shipped default, and the recovery is to save again, which upserts on the same `(user_id, category_id)` key
+and converges.
 
 The client reconciles against the response rather than against what it sent, so a partial failure shows
 the user what actually persisted rather than what they typed. The failure toast plus a re-save is the
@@ -823,11 +1226,16 @@ recovery, and there is no cleanup step and no half-written row to repair.
 **A single-statement transaction is not required for correctness here** and is not specced. Each row is
 independently meaningful, unlike a two-table write where half the state is nonsense.
 
-### Two edits on the same day
+### Two edits to the same category
 
-The second upserts the first day's row. Editing a figure twice in a morning leaves one row for that
-day holding the latest value, rather than two rows the resolver would have to break a tie between. This
-is also how a typo is corrected, which is why the settings UI needs no date control to be useful.
+The second updates the first's row. Editing a figure twice leaves one row for that category holding the
+latest value, rather than two rows the resolver would have to break a tie between. That is now true of any
+two edits rather than only of two on the same day, because the unique key no longer carries a date.
+
+**A typo is still correctable on the setting and is not correctable on tasks already created with it.** The
+second edit fixes what every future task is measured against, and every task already written keeps the wrong
+figure until someone edits those rows one at a time. That is the trade `AC2` records, and it is the trade the
+leading tool in this domain also makes.
 
 ### A user with no rows at all
 
@@ -847,12 +1255,18 @@ moment `0011` is applied, and it is a working state rather than an empty one.
 - The new build deployed and `0010` never applied. The settings section's read fails and its error
   state shows, and nothing else in the app is affected, because no other surface reads the table. The
   recovery is to apply the migration.
+- **`0010` applied in its old effective-dated shape before this amendment is built.** Then editing the file
+  is not available, per `AC5`, and the fix arrives as a new numbered migration that drops the index, rebuilds
+  the table without `effective_from`, and recreates the narrowed index. This is the one case in the list that
+  needs the owner to say something rather than the pipeline to do something, because nothing in this
+  environment can read the ledger to find out.
 
 ### The timezone boundary on "today"
 
-`effectiveFrom` defaults to today in the user's stored timezone rather than in UTC, so an edit made
-late in the evening does not land on tomorrow's date. `todayInZone` already exists for exactly this
-and is reused rather than reimplemented.
+**This case is gone rather than solved.** It existed because `effectiveFrom` defaulted to today and an edit
+made late in the evening could land on tomorrow's date. Nothing in the quota endpoints reads a date now, so
+there is no boundary to sit on. `todayInZone` stays exactly where it is and keeps its other callers, and it
+is simply no longer this feature's business.
 
 ### A quota of zero, or an absurd one
 
@@ -866,6 +1280,40 @@ The shipped pattern covers it. The section renders its `UAlert` and its retry co
 sections keep working because they load independently, and a failed save leaves the typed values in the
 form so nothing has to be retyped.
 
+### A task created before its category was chosen
+
+The normal flow rather than an edge, and it is spelled out under `AC12`. A create with no category stores
+`other`, which is not trackable, so no figure is stored. The first patch that sets a real category stores one.
+A task that never gets a real category never gets a figure and never needs one.
+
+### A task whose figure the user cleared, and then the category setting changes
+
+The task follows the new setting, which is what clearing asked for. That reintroduces the moving figure for
+that one row, deliberately, because it is the only way back out of a snapshot and the user asked for it
+explicitly. The do-not-police rule says a user who asks for this gets it.
+
+### A user changes a category and the same figure they wanted was already there
+
+The editor sends only changed fields, so a user who changes the category and separately types the number the
+old snapshot already held sends no `quotaWphOverride` at all, and the server re-snapshots over their intent.
+This is the same class of ambiguity the editor already documents for the category selector, where picking the
+id the coercion already displays cannot be told from not touching the field. It resolves the same way, which
+is that the user can see the resulting number and change it. Not worth a mechanism.
+
+### A write that is interrupted partway
+
+Each write is a single statement per row and there is nothing to unwind. A create that fails writes no task
+at all, so there is no task with a missing figure. A patch that fails writes nothing, so the task keeps the
+category and the figure it had, which is a consistent pair rather than a new category against an old figure.
+A quota read that fails during a create leaves the figure NULL, which resolves through the fallback, per
+`AC12`.
+
+### The snapshot and the category setting disagree, which is the normal state
+
+Not an error and not a state to reconcile. A task written in March holding 240 while the setting now says 260
+is the feature working. Nothing in the app offers to bring them into line, no banner points it out, and no
+migration corrects it. Anyone reading a task's figure is reading what that work was targeted at.
+
 ## Assumptions taken rather than asked
 
 Recorded under their own heading because this document was written without a live conversation, so
@@ -873,15 +1321,17 @@ each of these is a decision made to keep the build unblocked rather than a quest
 
 1. **The settings section is a third section on the existing settings page** rather than a new route.
    It is a handful of numeric fields and it belongs next to the work settings it used to live inside.
-2. **The `GET` resolves for today only** and takes no date parameter. Nothing shipped needs another
-   date, and `PLAN-22` resolves per period through the server-side resolver rather than through this
-   endpoint.
-3. **`source` and `effectiveFrom` are on the response.** They exist so the client never infers whether
-   a figure is a default. **Corrected after the design stage.** This item used to say that dropping
-   both would cost "the default marker in the UI and nothing else", which stopped being true once the
-   design put the date on screen. Both fields are now read by `AC7`, so dropping `effectiveFrom` costs
-   the only visible trace of the effective dating this feature exists to introduce, and the fallback in
-   `AC8` is what replaces it.
+2. **The `GET` resolves the current figure** and takes no date parameter. It used to say "for today only",
+   which was the effective-dated phrasing of the same thing. There is one figure per category now, so there
+   is no date to resolve for. `PLAN-22` reads what a period was measured against from the figures stored on
+   the tasks in that period rather than from this endpoint.
+3. **`source` is on the response and `effectiveFrom` is not.** `source` exists so the client never infers
+   whether a figure is a default. **Corrected twice.** It first said dropping both fields would cost the
+   default marker and nothing else, which stopped being true when the design put the date on screen. It then
+   said both were read by `AC7`. Under the snapshot model there is no effective date at all, so
+   `effectiveFrom` leaves the response, `AC7` reads `source` alone, and `AC8`'s recorded no-date string is
+   what ships. `source` is what carries the requirement, which is that the page is told rather than
+   comparing a figure against a hardcoded default.
 4. **Onboarding drops the quota question entirely** rather than moving it or asking four. Stated in
    `AC7` with the reason.
 5. **The seed writes the four defaults** rather than leaving the table empty, per `AC11`.
@@ -915,19 +1365,47 @@ each of these is a decision made to keep the build unblocked rather than a quest
    edit, and the migration files must not be renumbered or rewritten once applied, so the reversal
    arrives as new numbered files on top rather than as a correction to these two.
 
+7. **The snapshot lives in `tasks.quota_wph_override` rather than in a new column, and the column keeps its
+   name.** Both halves are argued in
+   [the field the snapshot lives in](#the-field-the-snapshot-lives-in-and-why-it-is-the-existing-one). The
+   owner approved the snapshot model and not this particular placement, so this is a coordinator decision on
+   an implementation question the approval did not reach. It is cheap to revisit before the backend stage
+   runs and expensive after, so if the owner wants the override kept separate, say so before the build.
+8. **Existing tasks keep their NULL and no migration backfills them.** Per
+   [existing tasks keep their NULL](#existing-tasks-keep-their-null).
+9. **Changing a task's category re-snapshots it.** Per `AC12`, with the precedence rules for a request that
+   does two things at once.
+10. **Assumption 6 above is untouched by the architecture change.** The snapshot model changes
+    nothing about whether categories become per-user rows, and `category_quotas` is still keyed by a
+    free-text `category_id`, so everything item 6 says still holds.
+
 ## Stages
 
 Specs and code review are never skipped.
 
 - **Design** runs, small. One new settings section, four numeric inputs, and the default marker. It
   decides whether the category labels take their `PLAN-32c` colour and it measures contrast if they do.
-- **Backend** runs and does most of the work. The contract field, the table, both migrations, the read
-  path, the resolver, both handlers, the model, the purge line, and the seed.
+- **Backend** runs and does most of the work. **It has already run once against the effective-dated shape,
+  so a large part of its brief is now undoing rather than building.** The contract field, the table, both
+  migrations, the read path, the resolver, both handlers, the model, the purge line, and the seed, plus the
+  snapshot on the task write path and the amended write-boundary guard.
+
+  What it removes from its own previous output is `effective_from` from the table, the migration and the
+  Drizzle definition, the third member of the unique index and the index's name, the `on` parameter from
+  `resolveCategoryQuota`, `effectiveFrom` from `CategoryQuotaRecord`, `ResolvedCategoryQuota` and the API
+  response, `effectiveFrom` from the `PATCH` body and its schema, the `ORDER BY` in `loadCategoryQuotas`, the
+  `todayInZone` and `loadWorkSettings` calls in the quota handlers, and the `effective_from` value the seed
+  writes. It renames the `'override'` source to `'task'`. It rewrites the `0010` header, the
+  `category_quotas` schema comment, and the `tasks.quotaWphOverride` schema comment.
+
 - **Frontend** runs. The new settings section, the removal of the quota field from `work-fields.vue`
   and the onboarding step, the composable and page edits, and every locale change including the
-  researched Québécois strings.
+  researched Québécois strings. Its two changes from the amendment are that the provenance line reads
+  `source` alone with no date formatting, and that `settings.quotas.userSince` becomes the parameterless
+  `settings.quotas.userValue`. The editor hint copy is the other string that changes, per `AC8`.
 - **Unit test** runs, and `AC10` is its brief rather than a suggestion. It also updates the four
-  existing test files listed in `AC3`.
+  existing test files listed in `AC3`. **Its largest single job is replacing the effective-dating cases
+  rather than deleting them**, which `AC10` sets out, plus the new write-path cases from `AC12`.
 - **Compliance** runs, briefly. No new class of personal data, since a quota is a work setting the app
   already stored, but the feature adds a table holding user data and `AC9` is the erasure path, so the
   purge change is worth a compliance read rather than only a code review.
@@ -958,15 +1436,28 @@ and the ledger row is appended by hand in the existing ragged style because that
 - [`onboarding-wizard.md`](../onboarding/onboarding-wizard.md). Its base-quota field, its `quotaWph`
   payload entry, its bounds criterion, and the work-settings list in its atomic-persistence criterion
   drop the quota. The step keeps its other three fields.
-- [`task-inline-editor.md`](task-inline-editor.md). Its editor keeps the quota override field
-  unchanged. Only the field's hint copy changes, per `AC8`, because the hint named a global default
-  that no longer exists.
+- [`task-inline-editor.md`](task-inline-editor.md). Its editor keeps the quota field unchanged in code. The
+  field's hint copy changes per `AC8`, and what the field means changes, because it now usually arrives
+  holding the task's own recorded figure rather than empty. That spec should say the field is the task's
+  quota rather than an override of a default.
+- [`tasks-schema.md`](tasks-schema.md) (`PLAN-01`). Its item 3 and its column table describe
+  `quota_wph_override` as "a nullable per-task override of the user's default quota (`settings.quota_wph`)",
+  which is wrong in both halves once this ships. The column holds the figure the task was created against
+  and the global it names is gone. Corrected in the same pass, on that field only.
+- [`task-write-api.md`](task-write-api.md) (`PLAN-09`). Two things. Its statement that nothing in the write
+  path reads a quota stops being true, per `AC12`, and its handoff paragraph explaining why the estimate is
+  not derived there keeps its conclusion while losing its stated reason, since the wrong global quota it
+  named is replaced by a correct per-category one. The estimate is still not derived, and now the reason is
+  simply that deriving it is `PLAN-12`'s decision rather than that no usable divisor exists. It also gains
+  the note that `quotaWphOverride` is now server-written as well as client-writable.
 - [`docs/TODO.md`](../../TODO.md). Its line describing the settings page as editing a "default WPH
   quota" is stale once this ships and is corrected in the same pass.
 
 ## Open questions
 
-None block the build.
+**One of these now blocks, which was not true before.** Question 6 has to be answered before the build
+starts, because the answer decides whether a migration file may be edited or must be superseded. The rest
+do not block.
 
 1. **Whether the categories themselves become per-user rows now or next, which is the owner's call and
    is with the owner now.** The mandatory rule headed "Any list is customizable, modular, and
@@ -995,6 +1486,51 @@ None block the build.
    design stage took the colour, on a span inside the `#label` slot, and measured the contrast on this
    card's own surfaces. Kept in this list as a closed question rather than deleted, so a later reader
    sees it was decided rather than skipped.
-5. **What `PLAN-22` wants from the resolver.** The consumer decision above ships the resolution with no
-   per-task consumer, so `PLAN-22` decides whether it reads per task, per category and date, or both,
-   and it is the feature that gets to amend the write-boundary guard when it does.
+5. **What `PLAN-22` wants from the resolver.** `resolveTaskQuota` still ships with no runtime caller, so
+   `PLAN-22` decides whether it reads per task, per category, or both. **It no longer inherits the
+   write-boundary guard amendment**, because `AC12` needs that amendment now and makes it, leaving
+   `PLAN-22` the narrower job of relaxing the arithmetic guard when it has arithmetic to do.
+6. **Whether `0010` has already been applied against any database.** This decides whether `AC5`'s
+   edit-in-place instruction is available or whether the change needs a new numbered migration on top.
+   Nothing in this environment can read the ledger, and the answer is the owner's. **The build should not
+   start until this is answered**, because getting it wrong in the optimistic direction leaves two databases
+   with different table shapes and nothing to detect it. It is the one question in this list that does block.
+7. **Whether the snapshot belongs in `tasks.quota_wph_override` or in a column of its own, and whether that
+   column should be renamed.** The owner approved the snapshot model and did not rule on the placement.
+   Assumption 7 is the coordinator's decision and the reasoning is in
+   [the field the snapshot lives in](#the-field-the-snapshot-lives-in-and-why-it-is-the-existing-one). It does
+   not block, and it is much cheaper to change before the backend stage runs than after.
+
+## What this architecture costs, in one place
+
+The reasons are argued where each decision is made. They are collected here so the trade is readable
+without hunting, and so nothing on this list can be presented later as a surprise.
+
+1. **A typo'd target cannot be retroactively fixed on tasks already created with it.** The setting is
+   correctable and the tasks are not, except one row at a time in the editor. This is the trade the leading
+   tool in this domain already makes and its users live with, and it is the direct cost of preferring a
+   stored fact over a dated lookup. `AC2` records it.
+2. **Every trackable task row now stores a number.** One integer per row, which is nothing in storage terms,
+   but it also means the editor's quota field is normally populated rather than normally empty, which changes
+   how that field reads and is why its hint copy changes again in `AC8`.
+3. **Roughly seven effective-dating tests become wrong rather than merely redundant**, plus the boundary and
+   ordering cases around them. They assert behaviour the resolver must no longer have, so they are replaced
+   rather than deleted quietly. `AC10` says what replaces them and why deleting without replacing weakens
+   `AC2` while appearing to pass.
+4. **One column cannot record two facts.** Repurposing `quota_wph_override` gives up the distinction between
+   a figure the server snapshotted and a figure the user typed, and between a row written before this feature
+   and a row the user deliberately cleared. Nothing shipped or specced reads either distinction.
+   [The field the snapshot lives in](#the-field-the-snapshot-lives-in-and-why-it-is-the-existing-one) records
+   the cheaper reversal if one is ever needed.
+5. **The column's name stops describing what it holds**, and it is kept anyway on the project's own
+   `project_word_count` precedent. A reviewer flagging it is right and is declined on those grounds, which is
+   written down so the point is settled rather than re-argued on every future pull request.
+6. **Two patterns now exist in this database for what looked like one problem.** `work_schedule` stays
+   effective-dated and `category_quotas` does not. The reason they differ is real, which is that a work
+   schedule has no record to write itself onto and a quota has a task, and it is stated in
+   [why the task carries the figure](#why-the-task-carries-the-figure-rather-than-the-table-carrying-a-history)
+   so the difference reads as a decision rather than an inconsistency.
+7. **The feature reaches the task write path, which the approved spec did not.** Named in
+   [the new surface this brings](#the-new-surface-this-brings-named-rather-than-absorbed), argued as a
+   consequence of the approved architecture rather than absorbed scope, and kept to one resolved number on two
+   endpoints with no arithmetic and no contract change.

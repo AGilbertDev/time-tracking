@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // CategoryQuotasPatchSchema is the request boundary for PATCH /api/me/category-quotas. Every rule
-// below is derived from docs/specs/planning/per-category-quotas.md AC6 (the PATCH contract), AC2 (a
-// past or future effectiveFrom is accepted on purpose), AC10 (which names the cases this file has to
-// cover), and the "A quota of zero, or an absurd one" edge case. None of it is read off the
-// implementation.
+// below is derived from docs/specs/planning/per-category-quotas.md AC6 (the PATCH contract), AC10
+// (which names the cases this file has to cover), and the "A quota of zero, or an absurd one" edge
+// case. None of it is read off the implementation.
 //
 // The spec fixes: quotas holds at least one entry, no duplicate categoryId, each categoryId a
 // trackable category id, each quotaWph validated by the existing quotaWphSchema at integer 1 to
-// 10000, effectiveFrom optional and validated by the same calendarDaySchema the task write boundary
-// uses, a non-trackable categoryId rejected with a 422, and every validation failure going through
+// 10000, a non-trackable categoryId rejected with a 422, and every validation failure going through
 // sendZodError as a 422 with per-field data rather than as a crash.
+//
+// THE BODY CARRIES NO DATE. Under the snapshot model the table holds one current figure per category
+// and the save updates it in place, so an effectiveFrom would be a parameter with nowhere to be
+// stored. The cases that accepted a past or future date, and the ones that validated its shape through
+// calendarDaySchema, were removed rather than adapted: they asserted a field the contract must no
+// longer have. What replaces them is the case below asserting that the field is now rejected as an
+// unknown key, which is a property the old suite could not state at all.
 //
 // The floor of 1 is not a style choice. The quota is the divisor in words over quota, so a stored 0
 // would divide by zero the moment PLAN-12 reads it. A high or low figure inside the range is accepted
@@ -50,34 +55,13 @@ function thrownBy(value: unknown): ThrownError {
 
 describe('CategoryQuotasPatchSchema', () => {
   describe('a valid body', () => {
-    it('accepts one quota with no effective date', () => {
+    it('accepts one quota', () => {
       const result = CategoryQuotasPatchSchema.safeParse({
         quotas: [{ categoryId: 'translation', quotaWph: 300 }]
       })
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual({ quotas: [{ categoryId: 'translation', quotaWph: 300 }] })
-    })
-
-    // effectiveFrom is optional and the handler defaults it to today in the user's own timezone, so
-    // the schema leaves it absent rather than filling it in with the server's idea of today.
-    it('leaves an absent effective date absent rather than defaulting it', () => {
-      const result = CategoryQuotasPatchSchema.safeParse({
-        quotas: [{ categoryId: 'translation', quotaWph: 300 }]
-      })
-
-      expect(result.success).toBe(true)
-      expect(result.data).not.toHaveProperty('effectiveFrom')
-    })
-
-    it('accepts an explicit effective date', () => {
-      const result = CategoryQuotasPatchSchema.safeParse({
-        effectiveFrom: '2026-08-23',
-        quotas: [{ categoryId: 'translation', quotaWph: 300 }]
-      })
-
-      expect(result.success).toBe(true)
-      expect(result.data?.effectiveFrom).toBe('2026-08-23')
     })
 
     // The body is partial by design, like the work-settings save, so one entry and all four are
@@ -211,9 +195,6 @@ describe('CategoryQuotasPatchSchema', () => {
 
     it('rejects a body with no quotas field', () => {
       expect(CategoryQuotasPatchSchema.safeParse({}).success).toBe(false)
-      expect(CategoryQuotasPatchSchema.safeParse({ effectiveFrom: '2026-08-23' }).success).toBe(
-        false
-      )
     })
 
     it.each([
@@ -235,51 +216,35 @@ describe('CategoryQuotasPatchSchema', () => {
     })
   })
 
-  describe('the effective date (AC2, AC10)', () => {
-    // The date rules come from the shared calendarDaySchema, so the shape and the real-date check
-    // cannot drift from the task write boundary. The impossible date is the one AC10 names.
+  describe('the effective date is gone from the contract', () => {
+    // This block replaces the one that validated an effectiveFrom through calendarDaySchema and
+    // accepted a past or future date on purpose. Both of those rested on the effective-dated table, and
+    // the snapshot model removed the field rather than relaxing it, so what is left to assert is that
+    // the field is refused rather than accepted and quietly ignored.
+    //
+    // Refused matters more than absent. strict() is what turns a field nobody declared into a named
+    // 422, so a client still sending a date is told rather than having it dropped while the save
+    // reports success. A save that stores less than it was handed is the failure this asserts against.
     it.each([
-      ['a shape-valid date that is not real', '2026-02-31'],
-      ['February 29 in a non-leap year', '2026-02-29'],
-      ['a single-digit month', '2026-8-23'],
-      ['no separators', '20260823'],
-      ['a two-digit year', '26-08-23'],
-      ['a month of 13', '2026-13-01'],
-      ['a day of 32', '2026-08-32'],
-      ['the empty string', ''],
-      ['a full timestamp', '2026-08-23T00:00:00Z']
-    ])('rejects %s as an effective date', (_label, effectiveFrom) => {
-      expect(
-        CategoryQuotasPatchSchema.safeParse({
-          effectiveFrom,
-          quotas: [{ categoryId: 'translation', quotaWph: 300 }]
-        }).success
-      ).toBe(false)
-    })
-
-    it.each([
-      ['null', null],
-      ['a number', 20260823]
-    ])('rejects %s in place of an effective date', (_label, effectiveFrom) => {
-      expect(
-        CategoryQuotasPatchSchema.safeParse({
-          effectiveFrom,
-          quotas: [{ categoryId: 'translation', quotaWph: 300 }]
-        }).success
-      ).toBe(false)
-    })
-
-    // AC2: "An effectiveFrom in the past is accepted by the API and is a deliberate correction rather
-    // than a mistake to block", and "A future effectiveFrom is accepted for the same reason". Both are
-    // the do-not-police rule applied to a date, so a schema that refused either would be wrong.
-    it.each([
+      ['a well-formed date', '2026-08-23'],
       ['a past date', '2020-01-15'],
-      ['a leap day', '2024-02-29'],
-      ['a future date', '2099-12-31']
-    ])('accepts %s', (_label, effectiveFrom) => {
+      ['a future date', '2099-12-31'],
+      ['a malformed date', '2026-2-31'],
+      ['null', null]
+    ])('rejects an effectiveFrom of %s as an unknown key', (_label, effectiveFrom) => {
       expect(
         CategoryQuotasPatchSchema.safeParse({
           effectiveFrom,
+          quotas: [{ categoryId: 'translation', quotaWph: 300 }]
+        }).success
+      ).toBe(false)
+    })
+
+    // The positive control for the case above. The same body without the date parses, so the rejection
+    // is the unknown key rather than anything else about the fixture.
+    it('accepts the same body once the effective date is taken off it', () => {
+      expect(
+        CategoryQuotasPatchSchema.safeParse({
           quotas: [{ categoryId: 'translation', quotaWph: 300 }]
         }).success
       ).toBe(true)
@@ -299,6 +264,9 @@ describe('CategoryQuotasPatchSchema', () => {
       ).toBe(false)
     })
 
+    // effectiveFrom is the unknown key here on purpose: it used to be a declared field on the body and
+    // is now declared nowhere, so it is the exact key a client written against the old contract would
+    // send.
     it('rejects an unknown key on an entry', () => {
       expect(
         CategoryQuotasPatchSchema.safeParse({
@@ -331,12 +299,8 @@ describe('CategoryQuotasPatchSchema', () => {
         }
       ],
       [
-        'a malformed effective date',
-        { effectiveFrom: '2026-2-31', quotas: [{ categoryId: 'translation', quotaWph: 300 }] }
-      ],
-      [
-        'an impossible effective date',
-        { effectiveFrom: '2026-02-31', quotas: [{ categoryId: 'translation', quotaWph: 300 }] }
+        'an effective date, which is no longer a declared field',
+        { effectiveFrom: '2026-08-23', quotas: [{ categoryId: 'translation', quotaWph: 300 }] }
       ],
       ['an unknown key', { quotas: [{ categoryId: 'translation', quotaWph: 300 }], quotaWph: 300 }]
     ])('answers %s with a 422 carrying something in data', (_label, body) => {

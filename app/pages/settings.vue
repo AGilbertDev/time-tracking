@@ -8,7 +8,7 @@ import { categoryHue } from '#shared/categories'
 // middleware forces sign-in and onboarding, so any onboarded user reaches their own settings. Every
 // write is scoped to the session user server-side. The three forms load and save independently, so
 // saving one never touches another's data and a failure in one leaves the others working.
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const toast = useToast()
 
 // Authenticated account surface, kept out of the index. The whole app is auth-gated, but the intent
@@ -84,13 +84,13 @@ async function onSaveWork() {
 
 // --- Per-category quotas -------------------------------------------------------------------
 // One resolved entry per trackable category, typed locally exactly as the work settings above are.
-// Every field arrives finished. quotaWph is the figure in force today, source says whether it came
-// from the user or from the shipped default, and effectiveFrom is the date of the winning row or null
-// for a default. So nothing in this page resolves a quota, decides whether a category has one, or
-// filters the list, because the server already did all three.
+// Every field arrives finished. quotaWph is the category's current figure and source says whether
+// it came from the user or from the shipped default. No date arrives, because a quota is a current
+// setting rather than a dated history and each task carries the figure it was created against. So
+// nothing in this page resolves a quota, decides whether a category has one, or filters the list,
+// because the server already did all three.
 interface CategoryQuota {
   categoryId: string
-  effectiveFrom: string | null
   quotaWph: number
   source: 'default' | 'user'
 }
@@ -122,33 +122,22 @@ watchEffect(() => {
   }
 })
 
-// The active locale drives the date format, matching the admin table. The timezone is pinned to UTC
-// on purpose. effectiveFrom is a plain calendar day, and new Date('2026-08-23') parses as UTC
-// midnight, which any negative offset such as America/Toronto would render as the previous day.
-const quotaDateFormatter = computed(
-  () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeZone: 'UTC' })
-)
-
 // The provenance line for one row. The response says which of the two states the row is in, so this
-// picks a string and formats a date the server already chose. Formatting for display is presentation
-// and stays here. Nothing about which date to show is decided in this page.
+// picks a string and does nothing else. Neither state is an absence, because an absence could not
+// tell a figure the user set apart from a row this section has nothing to say about.
 function quotaProvenance(entry: CategoryQuota): string {
-  if (entry.source === 'user' && entry.effectiveFrom) {
-    return t('settings.quotas.userSince', {
-      date: quotaDateFormatter.value.format(new Date(entry.effectiveFrom))
-    })
-  }
-  return t('settings.quotas.defaultBadge')
+  return entry.source === 'user'
+    ? t('settings.quotas.userValue')
+    : t('settings.quotas.defaultBadge')
 }
 
 const savingQuotas = ref(false)
 
 // The rows whose figure differs from the loaded one, in the order the response carried them. Only
-// these are written, and that matters for three reasons rather than for tidiness. Writing an
-// untouched row dates a stored row today and flips its source to the user, so the default marker
-// disappears from a category nobody edited. It fills the effective-dated history with edits that
-// were not edits. And it pins the user to today's shipped figure for good, so improving a default
-// could never reach them again.
+// these are written, and that matters for two reasons rather than for tidiness. Writing an
+// untouched row stores a row and flips its source to the user, so the default marker disappears
+// from a category nobody edited. And it pins the user to today's shipped figure for good, so
+// improving a default could never reach them again.
 //
 // A cleared input reads as undefined and falls back to the loaded figure, which therefore counts as
 // unchanged and is not sent.
@@ -166,9 +155,7 @@ async function onSaveQuotas() {
 
     // Nothing differs from what is stored, so there is nothing to write and no request goes out. The
     // success toast still fires, because a save that reports nothing back is indistinguishable from a
-    // dead button, and the submit stays enabled for the same reason. No date goes with the write
-    // either, since it is effective today and the server dates it from the user's own stored
-    // timezone.
+    // dead button, and the submit stays enabled for the same reason.
     if (changed.length > 0) {
       await $fetch('/api/me/category-quotas', {
         method: 'PATCH',
@@ -447,7 +434,7 @@ async function onSavePassword(event: FormSubmitEvent<PasswordState>) {
 
               <!-- The slot renders the same string the help prop carries, and only changes how the
                    default case is printed. An untouched default is the state worth spotting across
-                   the list, and a value the user set stays quiet and says when it took effect. -->
+                   the list, and a value the user set stays quiet and says only that it is theirs. -->
               <template #help="{ help }">
                 <UBadge
                   v-if="entry.source === 'default'"

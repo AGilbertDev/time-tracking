@@ -271,22 +271,48 @@ describe('words_done has left the codebase (task-inline-editor AC6, AC8)', () =>
 })
 
 describe('the write path derives no estimate (AC19)', () => {
-  // The per-category quota exists now, so the old reason for this guard has expired and the guard
-  // has not. PLAN-32b shipped the effective-dated category_quotas table and the server-side resolver
-  // in server/utils/resolveCategoryQuota.ts, and it dropped the global settings.quota_wph column this
-  // comment used to name as the only quota available.
+  // ---------------------------------------------------------------------------------------------
+  // This guard is narrowed rather than deleted, which docs/specs/planning/per-category-quotas.md
+  // AC12 asks for by name. It used to assert that nothing under server/api/tasks/ mentioned quotaWph
+  // at all beyond the quotaWphOverride passthrough, and its stated reason was that the only quota
+  // available was the global settings.quota_wph whose default the planning overview records as wrong.
+  // PLAN-32b retired that column and shipped a per-category resolver, so that reason has expired.
+  // The snapshot model then gave the write path a real job with a quota: both endpoints resolve the
+  // figure for a task's category and store it, which is a mention of quotaWph in exactly this
+  // directory.
   //
-  // What replaces that reason is the consumer decision in
-  // docs/specs/planning/per-category-quotas.md. The resolver ships with no per-task consumer on
-  // purpose, because nothing under server/api/tasks/ prints a quota or derives an estimate from one,
-  // and a resolved figure on the task read projection would be a shipped contract nobody reads.
-  // PLAN-22 is the feature that gets to read the resolver here, and it is the feature that gets to
-  // amend this guard when it does. Until then a search for quotaWph under server/api/tasks/ must
-  // still find nothing but the per-task override passthrough, which PLAN-32b left exactly as it was.
-  it('reads no quota anywhere under server/api/tasks beyond quotaWphOverride', () => {
-    for (const file of sourceFiles('server/api/tasks', ['.ts'])) {
-      expect(code(file).replaceAll('quotaWphOverride', '')).not.toContain('quotaWph')
-    }
+  // What is still worth protecting is a different property, and it is the one asserted below: no file
+  // under server/api/tasks/ performs quota arithmetic. Dividing a word count by a quota is PLAN-12's
+  // ground and summing a bucket over hours is PLAN-22's, and neither is this feature. Storing a
+  // resolved number and computing with one are different things, and only the second is refused here.
+  // Deleting the guard outright would have been weakening it, so it keeps its subject and loses only
+  // the part that expired.
+  // ---------------------------------------------------------------------------------------------
+  const QUOTA_ARITHMETIC =
+    /(?:quotaWph|quota_wph)[A-Za-z_]*\s*[*/%]|[*/%]\s*[\w.[\]]*(?:quotaWph|quota_wph)/
+
+  // The instrument first. A regex that cannot see the arithmetic it forbids would report every file
+  // clean whether or not the arithmetic were there, and an absence proved by a blind search is not a
+  // finding. Both directions of the division are fixtures, and so are the two shapes that must stay
+  // legal: storing a resolved figure, and importing the module that resolves it, whose path carries a
+  // slash right next to a quota-shaped identifier.
+  it('catches quota arithmetic written either way round, and passes a plain store', () => {
+    expect(QUOTA_ARITHMETIC.test('const minutes = words / quotaWph')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const words = quotaWph * hours')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const rate = row.quota_wph / 60')).toBe(true)
+
+    expect(QUOTA_ARITHMETIC.test('values.quotaWphOverride = resolved.quotaWph')).toBe(false)
+    expect(QUOTA_ARITHMETIC.test("import { x } from '../../../utils/resolveCategoryQuota'")).toBe(
+      false
+    )
+  })
+
+  it('performs no quota arithmetic anywhere under server/api/tasks', () => {
+    const offenders = sourceFiles('server/api/tasks', ['.ts']).filter((file) =>
+      QUOTA_ARITHMETIC.test(code(file))
+    )
+
+    expect(offenders).toEqual([])
   })
 
   it.each(WRITE_HANDLERS)('%s does not import loadWorkSettings for a quota', (file) => {

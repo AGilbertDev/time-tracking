@@ -123,16 +123,15 @@ const WORK_SCHEDULE_DDL = `
   )
 `
 
-// The category_quotas table as 0010 leaves it. Present so the erasure path can be tested against a
-// real table rather than a mock, since the purge endpoint names this table too and a cascade it cannot
-// rely on is not what clears it.
+// The category_quotas table as 0010 leaves it: one current figure per user and category, with no
+// effective date. Present so the erasure path can be tested against a real table rather than a mock,
+// since the purge endpoint names this table too and a cascade it cannot rely on is not what clears it.
 const CATEGORY_QUOTAS_DDL = `
   CREATE TABLE category_quotas (
     id text PRIMARY KEY NOT NULL,
     user_id text NOT NULL,
     category_id text NOT NULL,
     quota_wph integer NOT NULL,
-    effective_from text NOT NULL,
     created_at integer,
     updated_at integer,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE cascade
@@ -140,10 +139,10 @@ const CATEGORY_QUOTAS_DDL = `
 `
 
 // The unique index the write upserts on, so a test exercising the upsert conflicts the way production
-// does rather than inserting a second row for the same day.
+// does rather than inserting a second row for the same category.
 const CATEGORY_QUOTAS_INDEX_DDL = `
-  CREATE UNIQUE INDEX category_quotas_user_id_category_id_effective_from_idx
-    ON category_quotas (user_id, category_id, effective_from)
+  CREATE UNIQUE INDEX category_quotas_user_id_category_id_idx
+    ON category_quotas (user_id, category_id)
 `
 
 export type TaskTestDb = {
@@ -312,24 +311,18 @@ export async function seedWorkSchedule(
 
 // Inserts a category_quotas row. The erasure path has to clear this table as well, and the resolver's
 // stored-row branch needs a real row to resolve, so both kinds of test seed one from here rather than
-// through the write path they are checking.
+// through the write path they are checking. There is no effective date, because the table holds one
+// current figure per user and category.
 export async function seedCategoryQuota(
   client: Client,
   userId: string,
   categoryId = 'translation',
-  quotaWph = 240,
-  effectiveFrom = '2026-07-01'
+  quotaWph = 240
 ): Promise<void> {
   await client.execute({
-    sql: `INSERT INTO category_quotas (id, user_id, category_id, quota_wph, effective_from)
-          VALUES (?, ?, ?, ?, ?)`,
-    args: [
-      `quota-${userId}-${categoryId}-${effectiveFrom}`,
-      userId,
-      categoryId,
-      quotaWph,
-      effectiveFrom
-    ]
+    sql: `INSERT INTO category_quotas (id, user_id, category_id, quota_wph)
+          VALUES (?, ?, ?, ?)`,
+    args: [`quota-${userId}-${categoryId}`, userId, categoryId, quotaWph]
   })
 }
 

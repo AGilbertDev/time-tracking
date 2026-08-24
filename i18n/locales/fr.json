@@ -268,7 +268,7 @@
         "statusNone": "Aucun",
         "statusUnavailable": "Cette catégorie ne porte pas de statut.",
         "quota": "Quota",
-        "quotaHint": "Vide : le quota de la catégorie.",
+        "quotaHint": "Le quota de cette tâche, repris de sa catégorie à la création. Effacez le champ pour suivre la catégorie de nouveau.",
         "excludeFromStats": "Exclure des stats",
         "excludeHint": "La tâche reste au calendrier, mais ses mots ne comptent pas dans le quota.",
         "notes": "Notes",
@@ -411,7 +411,7 @@
       "loadError": "Vos quotas n'ont pas pu être chargés.",
       "retry": "Réessayer",
       "defaultBadge": "Valeur par défaut",
-      "userSince": "Votre valeur, en vigueur depuis le {date}.",
+      "userValue": "Votre valeur.",
       "empty": "Aucune catégorie ne porte de quota pour le moment.",
       "errors": {
         "generic": "Une erreur est survenue. Veuillez réessayer."

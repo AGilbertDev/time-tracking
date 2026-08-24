@@ -8,13 +8,16 @@ import { defaultQuotaWph, isTrackableCategory } from '#shared/categories'
 // shared/ is an open invitation to do the same thing with a quota, and there is no second consumer
 // that needs one on the client, because the API returns finished figures. Keeping it server-side is
 // what makes "no quota is computed in a component" enforceable rather than hoped for.
+//
+// Nothing here is effective dated. The snapshot model the owner approved on 2026-08-24 keeps one
+// current row per user and category and writes the figure onto the task instead, so no step compares
+// a date to anything and no function here takes a date at all.
 
 // One stored row from category_quotas, as the read path returns it and as the resolver consumes it.
 // Declared here rather than next to the query so the resolver can be tested without touching a
 // database, which is the same split loadWorkSchedule keeps with WorkScheduleRecord.
 export interface CategoryQuotaRecord {
   categoryId: string
-  effectiveFrom: string
   quotaWph: number
 }
 
@@ -22,27 +25,26 @@ export interface CategoryQuotaRecord {
 // against a hardcoded default, because that comparison would be a second copy of the rule.
 export type CategoryQuotaSource = 'default' | 'user'
 
-// The same, plus the one source only a single task can have.
-export type TaskQuotaSource = CategoryQuotaSource | 'override'
+// The same, plus the one source only a single task can have. It is named 'task' rather than
+// 'override' because under the snapshot model the figure on the task is the record rather than an
+// exception to one: the write path puts it there for every task written in a trackable category.
+export type TaskQuotaSource = CategoryQuotaSource | 'task'
 
-// A resolved quota for a category on a date. effectiveFrom is the date of the winning stored row, or
-// null when the figure is the shipped default and therefore belongs to no dated row.
+// A resolved quota for a category.
 export interface ResolvedCategoryQuota {
-  effectiveFrom: string | null
   quotaWph: number
   source: CategoryQuotaSource
 }
 
-// A resolved quota for one task. effectiveFrom is null for an override as well as for a default,
-// because a per-task override is not effective-dated. The source is what tells the two apart.
+// A resolved quota for one task. The source is what tells the task's own stored figure apart from
+// the category's current setting and from the shipped default.
 export interface ResolvedTaskQuota {
-  effectiveFrom: string | null
   quotaWph: number
   source: TaskQuotaSource
 }
 
-// The user's own figure for one category on one date, or the category's shipped default when they
-// have no row effective by then, or null when the category carries no quota at all.
+// The user's own current figure for one category, or the category's shipped default when they have
+// no row for it, or null when the category carries no quota at all.
 //
 // The trackable gate comes first and it is a gate rather than a last resort. A non-trackable category
 // has no quota by definition, so no stored row and no shipped number can produce one, and the check
@@ -50,33 +52,19 @@ export interface ResolvedTaskQuota {
 // returns null. That is the same fail-closed direction the contract documents for isTrackableCategory,
 // which is that words must never reach a quota numerator by accident.
 //
-// The winning row is the one with the latest effective_from on or before the date being resolved, so
-// a date earlier than every stored row falls through to the shipped default and there is no gap and
-// no discontinuity. Rows are scanned rather than assumed ordered, so an unordered list resolves the
-// same as an ordered one and the read path's ORDER BY is an optimisation rather than a precondition.
-//
-// A row naming a category this is not asked about never participates, which is what makes a row for a
-// retired or renamed id harmless. Such a row is left in place rather than deleted, so if the id comes
-// back its quota comes back with it.
+// There is at most one row per user and category, guaranteed by the unique index, so the scan below
+// takes the first match rather than choosing between candidates. A row naming a category this is not
+// asked about never participates, which is what makes a row for a retired or renamed id harmless.
+// Such a row is left in place rather than deleted, so if the id comes back its quota comes back with
+// it.
 export function resolveCategoryQuota(
   categoryId: unknown,
-  records: readonly CategoryQuotaRecord[],
-  on: string
+  records: readonly CategoryQuotaRecord[]
 ): ResolvedCategoryQuota | null {
   if (!isTrackableCategory(categoryId)) return null
 
-  let winner: CategoryQuotaRecord | undefined
-  for (const record of records) {
-    if (record.categoryId !== categoryId) continue
-    if (record.effectiveFrom > on) continue
-    // Both dates are 'YYYY-MM-DD', so the later one is the greater string and no date arithmetic is
-    // needed to compare them.
-    if (!winner || record.effectiveFrom > winner.effectiveFrom) winner = record
-  }
-
-  if (winner) {
-    return { effectiveFrom: winner.effectiveFrom, quotaWph: winner.quotaWph, source: 'user' }
-  }
+  const stored = records.find((record) => record.categoryId === categoryId)
+  if (stored) return { quotaWph: stored.quotaWph, source: 'user' }
 
   // The shipped default, and null when there is none. A user-created category from PLAN-30 has no
   // shipped number, so a trackable one with no stored row resolves to null rather than to a figure
@@ -84,32 +72,39 @@ export function resolveCategoryQuota(
   const shipped = defaultQuotaWph(categoryId)
   if (shipped === null) return null
 
-  return { effectiveFrom: null, quotaWph: shipped, source: 'default' }
+  return { quotaWph: shipped, source: 'default' }
 }
 
 // The quota one task is measured against, or null when the task's category carries none.
 //
-// The order is the trackable gate, then the task's own override, then the user's stored row effective
-// on the task's date, then the category's shipped default. The gate is first for a reason that matters
+// The order is the trackable gate, then the task's own stored figure, then the user's current row for
+// the category, then the category's shipped default. The gate is first for a reason that matters
 // today rather than in theory. The task editor shows the quota field for every category on purpose, so
-// a user can type an override onto a meeting or a break, and taking the override first would hand a
-// non-trackable task a quota. The stored override is left alone rather than cleared, so recategorizing
+// a user can type a figure onto a meeting or a break, and taking the stored figure first would hand a
+// non-trackable task a quota. The stored figure is left alone rather than cleared, so recategorizing
 // the row to a trackable category brings it back and nothing is destroyed to enforce the gate.
 //
-// This has no runtime caller yet, which is accepted deliberately. The resolution order is a decided
-// rule, writing it down once with tests is what stops it being re-derived under pressure later, and
-// PLAN-22 is the feature that reads it.
+// Steps three and four are a narrower set than they used to be. A task written through the API in a
+// trackable category carries its own figure, so the fallback is reached by exactly three kinds of row:
+// a task written before PLAN-32b, a task whose figure the user deliberately cleared, and a task
+// inserted outside the write path, which today means the dev seed. All three are real, so the fallback
+// is live code rather than a leftover.
+//
+// This has no runtime caller. The write path resolves a category rather than a task, so PLAN-22 is
+// still the feature that reads this one. It is written down here with tests anyway, because the
+// resolution order is a decided rule and writing it once is what stops it being re-derived under
+// pressure later.
 export function resolveTaskQuota(
-  task: { category: unknown; date: string; quotaWphOverride?: number | null },
+  task: { category: unknown; quotaWphOverride?: number | null },
   records: readonly CategoryQuotaRecord[]
 ): ResolvedTaskQuota | null {
   if (!isTrackableCategory(task.category)) return null
 
-  // A stored override has to be a usable divisor before it wins. No API path can write a zero or a
-  // negative today, because quotaWphSchema floors the override at 1, so this is defence against a row
+  // A stored figure has to be a usable divisor before it wins. No API path can write a zero or a
+  // negative today, because quotaWphSchema floors the field at 1, so this is defence against a row
   // that got there some other way rather than a live bug. It is worth keeping anyway, since the quota
   // is the divisor in words over quota and a zero reaching that division is exactly the failure this
-  // file's fail-closed direction exists to prevent. An unusable value is treated as no override at all,
+  // file's fail-closed direction exists to prevent. An unusable value is treated as no figure at all,
   // which is the same path a NULL takes, so the row falls through to its category's quota rather than
   // losing a perfectly good figure. Do not remove this as dead defensive code.
   if (
@@ -117,8 +112,8 @@ export function resolveTaskQuota(
     task.quotaWphOverride !== undefined &&
     task.quotaWphOverride > 0
   ) {
-    return { effectiveFrom: null, quotaWph: task.quotaWphOverride, source: 'override' }
+    return { quotaWph: task.quotaWphOverride, source: 'task' }
   }
 
-  return resolveCategoryQuota(task.category, records, task.date)
+  return resolveCategoryQuota(task.category, records)
 }

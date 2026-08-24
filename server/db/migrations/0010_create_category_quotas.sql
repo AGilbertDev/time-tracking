@@ -2,8 +2,8 @@
 --
 -- This is the expand half of retiring the global quota. A quota is a property of a
 -- kind of work rather than a property of the person doing it, so one number per user
--- could not describe four kinds of work at once. The user's own figure per category
--- lives here, the shipped starting figures stay in shared/categories.ts as
+-- could not describe four kinds of work at once. The user's own current figure per
+-- category lives here, the shipped starting figures stay in shared/categories.ts as
 -- defaultQuotaWph, and the server resolves the two together. A user with no rows in
 -- this table still resolves a working quota for every trackable category, so there
 -- is no bootstrap step, no backfill, and no state in which a trackable category has
@@ -26,22 +26,39 @@
 -- stored row can name a category the app no longer knows, and the resolver handles
 -- that by never selecting such a row rather than by preventing it.
 --
--- Effective dating copies work_schedule (0005) rather than inventing a second
--- arrangement for the same problem. Editing a quota must not restate a period that
--- has already been reported, so this is the SCD Type 2 pattern, one row per
--- effective date, with effective_from held as 'YYYY-MM-DD' text so lexicographic
--- order equals chronological order and resolution is a plain index-friendly range
--- scan. Only the two lifecycle instants (created_at, updated_at) use integer Unix
--- seconds.
+-- The snapshot model, approved 2026-08-24. This table holds one current figure per
+-- user and category, and a save updates that row in place. It is not effective
+-- dated and it keeps no history, which is a change from the shape this file was
+-- first written against. History is preserved on the other side instead: when a
+-- task is written the server resolves the quota for that task's category and stores
+-- the number on the task, in tasks.quota_wph_override, the way an invoice line
+-- stores the price it was sold at. Editing a figure here therefore changes what
+-- future tasks are measured against and can never reach a task that already exists.
 --
--- Unique index note. The unique index on (user_id, category_id, effective_from)
--- forbids two records for the same user, category, and effective date, which would
--- make resolution ambiguous. It is also the conflict target the PATCH upserts on, so
--- saving twice on the same day updates that day's row rather than piling up rows,
--- and it serves the resolution query
---   WHERE user_id = ? AND category_id = ? AND effective_from <= ?
---   ORDER BY effective_from DESC
--- with the two equality columns first and the range column last.
+-- Why that replaced effective dating. The requirement was always that editing a
+-- quota must not restate a period that has already been reported, and the snapshot
+-- meets it more directly. Under a dated lookup a stored figure is only correct while
+-- the resolver, the task's date, and the row's date agree, so a task moved to
+-- another day silently changes which figure it is measured against. Under the
+-- snapshot the figure is a stored fact on the row, so a task moving day, a setting
+-- being edited, and a row being read a year later all leave it alone. It is also
+-- what the tools this domain already uses do: they lock the figure onto the job, so
+-- changing a rate going forward leaves existing jobs holding what they were created
+-- with. work_schedule (0005) keeps its own effective dating and nothing about it
+-- changes, because a work schedule has to answer "how many hours was I available on
+-- this past day" for a day nothing was written down about, and so has nowhere to put
+-- the answer but a dated row. A quota has a task to write it on.
+--
+-- Unique index note. The unique index on (user_id, category_id) is what makes one
+-- current figure per user and category a database guarantee rather than a
+-- convention, so the resolver never has two rows to break a tie between. It is also
+-- the conflict target the PATCH upserts on, so saving twice updates the one row
+-- rather than piling up rows, and it serves the read path's
+--   WHERE user_id = ?
+-- scan with the user column first. The index name spells out its own two columns; it
+-- named a third in the first draft of this file, which was corrected here rather
+-- than left to lie about its own shape, because this file has never been applied
+-- anywhere.
 --
 -- Cascade note. The user_id foreign key is ON DELETE cascade, so deleting a user
 -- removes that user's quotas and leaves no orphans. SQLite fires the cascade only
@@ -74,7 +91,13 @@
 -- DO NOT renumber or rename this file once it has been applied anywhere. The
 -- runner's ledger (_applied_migrations) is keyed on the filename alone with no
 -- checksum, so a name already recorded is skipped whatever the file now says, and a
--- name that is not recorded runs again.
+-- name that is not recorded runs again. The same applies to editing it. This file
+-- was edited in place to drop effective_from because it had never run: there are no
+-- database credentials in this environment, the production apply is the owner's own
+-- manual step, and the pull request was open rather than merged. Once it has run
+-- anywhere, a correction has to arrive as a new numbered file on top, which for this
+-- change means dropping the index, rebuilding the table without the column, and
+-- recreating the index, since SQLite cannot drop a column a unique index names.
 --
 -- Idempotency note. Both statements use IF NOT EXISTS, so re-applying this file
 -- against a database that already has the table or the index is a no-op rather than
@@ -96,10 +119,9 @@ CREATE TABLE IF NOT EXISTS `category_quotas` (
 	`user_id` text NOT NULL,
 	`category_id` text NOT NULL,
 	`quota_wph` integer NOT NULL,
-	`effective_from` text NOT NULL,
 	`created_at` integer,
 	`updated_at` integer,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS `category_quotas_user_id_category_id_effective_from_idx` ON `category_quotas` (`user_id`,`category_id`,`effective_from`);
+CREATE UNIQUE INDEX IF NOT EXISTS `category_quotas_user_id_category_id_idx` ON `category_quotas` (`user_id`,`category_id`);
