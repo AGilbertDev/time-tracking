@@ -289,21 +289,40 @@ describe('the write path derives no estimate (AC19)', () => {
   // the part that expired.
   //
   // What the narrower rule gives up, stated rather than smoothed over, the way the AC17 block above
-  // states its own residual hole. The check is on arithmetic performed on an identifier that still
-  // carries a quota-shaped name, so aliasing defeats it: `const q = resolved.quotaWph` followed by
-  // `words / q` passes both cases below. The old mention rule would have caught the alias on its first
-  // line, and it could not survive, because write.ts legitimately reads .quotaWph now and the mention
-  // rule forbade exactly that. So this is a cost of the narrowing rather than an oversight in it.
+  // states its own residual hole. An earlier version of this comment said aliasing was the gap, which
+  // implied it was the only one. It is not, and the two classes below were found by running the pattern
+  // rather than by reasoning about it, which is the only way this kind of claim is worth making.
   //
-  // It is accepted because the alias shape is visible in review in a way the direct division is not,
-  // and because the behavioural half is covered elsewhere: PLAN-12's estimate and PLAN-22's bucket are
-  // both absent from the response shapes create.test.ts and update.test.ts assert, so arithmetic here
-  // would have to reach a column or a field one of those suites already reads back. If a later feature
-  // does introduce a local alias for a quota in this directory, widen the pattern to the alias rather
-  // than concluding the guard still holds.
+  // 1. The name is gone by the time the arithmetic happens. `const q = row.quotaWph` then `words / q`,
+  //    a destructure that renames, `const { quotaWph: q } = r`, and a helper that returns the figure,
+  //    `words / getQuota()`. All three defeat any name-based search, this one included. The old mention
+  //    rule would have caught the first two where they read `.quotaWph`, and it could not survive,
+  //    because write.ts legitimately reads `.quotaWph` now and the mention rule forbade exactly that. So
+  //    this is a cost of the narrowing rather than an oversight in it.
+  //
+  // 2. The operand sits deeper inside an expression than the pattern reaches. `words / (a ? quotaWph : b)`
+  //    passes, because the characters between the paren and the identifier are not the path characters
+  //    the second alternative allows. `words / (quotaWph + 1)` is caught, so this is about what precedes
+  //    the identifier rather than about parentheses as such, which the fixtures now cover.
+  //
+  // Both are accepted, because the alternative is parsing TypeScript in a guard, and neither shape is
+  // one a developer reaches for by accident. The behavioural half is covered elsewhere anyway: PLAN-12's
+  // estimate and PLAN-22's bucket are both absent from the response shapes create.test.ts and
+  // update.test.ts assert, so arithmetic here would have to reach a column or a field one of those
+  // suites already reads back.
+  //
+  // If a later feature does introduce either shape in this directory, widen the pattern to it rather
+  // than concluding the guard still holds. A guard whose limits are written down can be extended; one
+  // whose limits are assumed gets trusted past them.
   // ---------------------------------------------------------------------------------------------
+  // Two alternatives, one per operand position. The quota on the left of an operator, and the quota on
+  // the right of one. Each allows the operand to be wrapped in parentheses, which is the hole CodeRabbit
+  // found in the first version of this pattern: `[A-Za-z_]*` could not cross a closing paren and
+  // `[\w.[\]]*` did not include an opening one, so `words / (row.quotaWph)` and `(row.quotaWph) * hours`
+  // both passed a guard whose whole subject they violate. `\s*` sits inside the parens as well as outside
+  // them, so a spaced `( row.quotaWph )` is caught too, and `=?` catches the compound assignment form.
   const QUOTA_ARITHMETIC =
-    /(?:quotaWph|quota_wph)[A-Za-z_]*\s*[*/%]|[*/%]\s*[\w.[\]]*(?:quotaWph|quota_wph)/
+    /(?:quotaWph|quota_wph)[A-Za-z_]*\s*\)*\s*[*/%]|[*/%]=?\s*\(*\s*[\w.[\]]*(?:quotaWph|quota_wph)/
 
   // The instrument first. A regex that cannot see the arithmetic it forbids would report every file
   // clean whether or not the arithmetic were there, and an absence proved by a blind search is not a
@@ -312,14 +331,29 @@ describe('the write path derives no estimate (AC19)', () => {
   // slash right next to a quota-shaped identifier.
   it('catches quota arithmetic written either way round, and passes a plain store', () => {
     // Division with the quota as the divisor and as the dividend, then multiplication with the quota
-    // on each side. Four fixtures rather than three, because the regex is two alternatives and each
-    // operand position has to be shown to reach one of them. A multiplication fixtured only with the
-    // quota on the left proves the first alternative twice and the second one never.
+    // on each side. Four rather than three, because the regex is two alternatives and each operand
+    // position has to be shown to reach one of them. A multiplication fixtured only with the quota on
+    // the left proves the first alternative twice and the second one never.
     expect(QUOTA_ARITHMETIC.test('const minutes = words / quotaWph')).toBe(true)
     expect(QUOTA_ARITHMETIC.test('const rate = row.quota_wph / 60')).toBe(true)
     expect(QUOTA_ARITHMETIC.test('const words = quotaWph * hours')).toBe(true)
     expect(QUOTA_ARITHMETIC.test('const words = hours * quotaWph')).toBe(true)
 
+    // The parenthesized operand, in both positions. These two are the regression fixtures: the first
+    // version of the pattern returned false for both while they divide and multiply by a quota in
+    // plain sight, so they are the cases that turn this guard from decorative back into load-bearing.
+    expect(QUOTA_ARITHMETIC.test('const minutes = words / (row.quotaWph)')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const words = (row.quotaWph) * hours')).toBe(true)
+
+    // Spaces inside the parens, and the compound assignment. Fixtured because the pattern was widened
+    // for them, and a widening nobody asserts is a widening nobody can rely on.
+    expect(QUOTA_ARITHMETIC.test('const minutes = words / ( row.quotaWph )')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('total /= quotaWph')).toBe(true)
+
+    // The two shapes that must stay legal, re-asserted against the widened pattern rather than assumed
+    // to have survived it. Storing a resolved figure is what write.ts does on purpose, and the resolver
+    // import path carries a slash directly beside a quota-shaped identifier, which is the false positive
+    // a careless widening produces first.
     expect(QUOTA_ARITHMETIC.test('values.quotaWphOverride = resolved.quotaWph')).toBe(false)
     expect(QUOTA_ARITHMETIC.test("import { x } from '../../../utils/resolveCategoryQuota'")).toBe(
       false
