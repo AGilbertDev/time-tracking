@@ -5,7 +5,12 @@ import type { TaskCreateInput, TaskListItem } from '../../../models/tasks'
 import { useDb } from '../../../db/index'
 import { tasks } from '../../../db/schema'
 import { readTaskForUser } from './projection'
-import { assertStatusFitsCategory, nextSortOrder, toTaskColumns } from './write'
+import {
+  assertStatusFitsCategory,
+  nextSortOrder,
+  resolveQuotaSnapshot,
+  toTaskColumns
+} from './write'
 
 // Creates one task for the session user and returns it in the exact shape the list endpoint
 // returns, so the client can splice the response straight into the list it already holds with no
@@ -17,8 +22,9 @@ import { assertStatusFitsCategory, nextSortOrder, toTaskColumns } from './write'
 //
 // Two things this deliberately does not write. actual_minutes is left alone unless the user sent it,
 // so a create carrying only an estimate stores NULL and the read path resolves the fallback through
-// effectiveDuration. And estimated_minutes is stored verbatim and never derived from a word count
-// and a quota, which is PLAN-12's job and needs a per-category quota that does not exist yet.
+// effectiveDuration. And estimated_minutes is stored verbatim and never derived from a word count and
+// a quota, which is PLAN-12's job. The per-category quota exists now and this handler stores it, but
+// storing a figure and dividing by it are different things and only the first one is here.
 export async function createTask(event: H3Event, body: TaskCreateInput): Promise<TaskListItem> {
   const { user } = await requireUserSession(event)
   const db = useDb()
@@ -31,13 +37,39 @@ export async function createTask(event: H3Event, body: TaskCreateInput): Promise
   // nothing at all, so there is no partial state to unwind.
   const sortOrder = await nextSortOrder(user.id, body.date)
 
+  const values = toTaskColumns(body)
+
+  // The quota snapshot (AC12). The task stores the figure its category was set to at the moment it was
+  // written, so a later edit to that setting cannot move it.
+  //
+  // A figure in the body always wins, and so does an explicit null. The check is on `undefined` rather
+  // than on a truthy value, because toTaskColumns already passes an explicit null through, and clearing
+  // the field is the user asking this task to follow their category setting instead. Overwriting that
+  // would make the clear a silent no-op.
+  //
+  // Nothing is stored when the resolution returns none, which is the case for every non-trackable
+  // category. That is the common case on this endpoint rather than an edge one: TaskCreateSchema
+  // defaults category to DEFAULT_CATEGORY_ID, which is `other`, and `other` is not trackable, so a task
+  // created from the inline editor with no category chosen gets no figure here. It gets one from the
+  // first patch that sets a real category, which is why update.ts carries the same rule.
+  //
+  // All three non-resolving outcomes behave identically here and that is correct on this endpoint,
+  // unlike on the update. There is no previous figure on a row being inserted, so declining to write is
+  // genuinely "no figure" rather than "the figure belonging to some other category", and a row with no
+  // figure resolves through the user's current setting and then the shipped default. update.ts has to
+  // tell the outcomes apart precisely because that premise does not hold there.
+  if (values.quotaWphOverride === undefined) {
+    const snapshot = await resolveQuotaSnapshot(user.id, body.category)
+    if (snapshot.outcome === 'resolved') values.quotaWphOverride = snapshot.quotaWph
+  }
+
   // date and category are restated rather than left to the spread because their columns are NOT
   // NULL, and userId is set from the session right here so the one authority over ownership is
   // visible at the point of the write.
   const inserted = await db
     .insert(tasks)
     .values({
-      ...toTaskColumns(body),
+      ...values,
       userId: user.id,
       date: body.date,
       category: body.category,

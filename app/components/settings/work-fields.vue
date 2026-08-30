@@ -1,9 +1,13 @@
 <script setup lang="ts">
-// The four work controls the dashboard surfaces at review time: the daily target as an hours and
-// minutes pair, the Monday-first work-day toggle, the words-per-hour quota, and the timezone. It is
-// purely presentational and drives its parent through a model per field, so both the settings page
-// and (later) the onboarding work step can reuse the same idiom. Nothing here blocks or forces a
-// value, in line with the product rule that the app records reality rather than policing a schedule.
+// The three work controls the dashboard surfaces at review time: the daily target as an hours and
+// minutes pair, the Monday-first work-day toggle, and the timezone. It is purely presentational and
+// drives its parent through a model per field, so both the settings page and (later) the onboarding
+// work step can reuse the same idiom. Nothing here blocks or forces a value, in line with the
+// product rule that the app records reality rather than policing a schedule.
+//
+// The words-per-hour quota used to be the fourth control here. It is now a per-category setting with
+// its own section on the settings page, so this component no longer carries it and onboarding no
+// longer asks for it.
 //
 // The hours/minutes split and the timezone enumeration are lifted verbatim from the onboarding work
 // step so the two stay identical until onboarding is migrated onto this component.
@@ -11,7 +15,6 @@ const { t } = useI18n()
 
 const dailyWorkMinutes = defineModel<number>('dailyWorkMinutes', { required: true })
 const workDays = defineModel<number[]>('workDays', { required: true })
-const quotaWph = defineModel<number>('quotaWph', { required: true })
 const timezone = defineModel<string>('timezone', { required: true })
 
 // The stored value is total minutes, but it reads more naturally split into hours and minutes.
@@ -105,10 +108,6 @@ const timezones = computed(() => {
           {{ t(`onboarding.work.dayShort.${day}`) }}
         </UButton>
       </div>
-    </UFormField>
-
-    <UFormField :hint="t('onboarding.work.unitWph')" :label="t('onboarding.work.quota')">
-      <UInputNumber v-model="quotaWph" class="w-full" :max="10000" :min="1" />
     </UFormField>
 
     <UFormField :label="t('onboarding.work.timezone')">

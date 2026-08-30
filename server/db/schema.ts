@@ -42,7 +42,6 @@ export const settings = sqliteTable(
     userId: text('user_id').notNull(),
     dailyWorkMinutes: integer('daily_work_minutes').default(450),
     workDays: text('work_days').notNull().default('[1,2,3,4,5]'),
-    quotaWph: integer('quota_wph').notNull().default(450),
     // Preference columns. The theme defaults match DEFAULT_THEME_ID in shared/theme.ts,
     // and the locale default matches the i18n defaultLocale. Locale lives here now rather
     // than on users so a single settings row holds every user preference.
@@ -88,8 +87,36 @@ export const tasks = sqliteTable(
     deliveryTime: text('delivery_time'),
     // Plain integer counts and whole-minute durations. The schema stores raw
     // facts only; the quota math (PLAN-22) and the frozen estimate (PLAN-12)
-    // live in their own features. quotaWphOverride NULL means use
-    // settings.quota_wph.
+    // live in their own features.
+    //
+    // quota_wph_override is the quota snapshot. It holds the words-per-hour
+    // figure this one task is measured against, and under the snapshot model
+    // (PLAN-32b) the task write path fills it in: POST /api/tasks and
+    // PATCH /api/tasks/[id] resolve the quota for the task's category and store
+    // the number here, the way an invoice line stores the price it was sold at.
+    // So the normal case is a server-written figure rather than a user's
+    // exception, and editing a category setting afterwards never moves it. NULL
+    // means the row takes its category's current quota instead, which is the
+    // user's own category_quotas row and otherwise the category's shipped
+    // default. That is the state of every task written before PLAN-32b, of a
+    // task whose figure the user deliberately cleared, and of a row inserted
+    // outside the write path such as the dev seed's. The global
+    // settings.quota_wph this used to name retired in migration 0011, because a
+    // quota belongs to a kind of work rather than to a person. The resolution
+    // order lives in server/utils/resolveCategoryQuota.ts and nowhere else.
+    //
+    // The name no longer describes what the column holds and it is kept anyway,
+    // which is a deliberate refusal rather than an oversight. It is the same
+    // trade already settled on project_word_count immediately below: a rename
+    // means either ALTER TABLE RENAME COLUMN plus an edit to every reader or a
+    // create-copy-swap, and it also renames quotaWphOverride on the task write
+    // contract and the list projection, which a live client already reads. That
+    // turns an internal tidy into a breaking API change for no behaviour gained,
+    // so the meaning lives in this comment instead. One column cannot record two
+    // facts, so a NULL no longer distinguishes a pre-feature row from a cleared
+    // one and a number no longer distinguishes a snapshot from a typed figure.
+    // Nothing shipped or specced reads either distinction; a later feature that
+    // needs it adds a small quota_wph_source column rather than unpicking this.
     //
     // project_word_count is this row's own total, which is the whole project's
     // total only when the work is not split across days. The name reads as a
@@ -222,5 +249,72 @@ export const workSchedule = sqliteTable(
     // WHERE user_id = ? AND effective_from <= ? ORDER BY effective_from DESC.
     // user_id first for the equality match, effective_from second for the range.
     uniqueIndex('work_schedule_user_id_effective_from_idx').on(table.userId, table.effectiveFrom)
+  ]
+)
+
+// The effective-dated per-category quota history (PLAN-32b). A quota is a property of a kind of work
+// rather than a property of the person doing it, so the one global settings.quota_wph could not
+// describe four kinds of work at once and retired in migration 0011. This table holds the user's own
+// figure per category instead, and the shipped starting figures stay in shared/categories.ts as
+// defaultQuotaWph, so a user with no rows here still resolves a working quota for every trackable
+// category and there is no bootstrap step.
+//
+// It is a standalone table keyed by a free-text category_id rather than a quota column on a
+// categories record, and that is deliberate twice over. There is no per-user categories record to put
+// a column on, since the categories are still a code contract with no table behind them, so a quota
+// column on the category would mean building that table first and that table is its own feature
+// (PLAN-30). And free text means this table already accepts an id that does not exist yet, so a quota
+// for a user-created category is an insert rather than a migration. That is the same seam
+// CategoryId = DefaultCategoryId | (string & {}) keeps open in the type, expressed in the database
+// rather than only in TypeScript. The cost is that a stored row can name a category the app no longer
+// knows, which the resolver handles by never selecting it rather than by preventing it, and such a row
+// is left in place so its quota comes back if its category does.
+//
+// One current figure per user and category, and a save updates that row in place. This table keeps no
+// history and is deliberately not effective dated, which is the snapshot model the owner approved on
+// 2026-08-24. Editing a quota must not restate a period that has already been reported, and history is
+// preserved on the other side instead: the task write path resolves the quota for a task's category and
+// stores the number on the task in tasks.quota_wph_override, the way an invoice line stores the price it
+// was sold at. So an edit here changes what future tasks are measured against and cannot reach a task
+// that already exists.
+//
+// work_schedule above keeps its own effective dating and that is not an inconsistency. A work schedule
+// has to answer how many hours were available on a past day nothing was written down about, so it has
+// nowhere to put the answer but a dated row. A quota has a task to write it on.
+export const categoryQuotas = sqliteTable(
+  'category_quotas',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id').notNull(),
+    // Free-text category id, the shared ten today and any user-created id later. No CHECK and no
+    // enum here on purpose, for the reason given in the header. The write boundary validates the id
+    // against the contract's trackable set, and the read path is asked about one category at a time
+    // so a row naming an unknown id simply never participates.
+    categoryId: text('category_id').notNull(),
+    // The user's current target words per hour for that category. NOT NULL because a row with no
+    // figure would say nothing that the row's absence does not already say better, and the write
+    // boundary keeps it at 1 or above because the quota is a divisor.
+    quotaWph: integer('quota_wph').notNull(),
+    // True lifecycle instants, Unix-seconds mode 'timestamp', matching users, tasks, and
+    // work_schedule exactly (no .notNull(), defaulted through $defaultFn).
+    createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date())
+  },
+  (table) => [
+    // Deleting a user deletes their quotas. They are the user's own configuration with no reason to
+    // outlive the account, so cascade leaves no orphans. It fires for the same reason the tasks
+    // foreign key does, Turso's server default rather than anything the libSQL client sets, and the
+    // check behind that statement and the limits on it are recorded on that key rather than three
+    // times. The purge endpoint deletes this table explicitly as well, precisely because the pragma
+    // is unverified on the one database where a failed erasure would matter.
+    foreignKey({ columns: [table.userId], foreignColumns: [users.id] }).onDelete('cascade'),
+    // A unique index on (user_id, category_id) makes one current figure per user and category a
+    // database guarantee rather than a convention, so the resolver never has two rows to break a tie
+    // between. It is also the conflict target the write upserts on, so saving twice updates the one
+    // row rather than piling up rows, and it serves the read path's WHERE user_id = ? scan with the
+    // user column first.
+    uniqueIndex('category_quotas_user_id_category_id_idx').on(table.userId, table.categoryId)
   ]
 )

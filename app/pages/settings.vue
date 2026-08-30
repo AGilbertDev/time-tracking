@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
-// The configuration page: two independent sections on one page, Work and Security. Route name
-// settings, localized to /parametres (fr) and /settings (en) by nuxt.config. The global auth
+import { categoryHue } from '#shared/categories'
+
+// The configuration page: three independent sections on one page, Work, Quotas and Security. Route
+// name settings, localized to /parametres (fr) and /settings (en) by nuxt.config. The global auth
 // middleware forces sign-in and onboarding, so any onboarded user reaches their own settings. Every
-// write is scoped to the session user server-side. The two forms save independently: saving one
-// never touches the other's data.
+// write is scoped to the session user server-side. The three forms load and save independently, so
+// saving one never touches another's data and a failure in one leaves the others working.
 const { t } = useI18n()
 const toast = useToast()
 
@@ -19,7 +21,6 @@ useSeoMeta({
 // --- Work settings -------------------------------------------------------------------------
 interface WorkSettings {
   dailyWorkMinutes: number
-  quotaWph: number
   timezone: string
   workDays: number[]
 }
@@ -43,7 +44,6 @@ const {
 const workState = reactive<WorkSettings>({
   dailyWorkMinutes: 450,
   workDays: [1, 2, 3, 4, 5],
-  quotaWph: 450,
   timezone: 'America/Toronto'
 })
 
@@ -51,7 +51,6 @@ watchEffect(() => {
   if (!workData.value) return
   workState.dailyWorkMinutes = workData.value.dailyWorkMinutes
   workState.workDays = [...workData.value.workDays]
-  workState.quotaWph = workData.value.quotaWph
   workState.timezone = workData.value.timezone
 })
 
@@ -67,7 +66,6 @@ async function onSaveWork() {
       body: {
         dailyWorkMinutes: workState.dailyWorkMinutes,
         workDays: [...workState.workDays],
-        quotaWph: workState.quotaWph,
         timezone: workState.timezone
       }
     })
@@ -81,6 +79,100 @@ async function onSaveWork() {
     })
   } finally {
     savingWork.value = false
+  }
+}
+
+// --- Per-category quotas -------------------------------------------------------------------
+// One resolved entry per trackable category, typed locally exactly as the work settings above are.
+// Every field arrives finished. quotaWph is the category's current figure and source says whether
+// it came from the user or from the shipped default. No date arrives, because a quota is a current
+// setting rather than a dated history and each task carries the figure it was created against. So
+// nothing in this page resolves a quota, decides whether a category has one, or filters the list,
+// because the server already did all three.
+interface CategoryQuota {
+  categoryId: string
+  quotaWph: number
+  source: 'default' | 'user'
+}
+
+const {
+  data: quotaData,
+  status: quotaStatus,
+  refresh: refreshQuotas
+} = await useAsyncData<CategoryQuota[]>('me-category-quotas', () =>
+  $fetch('/api/me/category-quotas', { headers: requestHeaders })
+)
+
+// The editable copy, keyed by category id rather than by position, so a row is edited by name and no
+// part of this page assumes how many rows there are. It is re-seeded from the response on load and on
+// the reconcile after a save, which is what makes a partially persisted write show what actually
+// landed rather than what was typed, and it is also what makes quotaData the baseline the submit
+// compares against. The submit reads the response's own entries, so a key left over from an earlier
+// response is never sent.
+//
+// A value is number or undefined because reka-ui writes undefined into the model when the input is
+// cleared, in NumberFieldRoot. The runtime behaviour is right and the narrower type was not, so the
+// type says what actually happens and every reader below handles the cleared case.
+const quotaState = reactive<Record<string, number | undefined>>({})
+
+watchEffect(() => {
+  if (!quotaData.value) return
+  for (const entry of quotaData.value) {
+    quotaState[entry.categoryId] = entry.quotaWph
+  }
+})
+
+// The provenance line for one row. The response says which of the two states the row is in, so this
+// picks a string and does nothing else. Neither state is an absence, because an absence could not
+// tell a figure the user set apart from a row this section has nothing to say about.
+function quotaProvenance(entry: CategoryQuota): string {
+  return entry.source === 'user'
+    ? t('settings.quotas.userValue')
+    : t('settings.quotas.defaultBadge')
+}
+
+const savingQuotas = ref(false)
+
+// The rows whose figure differs from the loaded one, in the order the response carried them. Only
+// these are written, and that matters for two reasons rather than for tidiness. Writing an
+// untouched row stores a row and flips its source to the user, so the default marker disappears
+// from a category nobody edited. And it pins the user to today's shipped figure for good, so
+// improving a default could never reach them again.
+//
+// A cleared input reads as undefined and falls back to the loaded figure, which therefore counts as
+// unchanged and is not sent.
+function changedQuotas(): { categoryId: string; quotaWph: number }[] {
+  return (quotaData.value ?? []).flatMap((entry) => {
+    const edited = quotaState[entry.categoryId] ?? entry.quotaWph
+    return edited === entry.quotaWph ? [] : [{ categoryId: entry.categoryId, quotaWph: edited }]
+  })
+}
+
+async function onSaveQuotas() {
+  savingQuotas.value = true
+  try {
+    const changed = changedQuotas()
+
+    // Nothing differs from what is stored, so there is nothing to write and no request goes out. The
+    // success toast still fires, because a save that reports nothing back is indistinguishable from a
+    // dead button, and the submit stays enabled for the same reason.
+    if (changed.length > 0) {
+      await $fetch('/api/me/category-quotas', {
+        method: 'PATCH',
+        body: { quotas: changed }
+      })
+      await refreshQuotas()
+    }
+
+    toast.add({ title: t('settings.quotas.success'), color: 'success', icon: 'i-ph-check-circle' })
+  } catch {
+    toast.add({
+      title: t('settings.quotas.errors.generic'),
+      color: 'error',
+      icon: 'i-ph-warning-circle'
+    })
+  } finally {
+    savingQuotas.value = false
   }
 }
 
@@ -232,7 +324,6 @@ async function onSavePassword(event: FormSubmitEvent<PasswordState>) {
         <UForm v-else class="space-y-6" :state="workState" @submit="onSaveWork">
           <SettingsWorkFields
             v-model:daily-work-minutes="workState.dailyWorkMinutes"
-            v-model:quota-wph="workState.quotaWph"
             v-model:timezone="workState.timezone"
             v-model:work-days="workState.workDays"
           />
@@ -244,6 +335,126 @@ async function onSavePassword(event: FormSubmitEvent<PasswordState>) {
               icon="i-ph-check-bold"
               :label="t('settings.work.submit')"
               :loading="savingWork"
+              type="submit"
+            />
+          </div>
+        </UForm>
+      </UCard>
+    </section>
+
+    <!-- Quotas section. One numeric field per entry the API returned, in the order it returned
+         them. Nothing here sorts, filters, groups or counts the rows, so the same markup serves one
+         category or twenty. -->
+    <section aria-labelledby="settings-quotas-heading" class="space-y-4">
+      <div>
+        <h2
+          id="settings-quotas-heading"
+          class="flex items-center gap-2 text-lg font-semibold text-highlighted"
+        >
+          <UIcon class="size-5 text-primary" name="i-ph-target-bold" />
+          {{ t('settings.quotas.heading') }}
+        </h2>
+        <p class="mt-1 text-sm text-muted">{{ t('settings.quotas.subtitle') }}</p>
+      </div>
+
+      <UCard class="rounded-2xl bg-default ring ring-default">
+        <!-- Never blank, and independent of the other two sections: a skeleton while the figures
+             load, an alert with retry on failure, and the form once they are in hand. -->
+        <div v-if="quotaStatus === 'error'" role="alert">
+          <UAlert
+            :actions="[
+              {
+                label: t('settings.quotas.retry'),
+                color: 'neutral',
+                variant: 'outline',
+                onClick: () => refreshQuotas()
+              }
+            ]"
+            color="error"
+            icon="i-ph-warning-circle"
+            :title="t('settings.quotas.loadError')"
+            variant="subtle"
+          />
+        </div>
+
+        <!-- The pending state stands on the loaded grid so the card does not resize when the data
+             lands. Four placeholder cells is a guess at today's count rather than a count anything
+             here depends on, since reading the contract for the real number is the inference the API
+             removed. -->
+        <div
+          v-else-if="quotaStatus === 'pending'"
+          class="grid grid-cols-1 gap-x-6 gap-y-[clamp(1rem,2.5vh,1.5rem)] sm:grid-cols-2"
+        >
+          <div v-for="placeholder in 4" :key="placeholder" class="space-y-2">
+            <USkeleton class="h-4 w-32" />
+            <USkeleton class="h-9 w-full" />
+          </div>
+        </div>
+
+        <!-- No entry carries a quota. Unreachable against today's contract and rendered rather than
+             left blank, and with no submit, since there is no field to send. -->
+        <p v-else-if="!quotaData?.length" class="text-sm text-muted">
+          {{ t('settings.quotas.empty') }}
+        </p>
+
+        <UForm v-else class="space-y-6" :state="quotaState" @submit="onSaveQuotas">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-[clamp(1rem,2.5vh,1.5rem)] sm:grid-cols-2">
+            <!-- The unit takes the hint prop and the provenance takes the help prop, both as plain
+                 strings. UFormField builds its aria-describedby from its props and not from its
+                 slots, so a slot on its own would render text no screen reader ever reaches. The
+                 label takes a slot because it carries the category colour, and reka-ui's Label keeps
+                 its :for either way. -->
+            <UFormField
+              v-for="entry in quotaData"
+              :key="entry.categoryId"
+              :help="quotaProvenance(entry)"
+              :hint="t('onboarding.work.unitWph')"
+              :name="entry.categoryId"
+              :ui="{ hint: 'shrink-0', label: 'min-w-0 break-words' }"
+            >
+              <template #label>
+                <!-- The category colour through the mechanism PLAN-32c shipped. Lightness and chroma
+                     are fixed per mode in main.css and only the hue arrives here, read from the
+                     shared contract, so there is no colour mapping in this page. -->
+                <span
+                  class="planning-cat-name"
+                  :style="{ '--planning-cat-hue': categoryHue(entry.categoryId) }"
+                >
+                  {{ t(`categories.${entry.categoryId}`) }}
+                </span>
+              </template>
+
+              <UInputNumber
+                v-model="quotaState[entry.categoryId]"
+                class="w-full"
+                :max="10000"
+                :min="1"
+                :ui="{ base: 'tabular-nums' }"
+              />
+
+              <!-- The slot renders the same string the help prop carries, and only changes how the
+                   default case is printed. An untouched default is the state worth spotting across
+                   the list, and a value the user set stays quiet and says only that it is theirs. -->
+              <template #help="{ help }">
+                <UBadge
+                  v-if="entry.source === 'default'"
+                  color="neutral"
+                  :label="help"
+                  size="sm"
+                  variant="subtle"
+                />
+                <template v-else>{{ help }}</template>
+              </template>
+            </UFormField>
+          </div>
+
+          <div class="flex justify-end">
+            <UButton
+              class="btn-glow"
+              color="primary"
+              icon="i-ph-check-bold"
+              :label="t('settings.quotas.submit')"
+              :loading="savingQuotas"
               type="submit"
             />
           </div>

@@ -22,14 +22,19 @@ export function isValidTimezone(value: string): boolean {
   return IANA_TIMEZONE_PATTERN.test(value)
 }
 
-// The four per-user work-field validators, extracted so onboarding and the settings page share
-// one source and the ranges cannot drift between them. The bounds are the onboarding ones,
-// unchanged: minutes are a positive integer up to one full day, the quota is a generous upper
-// limit for words per hour, work days are day numbers 0 through 6 with no duplicates (an empty
-// array is allowed because the app records reality and does not force a schedule), and the
+// The per-user work-field validators, extracted so onboarding and the settings page share one source
+// and the ranges cannot drift between them. The bounds are the onboarding ones, unchanged: minutes are
+// a positive integer up to one full day, work days are day numbers 0 through 6 with no duplicates (an
+// empty array is allowed because the app records reality and does not force a schedule), and the
 // timezone is validated against the runtime's own IANA list when available.
 export const dailyWorkMinutesSchema = z.number().int().min(1).max(1440)
 
+// A words-per-hour figure, a generous upper limit with a floor of 1. It no longer validates a work
+// setting of its own, since the global quota_wph column retired in migration 0011, and it stays here
+// because two live boundaries reuse it. The per-task quota override on the task write schemas is one,
+// and the per-category quota write in models/category-quotas.ts is the other. The floor of 1 is
+// load-bearing on both, because the quota is the divisor in words over quota and a stored 0 would
+// divide by zero the moment PLAN-12 reads it.
 export const quotaWphSchema = z.number().int().min(1).max(10000)
 
 export const workDaysSchema = z
@@ -50,14 +55,12 @@ export const WorkSettingsPatchSchema = z
   .object({
     dailyWorkMinutes: dailyWorkMinutesSchema.optional(),
     workDays: workDaysSchema.optional(),
-    quotaWph: quotaWphSchema.optional(),
     timezone: timezoneSchema.optional()
   })
   .refine(
     (body) =>
       body.dailyWorkMinutes !== undefined ||
       body.workDays !== undefined ||
-      body.quotaWph !== undefined ||
       body.timezone !== undefined,
     { message: 'At least one work setting must be provided.' }
   )

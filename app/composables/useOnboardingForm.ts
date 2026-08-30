@@ -16,7 +16,6 @@ export interface OnboardingForm {
   lightTheme: ThemeId
   locale: Locale
   password: string
-  quotaWph: number
   timezone: string
   workDays: number[]
 }

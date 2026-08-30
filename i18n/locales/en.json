@@ -43,7 +43,7 @@
       },
       "work": {
         "title": "Work",
-        "subtitle": "Your hours, days, and quota."
+        "subtitle": "Your hours, days, and timezone."
       }
     },
     "nav": {
@@ -64,7 +64,6 @@
       "unitHours": "h",
       "unitMinutes": "min",
       "workDays": "Work days",
-      "quota": "Base quota",
       "unitWph": "words/hour",
       "timezone": "Timezone",
       "timezoneSearch": "Search a timezone…",
@@ -269,7 +268,7 @@
         "statusNone": "None",
         "statusUnavailable": "This category carries no status.",
         "quota": "Quota",
-        "quotaHint": "Empty means your default quota.",
+        "quotaHint": "This task's own quota, taken from its category when it was created. Clear the field to follow the category again.",
         "excludeFromStats": "Exclude from stats",
         "excludeHint": "The task stays on the calendar, but its words do not count toward the quota.",
         "notes": "Notes",
@@ -400,6 +399,20 @@
       "success": "Your work settings have been saved.",
       "loadError": "Your work settings could not be loaded.",
       "retry": "Try again",
+      "errors": {
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "quotas": {
+      "heading": "Quotas",
+      "subtitle": "Your target words per hour for each kind of work.",
+      "submit": "Save",
+      "success": "Your quotas have been saved.",
+      "loadError": "Your quotas could not be loaded.",
+      "retry": "Try again",
+      "defaultBadge": "Default value",
+      "userValue": "Your value.",
+      "empty": "No kind of work currently carries a quota.",
       "errors": {
         "generic": "Something went wrong. Please try again."
       }

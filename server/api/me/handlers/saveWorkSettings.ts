@@ -25,11 +25,9 @@ export async function saveWorkSettings(
   const values: {
     dailyWorkMinutes?: number
     workDays?: string
-    quotaWph?: number
     timezone?: string
   } = {}
   if (body.dailyWorkMinutes !== undefined) values.dailyWorkMinutes = body.dailyWorkMinutes
-  if (body.quotaWph !== undefined) values.quotaWph = body.quotaWph
   if (body.timezone !== undefined) values.timezone = body.timezone
   if (body.workDays !== undefined) values.workDays = JSON.stringify(body.workDays)
 

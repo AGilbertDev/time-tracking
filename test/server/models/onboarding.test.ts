@@ -21,7 +21,6 @@ const validPayload = {
   darkTheme: 'pastel',
   locale: 'fr',
   dailyWorkMinutes: 450,
-  quotaWph: 450,
   workDays: [1, 2, 3, 4, 5],
   timezone: 'America/Toronto'
 } as const
@@ -160,32 +159,6 @@ describe('CompleteOnboardingSchema', () => {
       expect(CompleteOnboardingSchema.safeParse(payload({ dailyWorkMinutes: 90.5 })).success).toBe(
         false
       )
-    })
-  })
-
-  describe('quotaWph bounds', () => {
-    it('accepts the default of 450', () => {
-      expect(CompleteOnboardingSchema.safeParse(payload({ quotaWph: 450 })).success).toBe(true)
-    })
-
-    it('accepts the lower boundary of 1', () => {
-      expect(CompleteOnboardingSchema.safeParse(payload({ quotaWph: 1 })).success).toBe(true)
-    })
-
-    it('accepts the upper boundary of 10000', () => {
-      expect(CompleteOnboardingSchema.safeParse(payload({ quotaWph: 10000 })).success).toBe(true)
-    })
-
-    it('rejects 0 which is below the minimum', () => {
-      expect(CompleteOnboardingSchema.safeParse(payload({ quotaWph: 0 })).success).toBe(false)
-    })
-
-    it('rejects a value above 10000', () => {
-      expect(CompleteOnboardingSchema.safeParse(payload({ quotaWph: 10001 })).success).toBe(false)
-    })
-
-    it('rejects a non-integer value', () => {
-      expect(CompleteOnboardingSchema.safeParse(payload({ quotaWph: 450.25 })).success).toBe(false)
     })
   })
 

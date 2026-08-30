@@ -11,23 +11,24 @@ import {
   foreignKeysEnabled,
   OTHER_USER_ID,
   OWNER_ID,
+  seedCategoryQuota,
   seedSettings,
   seedTask,
   seedWorkSchedule
 } from '../../../helpers/taskTestDb'
 
 // The purge endpoint against a real database, covering the one thing the existing
-// purge-deactivated.test.ts cannot: that a purged user's tasks and work_schedule rows are actually
-// gone afterwards. That suite mocks useDb with a fake whose delete() resolves to nothing, which proves
+// purge-deactivated.test.ts cannot: that a purged user's tasks, work_schedule, and category_quotas
+// rows are actually gone afterwards. That suite mocks useDb with a fake whose delete() resolves to nothing, which proves
 // the statements were issued and proves nothing about what any table ends up holding. So the seam here
 // is moved one layer down to a genuine in-memory libSQL database, and every assertion reads raw SQL.
 //
 // Why this runs with foreign keys OFF, which is the whole point and is not a shortcut.
 //
-// tasks and work_schedule both declare onDelete('cascade'), so with referential integrity in force the
-// rows would vanish when the users row went, whatever the endpoint did or did not delete explicitly.
-// This suite would pass, it would prove nothing about the endpoint, and it would keep passing if
-// someone deleted the two explicit statements as redundant. That is the exact regression it exists to
+// tasks, work_schedule, and category_quotas all declare onDelete('cascade'), so with referential
+// integrity in force the rows would vanish when the users row went, whatever the endpoint did or did
+// not delete explicitly. This suite would pass, it would prove nothing about the endpoint, and it would
+// keep passing if someone deleted the three explicit statements as redundant. That is the exact regression it exists to
 // catch. The cascade also only fires because Turso switches PRAGMA foreign_keys on server-side, and
 // server/db/schema.ts records that this was probed against development and never against production,
 // so leaning on it is leaning on something unverified where it matters most.
@@ -138,6 +139,7 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
       userId: OWNER_ID
     })
     await seedWorkSchedule(client, OWNER_ID)
+    await seedCategoryQuota(client, OWNER_ID)
 
     // A second, active account with rows of its own, so the deletes have to be scoped by user id
     // rather than clearing the tables.
@@ -149,6 +151,7 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
       userId: OTHER_USER_ID
     })
     await seedWorkSchedule(client, OTHER_USER_ID)
+    await seedCategoryQuota(client, OTHER_USER_ID)
   })
 
   it('confirms the cascade is genuinely unavailable before anything is concluded from it', async () => {
@@ -175,7 +178,7 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
   it('leaves no row of the purged user in any table', async () => {
     await purgeDeactivated(event)
 
-    for (const table of ['tasks', 'work_schedule', 'settings', 'users']) {
+    for (const table of ['tasks', 'work_schedule', 'category_quotas', 'settings', 'users']) {
       const result = await client.execute({
         sql: `SELECT COUNT(*) AS n FROM ${table} WHERE ${table === 'users' ? 'id' : 'user_id'} = ?`,
         args: [OWNER_ID]
@@ -188,7 +191,7 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
   it('leaves the active user rows untouched, so the deletes are scoped by user id', async () => {
     await purgeDeactivated(event)
 
-    for (const table of ['tasks', 'work_schedule', 'settings']) {
+    for (const table of ['tasks', 'work_schedule', 'category_quotas', 'settings']) {
       const result = await client.execute({
         sql: `SELECT COUNT(*) AS n FROM ${table} WHERE user_id = ?`,
         args: [OTHER_USER_ID]

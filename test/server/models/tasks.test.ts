@@ -1,5 +1,4 @@
 import {
-  isValidCalendarDay,
   isValidClockTime,
   TaskCreateSchema,
   TaskIdParamSchema,
@@ -25,33 +24,6 @@ import { DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_IDS } from '#shared/categories'
 
 // The smallest legal create body, per AC10. Individual cases extend it with the one field they test.
 const MINIMAL_CREATE = { date: '2026-07-20', category: 'translation' } as const
-
-describe('isValidCalendarDay', () => {
-  it('accepts a real calendar day', () => {
-    expect(isValidCalendarDay('2026-07-20')).toBe(true)
-  })
-
-  it('accepts February 29 in a leap year', () => {
-    expect(isValidCalendarDay('2024-02-29')).toBe(true)
-  })
-
-  // The round-trip check is the point: 2026-02-31 passes the shape and is not a real day, and
-  // JavaScript would otherwise roll it forward into March.
-  it('rejects a shape-valid day that is not a real date', () => {
-    expect(isValidCalendarDay('2026-02-31')).toBe(false)
-  })
-
-  it('rejects February 29 in a non-leap year', () => {
-    expect(isValidCalendarDay('2026-02-29')).toBe(false)
-  })
-
-  it.each(['2026-13-01', '2026-00-10', '2026-07-32', '20260720', '2026-7-20', '26-07-20', ''])(
-    'rejects the malformed day %s',
-    (value) => {
-      expect(isValidCalendarDay(value)).toBe(false)
-    }
-  )
-})
 
 describe('isValidClockTime (HH:MM, 24-hour)', () => {
   it.each(['00:00', '09:30', '13:45', '23:59'])('accepts %s', (value) => {

@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+
+import { code, ROOT, sourceFiles, stripComments } from '../../../helpers/sourceScan'
 
 // The criteria docs/specs/planning/task-write-api.md words as searches rather than as behaviour:
 // AC1, AC2, AC17, AC19, AC30, AC37, AC41, AC44, AC45 and AC46. Each of them names a property of the
@@ -12,110 +13,6 @@ import { describe, expect, it } from 'vitest'
 //
 // Comments are stripped before every search. AC44 exempts prose inside comments explicitly, and the
 // handler comments discuss the very values and columns these guards forbid in executable code.
-
-const ROOT = fileURLToPath(new URL('../../../../', import.meta.url))
-
-// Source text with comments removed, so a search sees executable code only. All three forms are
-// stripped: block and line comments in TypeScript, and the HTML comments a .vue template uses, since
-// the design reasoning in those templates discusses the very status values AC44 forbids in code.
-//
-// This is a scanner rather than three regexes, and the reason is the failure mode it replaces. The
-// line-comment strip used to be /\/\/.*$/gm, which ends a line at the first `//` wherever it sits,
-// so any line carrying a URL was truncated at `https:` and everything after it stopped being
-// searchable. Every guard in this file concludes from an absence, and a search that never saw the
-// code reports the same clean result as a search that saw it and found nothing. That is a false pass
-// in a test whose whole job is to prove something is not there.
-//
-// So the scan walks the text once and only treats `//` or `/*` as a comment when it is not inside a
-// quoted string or a template literal. String bodies are copied through untouched, escapes are
-// honoured so a `\'` does not close a string early, and a single- or double-quoted string stops at a
-// newline so a lone apostrophe in Vue template prose cannot swallow the rest of the file.
-//
-// What it deliberately does not do, stated rather than smoothed over: it does not recognise a
-// regular expression literal, which cannot be told from division without really parsing. A `//`
-// inside a regex would still read as a comment start. Nothing scanned here contains one, and the
-// case is checked by the fixtures below so the limit is visible rather than assumed away.
-function stripComments(source: string): string {
-  let out = ''
-  let index = 0
-
-  while (index < source.length) {
-    // An HTML comment, the form a .vue template uses. Checked first because `<!--` cannot begin any
-    // of the other states.
-    if (source.startsWith('<!--', index)) {
-      const end = source.indexOf('-->', index + 4)
-      index = end === -1 ? source.length : end + 3
-      continue
-    }
-
-    if (source.startsWith('/*', index)) {
-      const end = source.indexOf('*/', index + 2)
-      index = end === -1 ? source.length : end + 2
-      continue
-    }
-
-    if (source.startsWith('//', index)) {
-      while (index < source.length && source[index] !== '\n') index += 1
-      continue
-    }
-
-    const char = source[index] as string
-
-    if (char === '"' || char === "'" || char === '`') {
-      out += char
-      index += 1
-
-      while (index < source.length) {
-        const inner = source[index] as string
-        out += inner
-        index += 1
-
-        // A backslash consumes whatever follows it, so an escaped quote never closes the literal.
-        if (inner === '\\' && index < source.length) {
-          out += source[index]
-          index += 1
-          continue
-        }
-
-        if (inner === char) break
-
-        // Only a template literal spans lines. Stopping the other two at the newline keeps an
-        // unmatched apostrophe in template prose from being read as an opening quote for the rest of
-        // the file, which would leave real comments unstripped far away from the typo.
-        if (char !== '`' && inner === '\n') break
-      }
-
-      continue
-    }
-
-    out += char
-    index += 1
-  }
-
-  return out
-}
-
-function code(relativePath: string): string {
-  return stripComments(readFileSync(join(ROOT, relativePath), 'utf8'))
-}
-
-// Every source file under a directory, recursively, skipping build output and agent worktrees.
-function sourceFiles(relativeDir: string, extensions: string[]): string[] {
-  const skip = new Set(['node_modules', '.nuxt', '.output', '.git', 'worktrees'])
-  const found: string[] = []
-
-  const walk = (dir: string) => {
-    for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
-      if (skip.has(entry.name)) continue
-      const next = `${dir}/${entry.name}`
-      if (entry.isDirectory()) walk(next)
-      else if (extensions.some((extension) => entry.name.endsWith(extension))) found.push(next)
-    }
-  }
-
-  walk(relativeDir)
-  return found
-}
 
 const ROUTE_FILES = [
   'server/api/tasks/index.post.ts',
@@ -374,13 +271,116 @@ describe('words_done has left the codebase (task-inline-editor AC6, AC8)', () =>
 })
 
 describe('the write path derives no estimate (AC19)', () => {
-  // The derivation needs a per-category quota that does not exist yet, so the only quota available
-  // is the global settings.quota_wph, whose default the overview already records as wrong. A search
-  // for quotaWph under server/api/tasks/ must find nothing but the per-task override passthrough.
-  it('reads no quota anywhere under server/api/tasks beyond quotaWphOverride', () => {
-    for (const file of sourceFiles('server/api/tasks', ['.ts'])) {
-      expect(code(file).replaceAll('quotaWphOverride', '')).not.toContain('quotaWph')
-    }
+  // ---------------------------------------------------------------------------------------------
+  // This guard is narrowed rather than deleted, which docs/specs/planning/per-category-quotas.md
+  // AC12 asks for by name. It used to assert that nothing under server/api/tasks/ mentioned quotaWph
+  // at all beyond the quotaWphOverride passthrough, and its stated reason was that the only quota
+  // available was the global settings.quota_wph whose default the planning overview records as wrong.
+  // PLAN-32b retired that column and shipped a per-category resolver, so that reason has expired.
+  // The snapshot model then gave the write path a real job with a quota: both endpoints resolve the
+  // figure for a task's category and store it, which is a mention of quotaWph in exactly this
+  // directory.
+  //
+  // What is still worth protecting is a different property, and it is the one asserted below: no file
+  // under server/api/tasks/ performs quota arithmetic. Dividing a word count by a quota is PLAN-12's
+  // ground and summing a bucket over hours is PLAN-22's, and neither is this feature. Storing a
+  // resolved number and computing with one are different things, and only the second is refused here.
+  // Deleting the guard outright would have been weakening it, so it keeps its subject and loses only
+  // the part that expired.
+  //
+  // What the narrower rule gives up, stated rather than smoothed over, the way the AC17 block above
+  // states its own residual hole. An earlier version of this comment said aliasing was the gap, which
+  // implied it was the only one. It is not, and the two classes below were found by running the pattern
+  // rather than by reasoning about it, which is the only way this kind of claim is worth making.
+  //
+  // 1. The name is gone by the time the arithmetic happens. `const q = row.quotaWph` then `words / q`,
+  //    a destructure that renames, `const { quotaWph: q } = r`, and a helper that returns the figure,
+  //    `words / getQuota()`. All three defeat any name-based search, this one included. The old mention
+  //    rule would have caught the first two where they read `.quotaWph`, and it could not survive,
+  //    because write.ts legitimately reads `.quotaWph` now and the mention rule forbade exactly that. So
+  //    this is a cost of the narrowing rather than an oversight in it.
+  //
+  // 2. The operand sits deeper inside an expression than the pattern reaches. `words / (a ? quotaWph : b)`
+  //    passes, because the characters between the paren and the identifier are not the path characters
+  //    the second alternative allows. `words / (quotaWph + 1)` is caught, so this is about what precedes
+  //    the identifier rather than about parentheses as such, which the fixtures now cover.
+  //
+  // Both are accepted, because the alternative is parsing TypeScript in a guard, and neither shape is
+  // one a developer reaches for by accident. The behavioural half is covered elsewhere anyway: PLAN-12's
+  // estimate and PLAN-22's bucket are both absent from the response shapes create.test.ts and
+  // update.test.ts assert, so arithmetic here would have to reach a column or a field one of those
+  // suites already reads back.
+  //
+  // If a later feature does introduce either shape in this directory, widen the pattern to it rather
+  // than concluding the guard still holds. A guard whose limits are written down can be extended; one
+  // whose limits are assumed gets trusted past them.
+  // ---------------------------------------------------------------------------------------------
+  // Two alternatives, one per operand position. The quota on the left of an operator, and the quota on
+  // the right of one. Each allows the operand to be wrapped in parentheses, which is the hole CodeRabbit
+  // found in the first version of this pattern: `[A-Za-z_]*` could not cross a closing paren and
+  // `[\w.[\]]*` did not include an opening one, so `words / (row.quotaWph)` and `(row.quotaWph) * hours`
+  // both passed a guard whose whole subject they violate. `\s*` sits inside the parens as well as outside
+  // them, so a spaced `( row.quotaWph )` is caught too, and `=?` catches the compound assignment form.
+  const QUOTA_ARITHMETIC =
+    /(?:quotaWph|quota_wph)[A-Za-z_]*\s*\)*\s*[*/%]|[*/%]=?\s*\(*\s*[\w.[\]]*(?:quotaWph|quota_wph)/
+
+  // The instrument first. A regex that cannot see the arithmetic it forbids would report every file
+  // clean whether or not the arithmetic were there, and an absence proved by a blind search is not a
+  // finding. Both directions of the division are fixtures, and so are the two shapes that must stay
+  // legal: storing a resolved figure, and importing the module that resolves it, whose path carries a
+  // slash right next to a quota-shaped identifier.
+  it('catches quota arithmetic written either way round, and passes a plain store', () => {
+    // Division with the quota as the divisor and as the dividend, then multiplication with the quota
+    // on each side. Four rather than three, because the regex is two alternatives and each operand
+    // position has to be shown to reach one of them. A multiplication fixtured only with the quota on
+    // the left proves the first alternative twice and the second one never.
+    expect(QUOTA_ARITHMETIC.test('const minutes = words / quotaWph')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const rate = row.quota_wph / 60')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const words = quotaWph * hours')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const words = hours * quotaWph')).toBe(true)
+
+    // The parenthesized operand, in both positions. These two are the regression fixtures: the first
+    // version of the pattern returned false for both while they divide and multiply by a quota in
+    // plain sight, so they are the cases that turn this guard from decorative back into load-bearing.
+    expect(QUOTA_ARITHMETIC.test('const minutes = words / (row.quotaWph)')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('const words = (row.quotaWph) * hours')).toBe(true)
+
+    // Spaces inside the parens, and the compound assignment. Fixtured because the pattern was widened
+    // for them, and a widening nobody asserts is a widening nobody can rely on.
+    expect(QUOTA_ARITHMETIC.test('const minutes = words / ( row.quotaWph )')).toBe(true)
+    expect(QUOTA_ARITHMETIC.test('total /= quotaWph')).toBe(true)
+
+    // The two shapes that must stay legal, re-asserted against the widened pattern rather than assumed
+    // to have survived it. Storing a resolved figure is what write.ts does on purpose, and the resolver
+    // import path carries a slash directly beside a quota-shaped identifier, which is the false positive
+    // a careless widening produces first.
+    expect(QUOTA_ARITHMETIC.test('values.quotaWphOverride = resolved.quotaWph')).toBe(false)
+    expect(QUOTA_ARITHMETIC.test("import { x } from '../../../utils/resolveCategoryQuota'")).toBe(
+      false
+    )
+  })
+
+  it('performs no quota arithmetic anywhere under server/api/tasks', () => {
+    const scanned = sourceFiles('server/api/tasks', ['.ts'])
+
+    // The other half of the instrument, and the half the regex fixtures above cannot supply. They
+    // prove the pattern can see arithmetic in a string; this proves the scan is actually looking at
+    // the files that could carry it. An enumeration that came back empty satisfies the assertion
+    // below while reading nothing at all, which is a clean result from a blind search.
+    //
+    // The reachable version of that is narrower than it first looks, and saying so is the point of
+    // writing it down. A mistyped directory throws out of readdirSync rather than returning nothing,
+    // so it cannot produce this false clean. What can is the directory surviving while its contents
+    // leave it, which is what a move of the handlers one level up or into a renamed folder does, and
+    // it is the likelier of the two anyway. write.ts is named because it is the file the snapshot put
+    // a quota into, so it is where a real offence would most likely land and the first thing such a
+    // move would take with it.
+    expect(scanned).toContain('server/api/tasks/handlers/write.ts')
+    expect(scanned.filter((file) => code(file).includes('quotaWph')).length).toBeGreaterThan(0)
+
+    const offenders = scanned.filter((file) => QUOTA_ARITHMETIC.test(code(file)))
+
+    expect(offenders).toEqual([])
   })
 
   it.each(WRITE_HANDLERS)('%s does not import loadWorkSettings for a quota', (file) => {

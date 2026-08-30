@@ -12,7 +12,6 @@ export interface CompleteOnboardingPayload {
   lightTheme: string
   locale: string
   password: string
-  quotaWph: number
   timezone: string
   workDays: number[]
 }

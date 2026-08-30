@@ -13,6 +13,7 @@ import {
   OTHER_USER_ID,
   OWNER_ID,
   readStoredRow,
+  seedCategoryQuota,
   seedSettings,
   seedTask
 } from '../../../../helpers/taskTestDb'
@@ -248,7 +249,7 @@ describe('createTask', () => {
     // The derivation needs a per-category quota that does not exist yet, and because the estimate is
     // frozen by definition a value derived from today's wrong global quota would never self-correct.
     it('stores NULL when no estimate is sent, even with a word count and a quota override present', async () => {
-      await seedSettings(client, OWNER_ID, 'America/Toronto', 450)
+      await seedSettings(client, OWNER_ID, 'America/Toronto')
 
       const created = await createTask(
         event,
@@ -610,5 +611,130 @@ describe('createTask and the notes column (AC11, AC12)', () => {
     )
 
     expect((await readStoredRow(client, created.id))?.notes).toBe('Ordre du jour envoyé.')
+  })
+
+  // -----------------------------------------------------------------------------------------------
+  // The quota snapshot, from docs/specs/planning/per-category-quotas.md AC12. The task stores the
+  // words-per-hour figure its category was set to at the moment it was written, the way an invoice line
+  // stores the price it was sold at, so a later edit to that setting cannot move it.
+  //
+  // Read off the stored row rather than off the response throughout. The response carries
+  // quotaWphOverride either way, so a handler that resolved a figure and forgot to write it would look
+  // identical from the outside on every case but the first.
+  // -----------------------------------------------------------------------------------------------
+  describe('the quota snapshot (AC12)', () => {
+    it('stores the shipped default for a trackable category when the user has saved nothing', async () => {
+      const created = await createTask(event, body({ date: '2026-07-20', category: 'translation' }))
+
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(240)
+      expect(created.quotaWphOverride).toBe(240)
+    })
+
+    // Each trackable category takes its own figure, so the snapshot is resolved from the task's
+    // category rather than from one number the handler happened to have.
+    it.each([
+      ['translation', 240],
+      ['revision_internal', 1000],
+      ['revision_external', 1300],
+      ['proofreading', 2000]
+    ])('stores %s at its own figure of %i', async (category, expected) => {
+      const created = await createTask(event, body({ date: '2026-07-20', category }))
+
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(expected)
+    })
+
+    // AC12's last verifiable case: "A create for a user with a stored category_quotas row uses that row
+    // rather than the shipped default." This is the branch production takes the moment the user saves
+    // once, so a snapshot reading only the contract would pass every other case here.
+    it('prefers the user stored row over the shipped default', async () => {
+      await seedCategoryQuota(client, OWNER_ID, 'translation', 300)
+
+      const created = await createTask(event, body({ date: '2026-07-20', category: 'translation' }))
+
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(300)
+    })
+
+    // Another user's row is not this user's setting. The resolution is scoped to the session user like
+    // every other read on this path.
+    it('ignores another user stored row', async () => {
+      await seedCategoryQuota(client, OTHER_USER_ID, 'translation', 999)
+
+      const created = await createTask(event, body({ date: '2026-07-20', category: 'translation' }))
+
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(240)
+    })
+
+    it.each(['terminology', 'meetings', 'breaks', 'admin', 'dtp', 'other'])(
+      'stores no figure for the non-trackable %s',
+      async (category) => {
+        const created = await createTask(event, body({ date: '2026-07-20', category }))
+
+        expect((await readStoredRow(client, created.id))?.quota_wph_override).toBeNull()
+      }
+    )
+
+    // THE COMMON PATH, and it looks like an edge case and is not. TaskCreateSchema defaults category to
+    // DEFAULT_CATEGORY_ID, which is `other`, and `other` is not trackable. The inline editor creates a
+    // row from that same default, so the ordinary task made in the running app gets no figure here and
+    // gets one from the first patch that sets a real category. The matching case is in update.test.ts.
+    it('stores no figure for a create that names no category at all', async () => {
+      const created = await createTask(event, body({ date: '2026-07-20' }))
+
+      expect(created.category).toBe(DEFAULT_CATEGORY_ID)
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBeNull()
+    })
+
+    // Precedence rule 1. A figure in the body is the user stating what this task's figure is, so the
+    // server stores what they sent rather than resolving over the top of it.
+    it('stores the figure the body carries rather than the resolved one', async () => {
+      const created = await createTask(
+        event,
+        body({ date: '2026-07-20', category: 'translation', quotaWphOverride: 400 })
+      )
+
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(400)
+    })
+
+    it('stores the figure the body carries even when the user has a stored row', async () => {
+      await seedCategoryQuota(client, OWNER_ID, 'translation', 300)
+
+      const created = await createTask(
+        event,
+        body({ date: '2026-07-20', category: 'translation', quotaWphOverride: 400 })
+      )
+
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBe(400)
+    })
+
+    // Precedence rule 2. An explicit null is the user asking this task to follow their category setting,
+    // and a snapshot written over the top would make the clear a silent no-op.
+    it('leaves the figure NULL when the body clears it explicitly', async () => {
+      const created = await createTask(
+        event,
+        body({ date: '2026-07-20', category: 'translation', quotaWphOverride: null })
+      )
+
+      expect((await readStoredRow(client, created.id))?.quota_wph_override).toBeNull()
+    })
+
+    // The snapshot must not have cost the create its other guarantees. A resolution read sits between
+    // the sort-order read and the insert, so this checks the row is still whole.
+    it('writes a complete row alongside the snapshot', async () => {
+      await seedCategoryQuota(client, OWNER_ID, 'translation', 300)
+
+      const created = await createTask(
+        event,
+        body({ date: '2026-07-20', category: 'translation', client: 'Acme', projectWordCount: 900 })
+      )
+      const stored = await readStoredRow(client, created.id)
+
+      expect(stored).toMatchObject({
+        client: 'Acme',
+        project_word_count: 900,
+        quota_wph_override: 300,
+        sort_order: 0,
+        user_id: OWNER_ID
+      })
+    })
   })
 })

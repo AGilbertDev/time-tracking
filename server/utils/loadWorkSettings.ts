@@ -5,16 +5,18 @@ import { settings } from '../db/schema'
 
 export interface WorkSettings {
   dailyWorkMinutes: number
-  quotaWph: number
   timezone: string
   workDays: number[]
 }
+
+// There is no quota here. The single global quota_wph column this used to read retired in migration
+// 0011, because a quota belongs to a kind of work rather than to a person. The per-category figures
+// live in the category_quotas table and are read through loadCategoryQuotas.
 
 // Coded defaults matching the settings column defaults, returned when no row exists yet so a
 // user who reaches the settings page before any settings write still sees a coherent set.
 const DEFAULT_DAILY_WORK_MINUTES = 450
 const DEFAULT_WORK_DAYS: readonly number[] = [1, 2, 3, 4, 5]
-const DEFAULT_QUOTA_WPH = 450
 const DEFAULT_TIMEZONE = 'America/Toronto'
 
 // The work_days column stores JSON text, so a stored value can be corrupted or legacy. Parse
@@ -53,7 +55,6 @@ export async function loadWorkSettings(userId: string): Promise<WorkSettings> {
     .select({
       dailyWorkMinutes: settings.dailyWorkMinutes,
       workDays: settings.workDays,
-      quotaWph: settings.quotaWph,
       timezone: settings.timezone
     })
     .from(settings)
@@ -64,7 +65,6 @@ export async function loadWorkSettings(userId: string): Promise<WorkSettings> {
     return {
       dailyWorkMinutes: DEFAULT_DAILY_WORK_MINUTES,
       workDays: [...DEFAULT_WORK_DAYS],
-      quotaWph: DEFAULT_QUOTA_WPH,
       timezone: DEFAULT_TIMEZONE
     }
   }
@@ -72,7 +72,6 @@ export async function loadWorkSettings(userId: string): Promise<WorkSettings> {
   return {
     dailyWorkMinutes: row.dailyWorkMinutes ?? DEFAULT_DAILY_WORK_MINUTES,
     workDays: coerceWorkDays(row.workDays),
-    quotaWph: row.quotaWph,
     timezone: row.timezone
   }
 }

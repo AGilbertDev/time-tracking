@@ -11,6 +11,7 @@ import {
   OTHER_USER_ID,
   OWNER_ID,
   readStoredRow,
+  seedCategoryQuota,
   seedTask
 } from '../../../../helpers/taskTestDb'
 
@@ -714,5 +715,314 @@ describe('updateTask and the notes column (AC11, AC12)', () => {
     await updateTask(event, 'task-1', patch({ notes: 'ligne un\nligne deux' }))
 
     expect((await readStoredRow(client, 'task-1'))?.notes).toBe('ligne un\nligne deux')
+  })
+
+  // -----------------------------------------------------------------------------------------------
+  // The quota snapshot, from docs/specs/planning/per-category-quotas.md AC12.
+  //
+  // THIS IS THE COMMON PATH RATHER THAN THE CREATE, and the spec says so in as many words.
+  // TaskCreateSchema defaults category to DEFAULT_CATEGORY_ID, which is `other`, and `other` is not
+  // trackable, so a task made from the inline editor carries no figure when it is created. The first
+  // patch that sets a real category is where most tasks get a figure at all. An implementation that
+  // only snapshotted on create would leave most rows with none, which is why these cases exist.
+  //
+  // The four precedence rules AC12 fixes, each asserted below by name:
+  //
+  //   1. A figure in the body always wins.
+  //   2. An explicit null in the body wins too, and is not immediately overwritten.
+  //   3. Otherwise a category change re-snapshots and anything else does not.
+  //   4. A move to a non-trackable category leaves the stored figure alone rather than clearing it.
+  //
+  // Rule 4 is deliberately unlike the status-clearing rule this handler applies a few lines earlier,
+  // and the difference is stated rather than left to be discovered: a status a category cannot hold is
+  // an invalid row, while a stored figure a category does not use is merely an unused one, and the
+  // trackable gate in the resolver is what keeps it out of any numerator meanwhile.
+  //
+  // Every assertion reads the stored row rather than the response, because a handler that resolved a
+  // figure and forgot to write it would look right from the outside.
+  // -----------------------------------------------------------------------------------------------
+  describe('the quota snapshot (AC12)', () => {
+    // The normal flow through the app, end to end: a row starts on the create default and gets its
+    // figure from the patch that makes it real work.
+    it('snapshots a task moving off the non-trackable create default', async () => {
+      await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'other' })
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBeNull()
+
+      await updateTask(event, 'task-1', patch({ category: 'translation' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(240)
+    })
+
+    // Rule 5, which is rule 3 read from the non-trackable side. A task that sat in breaks holding a
+    // stale figure gets a fresh one when it becomes real work.
+    it('re-snapshots a task moving from a non-trackable category to a trackable one', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'breaks',
+        quotaWphOverride: 900
+      })
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(2000)
+    })
+
+    // Rule 3, the case AC12 argues for out loud: "a task recategorised from translation to
+    // proofreading is measured against the wrong target otherwise".
+    it('replaces the figure when the category changes from one trackable category to another', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(2000)
+    })
+
+    it('re-snapshots from the user stored row rather than the shipped default', async () => {
+      await seedCategoryQuota(client, OWNER_ID, 'proofreading', 1500)
+      await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'translation' })
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(1500)
+    })
+
+    // Rule 3's other half. Sending the category the task already has is not a change, so nothing is
+    // re-resolved and a figure the user typed is not quietly replaced by the category's.
+    it('does not re-snapshot when the body names the category the task already has', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 400
+      })
+
+      await updateTask(event, 'task-1', patch({ category: 'translation' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(400)
+    })
+
+    // Rule 3, stated as the exclusion it is. A date change is the case worth naming, because under the
+    // effective-dated model it did move the figure and under the snapshot it must not.
+    it('leaves the figure untouched when only the date changes', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+      await seedCategoryQuota(client, OWNER_ID, 'translation', 999)
+
+      await updateTask(event, 'task-1', patch({ date: '2026-09-01' }))
+
+      const stored = await readStoredRow(client, 'task-1')
+
+      expect(stored?.date).toBe('2026-09-01')
+      expect(stored?.quota_wph_override).toBe(240)
+    })
+
+    it.each([
+      ['a word count', { projectWordCount: 900 }],
+      ['a status', { status: 'En cours' }],
+      ['a note', { notes: 'Une note.' }],
+      ['a duration', { actualMinutes: 90 }],
+      ['a client', { client: 'Acme' }]
+    ])('leaves the figure untouched when only %s changes', async (_label, body) => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+      await seedCategoryQuota(client, OWNER_ID, 'translation', 999)
+
+      await updateTask(event, 'task-1', patch(body))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(240)
+    })
+
+    // Rule 4. The stored figure survives the move, so moving a task to a meeting and back brings its
+    // figure with it rather than losing it on the way.
+    it.each(['terminology', 'meetings', 'breaks', 'admin', 'dtp', 'other'])(
+      'leaves the figure alone when the task moves to the non-trackable %s',
+      async (category) => {
+        await seedTask(client, {
+          id: 'task-1',
+          date: '2026-07-20',
+          category: 'translation',
+          quotaWphOverride: 240
+        })
+
+        await updateTask(event, 'task-1', patch({ category }))
+
+        expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(240)
+      }
+    )
+
+    // Named for what it asserts rather than for what rule 4 promises. The figure the task left with was
+    // 400 and the figure it comes back holding is 240, so the round trip replaces the figure rather than
+    // returning it, and a case called "brings the figure back" read as though 400 survived. The 400 here
+    // is deliberately not a snapshot the server wrote, since no category resolves to it, which is what
+    // makes this the case where a hand-typed figure is lost.
+    it('replaces the figure when the task returns to a trackable category', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 400
+      })
+
+      await updateTask(event, 'task-1', patch({ category: 'meetings' }))
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(400)
+
+      await updateTask(event, 'task-1', patch({ category: 'translation' }))
+      // Coming back is a category change whose result is trackable, so it re-snapshots. The figure is
+      // the category's rather than the one the row was carrying, which is rule 3 applying to the return
+      // leg exactly as it applied to the outbound one.
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(240)
+    })
+
+    // The fail-open branch, which had no coverage at all until this case and is the one behind the
+    // defect it asserts against. Removing the `else if` in update.ts leaves the previous category's
+    // figure on the row and fails here with `expected 240 to be null`.
+    //
+    // The read is made to fail for real rather than stubbed. Dropping the table means loadCategoryQuotas
+    // issues its actual query against a database that cannot answer it, so what runs is the genuine
+    // catch in resolveQuotaSnapshot rather than a mock standing in for it. A stubbed rejection would
+    // prove the branch is wired up and prove nothing about whether a real read failure reaches it.
+    it('writes NULL rather than the old category figure when the quota read fails', async () => {
+      await seedTask(client, {
+        id: 'task-control',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+
+      // The positive control, run first and against the same patch, so the assertion below is known to
+      // be caused by the failure rather than by a patch that does nothing. With the table intact this
+      // re-snapshots to proofreading's shipped figure.
+      await updateTask(event, 'task-control', patch({ category: 'proofreading' }))
+      expect((await readStoredRow(client, 'task-control'))?.quota_wph_override).toBe(2000)
+
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      await client.execute('DROP TABLE category_quotas')
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading' }))
+
+      const stored = await readStoredRow(client, 'task-1')
+
+      // The move happened, so the row is proofreading now and 240 is translation's number. Keeping it
+      // would measure proofreading work against the translation target with nothing on screen saying so.
+      expect(stored?.category).toBe('proofreading')
+      expect(stored?.quota_wph_override).toBeNull()
+
+      // Fail-open means the write is never refused, so the task survived the failure.
+      expect(await countTasks(client)).toBe(2)
+
+      // And the failure was logged rather than swallowed, which is the half of the fail-open bargain
+      // that makes a repeatedly failing read visible.
+      expect(logged).toHaveBeenCalledTimes(1)
+      logged.mockRestore()
+    })
+
+    // Rule 1. A request carrying a figure is the user stating what this task's figure is, so it wins
+    // even when the same request also changes the category.
+    it('stores the figure the body carries rather than re-snapshotting', async () => {
+      await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'translation' })
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading', quotaWphOverride: 400 }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(400)
+    })
+
+    it('stores a figure the body carries with no category change at all', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+
+      await updateTask(event, 'task-1', patch({ quotaWphOverride: 400 }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(400)
+    })
+
+    // Rule 2, and it is the rule most likely to be got wrong, because clearing and re-snapshotting in
+    // the same request looks like two independent instructions. Clearing is the way back out of a
+    // snapshot, so a re-snapshot on the same request would make it a silent no-op.
+    it('stores NULL when the body clears the figure while also changing the category', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading', quotaWphOverride: null }))
+
+      const stored = await readStoredRow(client, 'task-1')
+
+      expect(stored?.category).toBe('proofreading')
+      expect(stored?.quota_wph_override).toBeNull()
+    })
+
+    it('stores NULL when the body clears the figure on its own', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240
+      })
+
+      await updateTask(event, 'task-1', patch({ quotaWphOverride: null }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBeNull()
+    })
+
+    // The resolution is scoped to the session user like every other read on this path.
+    it('ignores another user stored row when re-snapshotting', async () => {
+      await seedCategoryQuota(client, OTHER_USER_ID, 'proofreading', 999)
+      await seedTask(client, { id: 'task-1', date: '2026-07-20', category: 'translation' })
+
+      await updateTask(event, 'task-1', patch({ category: 'proofreading' }))
+
+      expect((await readStoredRow(client, 'task-1'))?.quota_wph_override).toBe(2000)
+    })
+
+    // The snapshot must not have cost the patch its other rules. A category change to a non-deliverable
+    // category still clears the status, and the row still moves day and takes a fresh sort order, all in
+    // the same write as the figure being left alone.
+    it('keeps the status-clearing and sort-order rules while leaving the figure alone', async () => {
+      await seedTask(client, {
+        id: 'task-1',
+        date: '2026-07-20',
+        category: 'translation',
+        quotaWphOverride: 240,
+        status: 'En cours'
+      })
+
+      await updateTask(event, 'task-1', patch({ category: 'breaks', date: '2026-09-01' }))
+
+      expect(await readStoredRow(client, 'task-1')).toMatchObject({
+        category: 'breaks',
+        date: '2026-09-01',
+        quota_wph_override: 240,
+        sort_order: 0,
+        status: null
+      })
+    })
   })
 })

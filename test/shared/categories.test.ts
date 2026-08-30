@@ -8,6 +8,7 @@ import {
   DEFAULT_CATEGORIES,
   DEFAULT_CATEGORY_ID,
   DEFAULT_CATEGORY_IDS,
+  defaultQuotaWph,
   isDeliverableCategory,
   isTrackableCategory
 } from '#shared/categories'
@@ -553,10 +554,20 @@ describe('Category descriptors carry a hue', () => {
   // a neutral, and no exception to the fixed lightness and chroma was taken, so the descriptor carries
   // one integer and nothing else. A neutral would have collided with the row's own muted text and read
   // as de-emphasised rather than as a category colour, which would say the row is lesser. It is not.
+  //
+  // The key set includes defaultQuotaWph, which PLAN-32b added to every descriptor. It is a number
+  // rather than a colour, so it takes nothing away from what this case is checking, which is that the
+  // colour is one hue integer and no descriptor carries a lightness, a chroma, or a hex of its own.
   it('gives other an ordinary hue with no per-category colour override', () => {
     const other = DEFAULT_CATEGORIES.find((category) => category.id === 'other')
     expect(other?.hue).toBe(90)
-    expect(Object.keys(other ?? {}).sort()).toEqual(['deliverable', 'hue', 'id', 'trackable'])
+    expect(Object.keys(other ?? {}).sort()).toEqual([
+      'defaultQuotaWph',
+      'deliverable',
+      'hue',
+      'id',
+      'trackable'
+    ])
   })
 
   // Two categories sharing a hue would defeat the whole point, which is telling one kind of work
@@ -637,6 +648,115 @@ describe('categoryHue', () => {
   it('agrees with coerceCategory for an unknown id', () => {
     expect(categoryHue('does-not-exist')).toBe(categoryHue(DEFAULT_CATEGORY_ID))
   })
+})
+
+// The quota half of the contract comes from the per-category quotas spec
+// (docs/specs/planning/per-category-quotas.md). Its AC1 puts a defaultQuotaWph on every descriptor and
+// its AC10 asks for the accessor over all ten ids plus the invalid inputs, and for the consistency
+// check between the flag and the number. Expected values are the spec's own table under "The four
+// shipped defaults", not the implementation.
+//
+// EXTERNAL REVISION IS DELIBERATELY THE FASTER NUMBER. 1300 for revision_external against 1000 for
+// revision_internal reads like a transposition and the spec says twice that it is not one, because
+// revising work that came from outside is expected to move quicker than revising work from inside.
+// Any change putting the larger figure on the internal side undoes a decision rather than fixing a
+// typo.
+const DEFAULT_QUOTA_TABLE: Array<[string, number | null]> = [
+  ['translation', 240],
+  ['revision_internal', 1000],
+  ['revision_external', 1300],
+  ['proofreading', 2000],
+  ['terminology', null],
+  ['meetings', null],
+  ['breaks', null],
+  ['admin', null],
+  ['dtp', null],
+  ['other', null]
+]
+
+describe('defaultQuotaWph', () => {
+  // AC1 and the spec's defaults table, asserted per id. These are ordinary configurable defaults
+  // rather than constants, so this is only what a user with no stored row starts at, and their own
+  // saved figure wins over it from the moment they save one.
+  it.each(DEFAULT_QUOTA_TABLE)('resolves %s to %s', (id, expected) => {
+    expect(defaultQuotaWph(id)).toBe(expected)
+  })
+
+  // The transposition guard stated as a direction rather than as two numbers, so a swap fails with a
+  // message about which way round the pair belongs.
+  it('keeps external revision faster than internal revision', () => {
+    expect(defaultQuotaWph('revision_external')).toBe(1300)
+    expect(defaultQuotaWph('revision_internal')).toBe(1000)
+    expect(defaultQuotaWph('revision_external')).toBeGreaterThan(
+      defaultQuotaWph('revision_internal') ?? 0
+    )
+  })
+
+  // AC1: every descriptor declares the field explicitly, "for the same reason deliverable is declared
+  // explicitly on all ten". A missing key would read as undefined at every call site, and undefined
+  // is not the same answer as null, so absence is a failure rather than a default.
+  it.each(DEFAULT_CATEGORIES)('declares an explicit quota field for $id', (descriptor) => {
+    expect(descriptor).toHaveProperty('defaultQuotaWph')
+    expect(
+      descriptor.defaultQuotaWph === null || typeof descriptor.defaultQuotaWph === 'number'
+    ).toBe(true)
+  })
+
+  // One mapping rather than a function and a table that can drift.
+  it.each(DEFAULT_CATEGORIES)('agrees with the descriptor for $id', (descriptor) => {
+    expect(defaultQuotaWph(descriptor.id)).toBe(descriptor.defaultQuotaWph)
+  })
+
+  // AC1's consistency check, and the part worth reading carefully. The flag and the number agree
+  // across the ten shipped descriptors, and that agreement is asserted rather than turned into a
+  // derivation. trackable answers whether words reach a quota and this is a number, so a PLAN-30
+  // user-created trackable category has no shipped figure and is still trackable. Deriving either
+  // from the other would break that member on the day it arrives.
+  it('carries a number for exactly the trackable defaults', () => {
+    for (const descriptor of DEFAULT_CATEGORIES) {
+      expect(descriptor.defaultQuotaWph === null).toBe(!descriptor.trackable)
+    }
+  })
+
+  it('carries a figure for the four trackable ids and null for the other six', () => {
+    const withFigure = DEFAULT_CATEGORIES.filter((category) => category.defaultQuotaWph !== null)
+    expect(withFigure.map((category) => category.id)).toEqual([
+      'translation',
+      'revision_internal',
+      'revision_external',
+      'proofreading'
+    ])
+    expect(DEFAULT_CATEGORIES.filter((category) => category.defaultQuotaWph === null)).toHaveLength(
+      6
+    )
+  })
+
+  // Totality and the fail direction. The accessor coerces the id first, so an unknown or retired value
+  // resolves to `other` and therefore to null, which is the right way to fail for a figure that ends
+  // up as a divisor. A user-created id is the same case until PLAN-30 extends the validated set, and
+  // the spec is explicit that it returns null rather than a number invented for a kind of work nobody
+  // has described yet.
+  it.each(INVALID_INPUTS)('resolves %s to null rather than a figure', (_label, input) => {
+    expect(() => defaultQuotaWph(input)).not.toThrow()
+    expect(defaultQuotaWph(input)).toBeNull()
+  })
+
+  it('agrees with coerceCategory for an unknown id', () => {
+    expect(defaultQuotaWph('does-not-exist')).toBe(defaultQuotaWph(DEFAULT_CATEGORY_ID))
+  })
+
+  // A figure is only a starting value, so nothing may read as a ceiling or a floor. Every shipped
+  // number sits inside the range the write boundary accepts, which is integer 1 to 10000, so a user
+  // can save any of them back unchanged.
+  it.each(DEFAULT_CATEGORIES.filter((category) => category.defaultQuotaWph !== null))(
+    'keeps the shipped figure for $id inside the writable range',
+    (descriptor) => {
+      const figure = descriptor.defaultQuotaWph ?? 0
+      expect(Number.isInteger(figure)).toBe(true)
+      expect(figure).toBeGreaterThanOrEqual(1)
+      expect(figure).toBeLessThanOrEqual(10000)
+    }
+  )
 })
 
 // AC2 and AC6 of the nine-categories spec. Every visible category name lives in the locale files

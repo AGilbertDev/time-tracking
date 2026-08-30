@@ -32,7 +32,6 @@ const form = reactive<OnboardingForm>({
   locale: user.value?.locale ?? DEFAULT_LOCALE,
   dailyWorkMinutes: 450,
   workDays: [1, 2, 3, 4, 5],
-  quotaWph: 450,
   timezone: 'America/Toronto'
 })
 provide(ONBOARDING_FORM_KEY, form)
@@ -140,7 +139,6 @@ async function finish() {
       locale: form.locale,
       dailyWorkMinutes: form.dailyWorkMinutes,
       workDays: form.workDays,
-      quotaWph: form.quotaWph,
       timezone: form.timezone
     })
 
