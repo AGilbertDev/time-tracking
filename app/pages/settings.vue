@@ -2,13 +2,16 @@
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 import { categoryHue } from '#shared/categories'
+import { DEFAULT_LOCALE, DEFAULT_THEME_ID } from '#shared/theme'
 
-// The configuration page: three independent sections on one page, Work, Quotas and Security. Route
-// name settings, localized to /parametres (fr) and /settings (en) by nuxt.config. The global auth
-// middleware forces sign-in and onboarding, so any onboarded user reaches their own settings. Every
-// write is scoped to the session user server-side. The three forms load and save independently, so
-// saving one never touches another's data and a failure in one leaves the others working.
-const { t } = useI18n()
+// The configuration page: four independent sections on one page, Work, Quotas, Security and Reset,
+// the last of which is offered only to an admin and only while the server says the feature is on.
+// Route name settings, localized to /parametres (fr)
+// and /settings (en) by nuxt.config. The global auth middleware forces sign-in and onboarding, so any
+// onboarded user reaches their own settings. Every write is scoped to the session user server-side.
+// The sections load and save independently, so saving one never touches another's data and a failure
+// in one leaves the others working.
+const { t, setLocale } = useI18n()
 const toast = useToast()
 
 // Authenticated account surface, kept out of the index. The whole app is auth-gated, but the intent
@@ -263,6 +266,111 @@ async function onSavePassword(event: FormSubmitEvent<PasswordState>) {
     }
   } finally {
     savingPw.value = false
+  }
+}
+
+// --- Reset onboarding (admin) --------------------------------------------------------------
+// A self-action on the acting account's own configuration, which is why it lives here rather than on
+// the admin users page. The endpoint takes no body and no target, so there is nothing for this page
+// to parameterize and nothing it can aim wrongly.
+const { data: me } = useMeQuery()
+const localePath = useLocalePath()
+const { lightTheme, darkTheme } = useTheme()
+const { mutateAsync: resetOnboarding } = useResetOnboardingMutation()
+
+// Whether to offer the control at all, as one finished boolean off /api/me. The server computes it
+// as the caller's role being exactly admin AND the runtime switch being on, so this page renders on a
+// single condition and works out nothing for itself. Deliberately no isAdmin call and no reading of
+// the switch: the switch is a private config key that never reaches the client bundle, and combining
+// two facts here would be a second copy of a rule the server already applied.
+//
+// The explicit === true is the anti-flash, and the absent case is the one that matters. useMeQuery
+// seeds its initialData from the sealed session cookie, which does not carry this field, so it reads
+// undefined on the first paint and only resolves once /api/me answers. Absent therefore reads as
+// false, so the section can only ever go from absent to present. A control that must not appear while
+// the switch is off belongs hidden when the answer is unknown rather than shown and then withdrawn.
+const showReset = computed(() => me.value?.canResetOnboarding === true)
+
+const confirmOpen = ref(false)
+const resetting = ref(false)
+const cancelButton = useTemplateRef('cancelButton')
+
+// Left alone, reka-ui autofocuses the first focusable element in the dialog, which in UModal is the
+// header's close button. On a destructive dialog the arrival point should be the action that does
+// nothing, so DialogContent's own open-autofocus event is intercepted and focus is placed on Cancel.
+// Enter or Space on arrival then dismisses rather than confirming.
+//
+// The fallback is not defensive padding. preventDefault above cancels reka-ui's own focusFirst, so
+// once this handler runs nothing else will place focus, and FocusScope's internal fallback cannot
+// cover for it either because its lastFocusedElement ref is still null at mount. If the Cancel
+// lookup resolves to nothing, focus stays on the Reset button, which is outside the dialog and
+// inside a subtree UModal has just marked aria-hidden, so a screen reader user is parked on a
+// control their reader cannot describe and outside a trap that never armed.
+//
+// currentTarget is the FocusScope container, which carries tabindex="-1" and is therefore
+// focusable, and it is read here rather than inside the callback because currentTarget is only set
+// while the event is being dispatched and reads back as null afterwards.
+function focusCancel(event: Event) {
+  event.preventDefault()
+  const container = event.currentTarget
+
+  nextTick(() => {
+    const cancel = cancelButton.value?.$el
+    if (cancel instanceof HTMLElement) {
+      cancel.focus()
+      return
+    }
+    if (container instanceof HTMLElement) container.focus()
+  })
+}
+
+async function onConfirmReset() {
+  resetting.value = true
+  try {
+    // The server decides what a reset means and returns the refreshed session, which the mutation
+    // re-reads in its onSuccess. Nothing here knows which rows were cleared or what they fall back
+    // to, so there is no second copy of that enumeration on the client.
+    await resetOnboarding()
+
+    // The deleted settings row carried the theme and the interface language, so both are back to
+    // their coded defaults server-side. Refreshing the session alone leaves the old theme painted
+    // and the old language in place, because useTheme's ids are useState seeded once from the
+    // session and the active locale is not read off it at all. Same re-apply the wizard does after
+    // its own write, with the shared defaults rather than a pick.
+    lightTheme.value = DEFAULT_THEME_ID
+    darkTheme.value = DEFAULT_THEME_ID
+    await setLocale(DEFAULT_LOCALE)
+
+    confirmOpen.value = false
+
+    // The dashboard, never the onboarding path. auth.global.ts sees onboarded: false and redirects,
+    // so the rule about where a user who has not finished setup belongs stays in the one place that
+    // already owns it.
+    await navigateTo(localePath('index'))
+
+    // Last on purpose, and both halves of that position are load-bearing. Do not move it back up.
+    //
+    // After the locale switch, so the message reads in the language the interface has just become
+    // rather than sitting in English on a French page. That was always the reason it sat late.
+    //
+    // After the navigation for a second reason. UModal calls reka-ui's useHideOthers, which sets
+    // aria-hidden="true" on every sibling of the dialog's ancestor chain and makes no exception for
+    // an [aria-live] element. The toast viewport is a direct child of body, so a toast added while
+    // the dialog is still mounted, which includes the whole of its exit animation, is appended
+    // inside an aria-hidden subtree and is never announced at all. Awaiting the navigation first
+    // unmounts this page with its modal, so the live region is uncovered by the time this runs.
+    toast.add({ title: t('settings.reset.success'), color: 'success', icon: 'i-ph-check-circle' })
+  } catch {
+    // Nothing else changes and pressing Reset again is the documented recovery, so the failure needs
+    // no inline region in the card, only the same toast the other three sections use.
+    confirmOpen.value = false
+    toast.add({
+      title: t('settings.reset.errors.generic'),
+      color: 'error',
+      icon: 'i-ph-warning-circle'
+    })
+  } finally {
+    resetting.value = false
   }
 }
 </script>
@@ -538,6 +646,103 @@ async function onSavePassword(event: FormSubmitEvent<PasswordState>) {
           </div>
         </UForm>
       </UCard>
+    </section>
+
+    <!-- Reset section, admin only and appended last. A destructive action belongs at the end of a
+         page rather than between two things the user came to edit, and last is also the only
+         position that leaves the three sections above it untouched, since adding or removing a last
+         child under a space-y wrapper changes nothing about its siblings. The condition is an
+         affordance, not the gate: the server's admin wrapper is the real boundary and refuses a
+         non-admin, or an admin calling while the switch is off, with the same indistinguishable
+         403. -->
+    <section v-if="showReset" aria-labelledby="settings-reset-heading" class="space-y-4">
+      <div>
+        <h2
+          id="settings-reset-heading"
+          class="flex items-center gap-2 text-lg font-semibold text-highlighted"
+        >
+          <UIcon class="size-5 text-primary" name="i-ph-arrow-counter-clockwise-bold" />
+          {{ t('settings.reset.heading') }}
+        </h2>
+        <p class="mt-1 text-sm text-muted">{{ t('settings.reset.subtitle') }}</p>
+      </div>
+
+      <!-- No skeleton and no load-failure alert, because this section reads nothing. The card is the
+           shipped one with no error tint and no coloured ring: a permanent red block on a page used
+           routinely becomes furniture, and the heading is not where the decision happens. -->
+      <UCard class="rounded-2xl bg-default ring ring-default">
+        <div class="flex justify-end">
+          <!-- error + subtle is the whole of the at-rest signal, and its job is to say this is not a
+               fourth Save rather than to carry the warning, which the modal states in words. The
+               icon changes from a check to a counter-clockwise arrow so the difference survives with
+               all colour removed. No :loading and no type="submit": pressing this sends nothing, so
+               a loading state here would be a lie and it lives on the modal's confirm instead.
+               Solid error is held back for that confirm so the two steps read as an escalation. -->
+          <UButton
+            color="error"
+            icon="i-ph-arrow-counter-clockwise-bold"
+            :label="t('settings.reset.submit')"
+            variant="subtle"
+            @click="confirmOpen = true"
+          />
+        </div>
+      </UCard>
+
+      <!-- The confirmation, declared INSIDE the guarded section on purpose. Do not lift it back
+           out to be a sibling. UModal portals its content out of the document flow, so its position
+           in the template affects no layout and no stacking, which is what makes nesting it here
+           free and is the same fact that used to be given as the reason for placing it outside.
+           As a sibling the component was instantiated whatever the switch said, and the
+           confirmation stayed unreachable only because the single writer of confirmOpen = true
+           happened to sit inside the unrendered section. That is a property of where one assignment
+           lives rather than of the template, and any later deep link or keyboard shortcut that
+           opened the dialog would undo it silently. As a child it is not built at all while
+           showReset is false, so AC26.3 holds by construction rather than by argument.
+           scrollable moves the overflow onto the overlay, which matters because every one of its
+           sentences is in the header and the header does not scroll, so a short viewport would
+           otherwise clip a warning about an irreversible action off the bottom of the screen. -->
+      <UModal
+        v-model:open="confirmOpen"
+        :content="{ onOpenAutoFocus: focusCancel }"
+        scrollable
+        :title="t('settings.reset.confirm.title')"
+        :ui="{ description: 'mt-2 space-y-3 text-sm text-muted', footer: 'justify-end' }"
+      >
+        <!-- All four sentences live in #description rather than #body, and that is the one thing here
+             that is silently wrong if it moves. UModal builds the dialog's accessible description from
+             this slot, and a modal whose prose sits in #body renders correctly, looks right, and
+             announces a title followed by an empty description. DialogDescription renders as a <p>, so
+             each sentence is a span rather than a div, a p or a li: anything else closes the paragraph
+             early and produces a real hydration mismatch. Weight, not colour, carries the emphasis. -->
+        <template #description>
+          <span class="block text-default">{{ t('settings.reset.confirm.cleared') }}</span>
+          <span class="block">{{ t('settings.reset.confirm.kept') }}</span>
+          <span class="block">{{ t('settings.reset.confirm.password') }}</span>
+          <span class="block font-medium text-highlighted">
+            {{ t('settings.reset.confirm.irreversible') }}
+          </span>
+        </template>
+
+        <!-- Cancel is the safe option and holds initial focus, so Enter and Space on arrival do
+             nothing and Escape does the same thing as Cancel. Both stay enabled while the request is
+             in flight: disabling them would guard against leaving mid-write, and it would also trap
+             the user if the request hung, where leaving is already a documented-safe state. -->
+        <template #footer="{ close }">
+          <UButton
+            ref="cancelButton"
+            color="neutral"
+            :label="t('settings.reset.confirm.cancel')"
+            variant="ghost"
+            @click="close"
+          />
+          <UButton
+            color="error"
+            :label="t('settings.reset.confirm.submit')"
+            :loading="resetting"
+            @click="onConfirmReset"
+          />
+        </template>
+      </UModal>
     </section>
   </div>
 </template>

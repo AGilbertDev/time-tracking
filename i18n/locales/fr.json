@@ -439,6 +439,24 @@
         "breached": "Ce mot de passe figure dans une fuite de données connue. Veuillez en choisir un autre.",
         "generic": "Une erreur est survenue. Veuillez réessayer."
       }
+    },
+    "reset": {
+      "heading": "Réinitialisation",
+      "subtitle": "Effacez vos paramètres et refaites la configuration initiale.",
+      "submit": "Réinitialiser",
+      "confirm": {
+        "title": "Réinitialiser vos paramètres ?",
+        "cleared": "Vos heures de travail, vos jours travaillés, votre fuseau horaire, votre thème, votre langue et vos quotas seront effacés et reprendront leurs valeurs par défaut.",
+        "kept": "Vos tâches, votre nom et votre mot de passe ne sont pas touchés.",
+        "password": "La configuration initiale vous redemandera un mot de passe. Vous pouvez saisir le même.",
+        "irreversible": "Cette action est irréversible.",
+        "cancel": "Annuler",
+        "submit": "Réinitialiser"
+      },
+      "success": "Vos paramètres ont été réinitialisés.",
+      "errors": {
+        "generic": "Une erreur est survenue. Veuillez réessayer."
+      }
     }
   }
 }

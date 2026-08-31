@@ -439,6 +439,24 @@
         "breached": "This password appears in a known data breach. Please choose another one.",
         "generic": "Something went wrong. Please try again."
       }
+    },
+    "reset": {
+      "heading": "Reset",
+      "subtitle": "Clear your settings and go through the initial setup again.",
+      "submit": "Reset",
+      "confirm": {
+        "title": "Reset your settings?",
+        "cleared": "Your work hours, work days, timezone, theme, language and quotas will be cleared and go back to their default values.",
+        "kept": "Your tasks, your name and your password are not affected.",
+        "password": "The initial setup will ask you for a password again. You can enter the same one.",
+        "irreversible": "This cannot be undone.",
+        "cancel": "Cancel",
+        "submit": "Reset"
+      },
+      "success": "Your settings have been reset.",
+      "errors": {
+        "generic": "Something went wrong. Please try again."
+      }
     }
   }
 }

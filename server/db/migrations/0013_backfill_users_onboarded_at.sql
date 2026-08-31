@@ -1,0 +1,86 @@
+-- Backfill users.onboarded_at for every account that already has a password.
+--
+-- This is the other half of 0012 and it is not optional. Every account that already has a password
+-- has completed onboarding. Leaving onboarded_at NULL for them would mint onboarded: false on their
+-- next session, the global middleware would force them onto the wizard, and the re-entry guard now
+-- reads onboarded_at rather than password_hash so it would accept the submission and overwrite the
+-- name, the password, and the settings row. Every existing user would be silently re-onboarded on
+-- deploy. That is a live incident rather than a rough edge, so this file ships with 0012 and is
+-- applied in the same pass, before the new build goes out.
+--
+-- Why the value is created_at rather than the migration instant. A users row in this app is created
+-- when a magic link is verified, and onboarding follows in the same sitting, usually within minutes.
+-- So created_at is the closest true instant available, and it preserves the invariant that an
+-- account never reads as having finished setup before it existed. The migration instant is further
+-- from the truth by however long the account has been in use.
+--
+-- Why COALESCE rather than created_at on its own. users.created_at is nullable in the schema, so
+-- created_at alone would leave onboarded_at NULL on any row that lacks one, which is the exact
+-- failure this file exists to prevent. unixepoch() returns Unix seconds, matching the column's
+-- mode 'timestamp' representation, and it is the honest fallback because it says the migration
+-- moment rather than inventing a plausible earlier one.
+--
+-- What the written value means. It means this account had a password before the migration ran and
+-- was therefore already through setup. It does NOT mean setup finished at that instant. It is a
+-- reconstruction rather than a record. Nothing shipped or specced reads the instant, because the
+-- only consumer is the NULL check, so the imprecision costs nothing today. Any later feature that
+-- needs a real completion time must treat a value at or before the migration as a reconstruction.
+--
+-- What this deliberately leaves alone. Rows with a NULL password_hash stay NULL. Those accounts
+-- accepted a magic link and never onboarded, they are genuinely not through setup, and the old build
+-- agreed, because the flag it derived from password_hash was false for them too. So after this file
+-- runs, for every row that existed before this feature, onboarded_at IS NOT NULL equals
+-- password_hash IS NOT NULL. That equality is the property that makes the deploy invisible to
+-- existing users.
+--
+-- The AND onboarded_at IS NULL half of the WHERE clause is doing real work rather than being
+-- decoration. It is what makes this file re-runnable, and it also means the backfill can never
+-- overwrite a real completion timestamp written by the onboarding handler, and can never undo a
+-- deliberate admin reset that happened after the first run.
+--
+-- Idempotency note. This one is genuinely idempotent at the statement level, unlike 0012. A second
+-- run matches no rows and changes nothing, so it is safe whether the runner's ledger offers it again
+-- or not. SQLite runs a single UPDATE as one implicit transaction, so it either fully applies or
+-- does not apply at all, which is what makes a crash mid-file resumable by simply running it again.
+--
+-- Apply ordering. This file and 0012 are two halves of one additive change and they go together, in
+-- filename order, in a single `bun run apply-migrations --yes`, BEFORE the new build is deployed.
+-- That is the opposite of the instruction on 0010 and 0011, which are deliberately split across the
+-- deploy because one is an expand and the other is a destructive contract. There is nothing to
+-- contract here, so do not generalise that ordering to this pair. Applying 0012 alone and then
+-- deploying is the silent re-onboarding described at the top of this file, and it is worse than an
+-- outage because nothing errors and nobody finds out until a profile has been overwritten.
+--
+-- The same precondition applies to that single command as to 0012's, and it is argued in full in
+-- 0012's header rather than repeated here. In short, scripts/apply-migrations.ts cannot be pointed at
+-- one file and applies every pending one, so dry-run first with `bun run apply-migrations` and read
+-- the list against the database it names. If 0011_drop_settings_quota_wph.sql is still in it, decide
+-- whether that database holds a settings.quota_wph value that has to be read out before its
+-- irreversible DROP runs. That is the one case where sweeping it up alongside these two files costs
+-- something, and it is a question about the database rather than about the file list.
+--
+-- Undo. Nothing to undo. The column this fills disappears with 0012's undo, and the old build never
+-- names it, so a build rollback can leave the values sitting where they are.
+--
+-- DO NOT renumber or rename this file once it has been applied anywhere. The runner's ledger
+-- (_applied_migrations) is keyed on the filename alone with no checksum, so a name already recorded
+-- is skipped whatever the file now says, and a name that is not recorded runs again. A re-run of
+-- this particular file happens to be harmless because of the WHERE clause, which is a property of
+-- this statement rather than a licence to rename migrations. The same applies to editing it in
+-- place.
+--
+-- Authored as plain statement-broken SQL with this comment header to match how 0000 through 0012 are
+-- maintained in this project, applied by hand rather than by a snapshot-diffing runner, because the
+-- repo keeps no drizzle-kit meta snapshot directory or _journal.json.
+--
+-- DO NOT auto-run this against production. There is one real user, and this migration is applied
+-- manually by the owner against the production Turso database, matching 0000 through 0012. It must
+-- not be pointed at a live database by CI, a deploy hook, or a dev-boot migration runner. There are
+-- no database credentials in this environment, so how many production rows have a NULL created_at
+-- and what timestamps this actually writes cannot be known from here. The owner records the row
+-- count the backfill reports in the pull request, so the reconstruction is a recorded fact rather
+-- than an assumption.
+
+UPDATE `users`
+SET `onboarded_at` = COALESCE(`created_at`, unixepoch())
+WHERE `password_hash` IS NOT NULL AND `onboarded_at` IS NULL;

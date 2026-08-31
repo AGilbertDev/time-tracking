@@ -93,6 +93,30 @@ export default defineNuxtConfig({
     // NUXT_AVATAR_STORAGE_DRIVER=fs|blob to force one (for example to exercise the blob driver locally
     // against a scratch store, or to force fs in a non-prod deploy).
     avatarStorageDriver: '',
+    // Whether the admin onboarding reset is available at all, single-sourced in
+    // server/utils/onboardingReset.ts. The feature exists so the owner can walk the first-run wizard
+    // again and compare it against the settings page during manual testing, and it is meant to stop
+    // existing once that surface is settled, so it ships with a switch that is not a code change.
+    // Read by the reset handler, which refuses with the same 403 it gives a non-admin when this is
+    // off, and by GET /api/me, which folds it together with the caller's role into the derived
+    // canResetOnboarding the settings page renders on.
+    //
+    // Empty means "decide by environment", enabled under `nuxt dev` and disabled everywhere else, so
+    // a production deploy never silently carries a destructive action the owner is finished with.
+    // Override with NUXT_ONBOARDING_RESET_ENABLED=true|false to force one, true to exercise it on a
+    // preview deploy and false to close it locally while `nuxt dev` runs. Both directions are
+    // configuration rather than a deploy of different code.
+    //
+    // A string default with an explicit parse in the helper, rather than a boolean default relying on
+    // Nuxt coercing the environment value by the default's type. That is the avatarStorageDriver
+    // precedent three lines up, and it is the more robust of the two, because the parse is written
+    // down where it can be read and tested instead of depending on a coercion rule holding. The
+    // helper accepts only 'true' and 'false' and treats anything else as unset, so a typo falls back
+    // to the environment default rather than resolving to whatever a truthy string would have meant.
+    //
+    // This is one switch on one endpoint rather than the beginning of a flag framework, and there is
+    // deliberately nothing here for a second flag to reuse.
+    onboardingResetEnabled: '',
     siteUrl: ''
   },
   // sharp ships a platform-specific native binary. Keep it external to the Nitro server bundle so
