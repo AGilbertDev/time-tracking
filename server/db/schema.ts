@@ -23,7 +23,31 @@ export const users = sqliteTable('users', {
   role: text('role').notNull().default('user'),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  deactivatedAt: integer('deactivated_at', { mode: 'timestamp' })
+  deactivatedAt: integer('deactivated_at', { mode: 'timestamp' }),
+  // When this account finished the first-run wizard, added by migration 0012. Unix seconds
+  // through mode 'timestamp', matching createdAt, updatedAt, and deactivatedAt above.
+  //
+  // This is the stored answer to "has this account finished setup". The session's onboarded flag
+  // reads this column at all three session-creation sites, and the onboarding completion handler
+  // is the only thing that writes a value into it. Before this column existed the flag was
+  // inferred from passwordHash, which conflated two different facts. "This account has
+  // credentials" and "this account has finished setup" are separate questions, and the admin
+  // onboarding reset needs to change the second without touching the first. Clearing the hash
+  // instead would delete the account's ability to authenticate, and the magic-link path refuses
+  // to issue a link to an account that is off the allowlist, so a sole admin could land outside
+  // every route back in.
+  //
+  // Nullable, and deliberately with no $defaultFn and no database-level default. The magic-link
+  // verify handler inserts a bare users row for a brand-new invitee, so an insert default would
+  // mark that account as onboarded at the moment it was created, before the wizard had run. Null
+  // is the correct state for a new row.
+  //
+  // Note that passwordHash keeps its own separate jobs. The magic-link redirect rule and the
+  // admin list's Active status both still read it, because both of those answer "does this person
+  // have a usable account" rather than "has this person finished setup". A reset account keeps its
+  // password, so it correctly stays outside the magic-link path and correctly still reads as
+  // Active.
+  onboardedAt: integer('onboarded_at', { mode: 'timestamp' })
 })
 
 export const magicLinkTokens = sqliteTable('magic_link_tokens', {

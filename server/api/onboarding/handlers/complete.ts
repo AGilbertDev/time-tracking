@@ -16,15 +16,22 @@ export async function completeOnboarding(
   const { user } = await requireUserSession(event)
   const db = useDb()
 
-  // Onboarding completes exactly once. If this account already has a password hash it is
-  // onboarded, so a second submit (for example by reopening the wizard URL) is rejected rather
-  // than allowed to overwrite the existing profile.
+  // Onboarding completes once per setup. A second submit, for example by reopening the wizard URL,
+  // is rejected rather than allowed to overwrite the existing profile.
+  //
+  // The guard reads users.onboarded_at rather than users.password_hash, and that move is what makes
+  // the admin onboarding reset work at all rather than being a tidy-up. A reset clears the timestamp
+  // and deliberately leaves the password in place, so a guard still reading the hash would let the
+  // reset admin reach the wizard and then reject their Finish with 409, while the global middleware
+  // bounced them straight back to the wizard they could not leave. That is a closed loop with no
+  // exit. Keyed on the timestamp, a reset account is accepted here exactly once more, which is the
+  // whole point of the reset.
   const existing = await db
-    .select({ passwordHash: users.passwordHash })
+    .select({ onboardedAt: users.onboardedAt })
     .from(users)
     .where(eq(users.id, user.id))
     .get()
-  if (existing?.passwordHash) {
+  if (existing?.onboardedAt) {
     throw createError({ statusCode: 409, statusMessage: 'already_onboarded' })
   }
 
@@ -36,14 +43,21 @@ export async function completeOnboarding(
   // Hash the password so the raw value is never stored.
   const passwordHash = await hashPassword(body.password)
 
-  // Persist the profile. Setting passwordHash is what marks onboarding complete.
+  // Persist the profile. onboarded_at is what marks onboarding complete, and it is written in the
+  // same update as the password rather than in a second statement, so there is no window in which an
+  // account holds a new password without the timestamp that says it is through setup. The password
+  // no longer carries that meaning on its own, which is exactly why the reset can clear one without
+  // touching the other.
+  const now = new Date()
+
   await db
     .update(users)
     .set({
       firstName: body.firstName,
       lastName: body.lastName,
       passwordHash,
-      updatedAt: new Date()
+      onboardedAt: now,
+      updatedAt: now
     })
     .where(eq(users.id, user.id))
 
@@ -87,6 +101,8 @@ export async function completeOnboarding(
       // Onboarding never changes the avatar, so carry forward whatever the session minted at
       // magic-link verify holds (null for a brand-new user).
       avatarUrl: user.avatarUrl,
+      // Still a literal, and correctly so. It is a statement about the onboarded_at value this
+      // handler just wrote a few lines above rather than an inference from the password.
       onboarded: true,
       // Carry the real role forward from the session minted at magic-link verify. Onboarding
       // never changes the role, so the session value is the user's true role.

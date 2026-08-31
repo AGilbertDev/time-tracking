@@ -1,0 +1,104 @@
+-- Add the onboarded_at column to users.
+--
+-- This is the storage behind the admin onboarding reset. It records when an account finished the
+-- first-run wizard, and the session's onboarded flag reads it from here rather than inferring it
+-- from password_hash.
+--
+-- Why the column exists at all, since the old inference worked. "This account has credentials" and
+-- "this account has finished setup" are two different facts that happen to coincide until somebody
+-- asks to redo the setup. A reset has to change the second without changing the first. Clearing
+-- password_hash would not reset onboarding, it would delete the account's ability to sign in, and
+-- the magic-link request handler refuses to send a link to an address that is not on the allowlist,
+-- so a sole admin could end up outside every route back in. The stored column removes that whole
+-- class of dead end, because after a reset the admin still has their password and the only thing
+-- that changed is which page the router sends them to.
+--
+-- Nullable, integer, holding Unix seconds so it matches created_at, updated_at, and deactivated_at
+-- on the same table and the Drizzle mode 'timestamp' declaration in server/db/schema.ts. There is
+-- deliberately no DEFAULT here and no $defaultFn on the Drizzle side. The magic-link verify handler
+-- inserts a bare users row for a brand-new invitee, so any insert default would mark that account
+-- as onboarded at the moment it was created, before the wizard had run. NULL is the correct state
+-- for a new row, and the only writer of a real value is the onboarding completion handler.
+--
+-- Why this is split from the backfill in 0013. The runner records a file in its ledger only after
+-- every statement in that file has succeeded, and it tolerates no error. One file holding both the
+-- ADD COLUMN and the UPDATE could therefore add the column, fail on the backfill, and leave the
+-- file unrecorded, so the next run would die immediately on the ADD COLUMN with a duplicate column
+-- name and the only way forward would be hand-editing SQL that had already partly run. Split, the
+-- failure is resumable, because this file records on its own and 0013 is written so it can be
+-- re-run freely.
+--
+-- Idempotency note, stated against the runner this project actually has. SQLite supports no
+-- IF NOT EXISTS on ALTER TABLE ADD COLUMN, so this statement carries no guard of its own and this
+-- file is not safe to execute twice. Re-running it against a database that already has the column
+-- fails with a duplicate column name error. What prevents that is the runner's _applied_migrations
+-- ledger, which records this filename once it has run and never offers it again. That is the same
+-- arrangement 0007, 0008, and 0011 rely on. The 0006 header says something different, that the
+-- statement "is applied through a runner that tolerates the benign duplicate column name error and
+-- continues, which makes a re-run safe", and that sentence describes a runner this project does not
+-- have. Do not copy it forward from there. scripts/apply-migrations.ts throws on any error and
+-- leaves the file unrecorded.
+--
+-- Apply ordering, and this one is the opposite of the instruction on 0010 and 0011. Apply this file
+-- and 0013 together, in one pass, BEFORE deploying the new build. A single
+-- `bun run apply-migrations --yes` runs them in filename order, which is the right sequence. Then
+-- deploy. There is no third step, because the build that is live never names onboarded_at and can
+-- be redeployed at any time without touching the database.
+--
+-- One precondition on that single command, because scripts/apply-migrations.ts has no way to select
+-- a file. `--yes` applies every pending file in filename order, not just the two named here, so "one
+-- pass" means these two only when nothing earlier is still pending. Dry-run first, which is
+-- `bun run apply-migrations` with no flag, and read the list it prints. It names the target database
+-- and every file it would execute, and it is the only place the real state of a given database can
+-- be read, because each database carries its own _applied_migrations ledger and dev and production
+-- are routinely at different points. Do not carry an answer from one to the other.
+--
+-- What to look for in that list is 0011_drop_settings_quota_wph.sql. Its own header stages it to run
+-- AFTER the new build is deployed, and only once the settings.quota_wph value has been read out and
+-- recorded, so a run that sweeps it up alongside this file performs its irreversible DROP early and
+-- skips that read-out. Whether that costs anything depends on the database rather than on the file
+-- list. Against one holding real user data it is lost work, and the read-out has to happen before
+-- the command is run. Against one being built from empty it is harmless and correct, because 0011
+-- then drops a column 0000 created moments earlier that nothing ever wrote to, which is exactly what
+-- the first apply against a fresh production database looks like. So the question is never whether
+-- 0011 appears in the pending list, it is whether that particular database holds a quota value worth
+-- reading first.
+--
+-- A reader must not generalise the 0010 and 0011 ordering to here. Those two are deliberately split
+-- across the deploy because one is an expand and the other is a destructive contract. This file and
+-- 0013 are two halves of one additive change and there is nothing to contract, so they land
+-- together and they land first.
+--
+-- Two orders are forbidden. Deploying the new build before this file is applied gives a total
+-- authentication outage, because every session-creation site and the onboarding re-entry guard
+-- select onboarded_at and the query throws `no such column`, so magic-link verification, password
+-- sign-in, and onboarding completion all fail at once. Applying this file without 0013 and then
+-- deploying is worse in a quieter way, because every existing user reads as never onboarded, the
+-- global middleware forces them onto the wizard, and the re-entry guard accepts the submission and
+-- overwrites their name, their password, and their settings row. Nothing errors in that second
+-- case, which is why it is the more dangerous of the two.
+--
+-- Undo. One statement drops the column again.
+--   ALTER TABLE `users` DROP COLUMN `onboarded_at`;
+-- SQLite permits it because the column is not a primary key, not unique, not indexed, and not
+-- referenced by a constraint or a generated column. The contents are lost, which costs only the
+-- reconstruction 0013 wrote, since the old build re-derives the same answer from the password. In
+-- practice rolling the build back is enough on its own and the column can simply sit unread.
+--
+-- DO NOT renumber or rename this file once it has been applied anywhere. The runner's ledger
+-- (_applied_migrations) is keyed on the filename alone with no checksum, so a name already recorded
+-- is skipped whatever the file now says, and a name that is not recorded runs again. Re-running this
+-- ADD COLUMN against a table that already has the column throws, the file is not recorded, and the
+-- loop stops before every later migration. The same applies to editing it in place.
+--
+-- Authored as plain statement-broken SQL with this comment header to match how 0000 through 0011 are
+-- maintained in this project, applied by hand rather than by a snapshot-diffing runner, because the
+-- repo keeps no drizzle-kit meta snapshot directory or _journal.json.
+--
+-- DO NOT auto-run this against production. There is one real user, and this migration is applied
+-- manually by the owner against the production Turso database, matching 0000 through 0011. It must
+-- not be pointed at a live database by CI, a deploy hook, or a dev-boot migration runner. There are
+-- no database credentials in this environment, so nothing here was applied or verified against a
+-- real database.
+
+ALTER TABLE `users` ADD `onboarded_at` integer;

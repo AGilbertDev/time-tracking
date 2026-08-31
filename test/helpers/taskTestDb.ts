@@ -1,6 +1,7 @@
 import type { Client } from '@libsql/client'
 
 import { createClient } from '@libsql/client'
+import { getTableName } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
 import { onTestFinished } from 'vitest'
 
@@ -20,7 +21,20 @@ import { onTestFinished } from 'vitest'
 export const OWNER_ID = 'user-owner'
 export const OTHER_USER_ID = 'user-other'
 
-// The users table as 0000 leaves it. Only the columns the tasks foreign key and the fixtures need.
+// The users table as 0000 leaves it, plus 0012's onboarded_at. Only the columns the tasks foreign
+// key and the fixtures need.
+//
+// onboarded_at carries no DEFAULT here, deliberately and for the same reason the shipped column
+// carries none. The magic-link verify handler inserts a bare users row for a brand-new invitee, so
+// an insert default would mark that account as onboarded before the wizard had run. Null is the
+// correct state for a new row, and a DDL that defaulted it would make the tests for that agree with
+// a database production does not have.
+//
+// This column has to stay in step with migration 0012 the same way TASKS_DDL stays in step with the
+// live tasks table. A harness missing a column the shipped code selects is worse than no test at
+// all, because every suite goes green while the handler under test would throw `no such column`
+// against the real database. It was added when 0012 was written and it is the reason the three
+// session-creation sites can be exercised here at all.
 const USERS_DDL = `
   CREATE TABLE users (
     id text PRIMARY KEY NOT NULL,
@@ -32,7 +46,8 @@ const USERS_DDL = `
     role text DEFAULT 'user' NOT NULL,
     created_at integer,
     updated_at integer,
-    deactivated_at integer
+    deactivated_at integer,
+    onboarded_at integer
   )
 `
 
@@ -338,6 +353,184 @@ export async function deactivateUser(
     sql: 'UPDATE users SET deactivated_at = ? WHERE id = ?',
     args: [Math.floor(deactivatedAt.getTime() / 1000), userId]
   })
+}
+
+// A Drizzle instance that logs which table each write names, and can be told to throw on one of
+// them.
+//
+// This is a mock at the infrastructure boundary and nowhere else. Every statement that is not the
+// chosen failure point runs for real against the real database, so a run that stops halfway leaves
+// exactly the partial state production would leave. Injecting the failure any higher, by stubbing a
+// handler's own steps, would be testing the test.
+//
+// It lives here rather than in one suite because two of them need it for different reasons. The reset
+// has no transaction available, so its safety is entirely the write order and only a run that stops
+// partway can show that order holding. The onboarding completion has to write the password and the
+// timestamp in one statement, and counting the statements it issued is how that is observed rather
+// than assumed.
+//
+// The log records the attempt rather than the success, so a forced failure still shows where the
+// handler had got to when it stopped. That is the point of the ordering assertions.
+export function instrumentedDb(
+  db: unknown,
+  order: string[],
+  failOn?: 'category_quotas' | 'settings' | 'tasks' | 'users'
+): unknown {
+  return new Proxy(db as object, {
+    get(target, property) {
+      const value = Reflect.get(target, property)
+
+      if (property === 'update' || property === 'delete' || property === 'insert') {
+        return (table: never) => {
+          const name = getTableName(table)
+          order.push(`${String(property)}:${name}`)
+          if (failOn === name) {
+            throw new Error(`forced failure: ${String(property)} on ${name}`)
+          }
+          return (value as (t: never) => unknown).call(target, table)
+        }
+      }
+
+      return typeof value === 'function' ? (value as () => unknown).bind(target) : value
+    }
+  })
+}
+
+// Inserts a magic_link_tokens row. The verify handler is one of the three session-creation sites, so
+// exercising it needs a real token row to consume, and the two rules that handler carries are only
+// separable by driving it end to end. Defaults to a live token, since an expired or already-used one
+// is the exception a test asks for explicitly.
+export async function seedMagicLinkToken(
+  client: Client,
+  token: string,
+  email: string,
+  options: { expiresAt?: Date; used?: boolean } = {}
+): Promise<void> {
+  const expiresAt = options.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000)
+  await client.execute({
+    sql: 'INSERT INTO magic_link_tokens (token, email, expires_at, used) VALUES (?, ?, ?, ?)',
+    args: [token, email, Math.floor(expiresAt.getTime() / 1000), options.used ? 1 : 0]
+  })
+}
+
+// The stored magic-link token row, raw. Whether a token was burned is read from the database rather
+// than from the handler's return value, for the same reason as everywhere else here.
+export async function readMagicLinkToken(
+  client: Client,
+  token: string
+): Promise<Record<string, unknown> | undefined> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM magic_link_tokens WHERE token = ?',
+    args: [token]
+  })
+  const row = result.rows[0]
+  return row ? Object.fromEntries(Object.entries(row)) : undefined
+}
+
+// The stored users row for an email rather than an id, which is how the magic-link path finds an
+// account and the only way to read back a row that handler created for a brand-new invitee.
+export async function readUserRowByEmail(
+  client: Client,
+  email: string
+): Promise<Record<string, unknown> | undefined> {
+  const result = await client.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email] })
+  const row = result.rows[0]
+  return row ? Object.fromEntries(Object.entries(row)) : undefined
+}
+
+// The users columns a fixture can set. Every one is optional, matching the table, and a Date is
+// stored as the Unix seconds the timestamp columns hold so a raw read-back sees exactly what
+// production would.
+export type UserRowSeed = {
+  avatarUrl?: string | null
+  createdAt?: Date | null
+  deactivatedAt?: Date | null
+  firstName?: string | null
+  lastName?: string | null
+  onboardedAt?: Date | null
+  passwordHash?: string | null
+  role?: string
+}
+
+// Sets columns on one of the fixture users with raw SQL, deliberately bypassing every handler so a
+// starting state can never be shaped by the code a test is checking. Only the named columns are
+// written, so a test saying nothing about password_hash leaves it null rather than inheriting a
+// default it did not ask for.
+//
+// This lives here rather than in each suite because the onboarding reset, the two sign-in paths, and
+// the wizard completion all need the same thing: an account put into a precise combination of
+// "has a password" and "has finished setup". Those two columns are the whole subject of that
+// feature, so the setup that arranges them belongs in one place.
+export async function seedUserAccount(
+  client: Client,
+  userId: string,
+  columns: UserRowSeed
+): Promise<void> {
+  const seconds = (value: Date | null | undefined) =>
+    value ? Math.floor(value.getTime() / 1000) : null
+
+  const assignments: Record<string, string | number | null> = {}
+  if ('avatarUrl' in columns) assignments.avatar_url = columns.avatarUrl ?? null
+  if ('createdAt' in columns) assignments.created_at = seconds(columns.createdAt)
+  if ('deactivatedAt' in columns) assignments.deactivated_at = seconds(columns.deactivatedAt)
+  if ('firstName' in columns) assignments.first_name = columns.firstName ?? null
+  if ('lastName' in columns) assignments.last_name = columns.lastName ?? null
+  if ('onboardedAt' in columns) assignments.onboarded_at = seconds(columns.onboardedAt)
+  if ('passwordHash' in columns) assignments.password_hash = columns.passwordHash ?? null
+  if (columns.role !== undefined) assignments.role = columns.role
+
+  const names = Object.keys(assignments)
+  if (names.length === 0) return
+
+  await client.execute({
+    sql: `UPDATE users SET ${names.map((name) => `${name} = ?`).join(', ')} WHERE id = ?`,
+    args: [...names.map((name) => assignments[name] ?? null), userId]
+  })
+}
+
+// The stored users row as the database holds it, column names and raw SQLite values. Every criterion
+// about what a reset touches and what it leaves alone reads through this rather than through a
+// handler, so the code under test is never also what reports on its own writes.
+export async function readUserRow(
+  client: Client,
+  userId: string
+): Promise<Record<string, unknown> | undefined> {
+  const result = await client.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [userId] })
+  const row = result.rows[0]
+  return row ? Object.fromEntries(Object.entries(row)) : undefined
+}
+
+// Every tasks row, in a stable order, as raw column values. This is what "the tasks table is
+// unchanged" is asserted against: a count alone would pass while every row had been rewritten, so
+// the comparison has to be over the rows themselves including quota_wph_override.
+export async function readAllTaskRows(client: Client): Promise<Record<string, unknown>[]> {
+  const result = await client.execute('SELECT * FROM tasks ORDER BY id ASC')
+  return result.rows.map((row) => Object.fromEntries(Object.entries(row)))
+}
+
+// The stored settings rows for one user, raw. A reset deletes the row rather than rewriting it, so
+// the assertion is on rows returned rather than on any column value.
+export async function readSettingsRows(
+  client: Client,
+  userId: string
+): Promise<Record<string, unknown>[]> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM settings WHERE user_id = ?',
+    args: [userId]
+  })
+  return result.rows.map((row) => Object.fromEntries(Object.entries(row)))
+}
+
+// The stored category_quotas rows for one user, raw, in a stable order.
+export async function readCategoryQuotaRows(
+  client: Client,
+  userId: string
+): Promise<Record<string, unknown>[]> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM category_quotas WHERE user_id = ? ORDER BY category_id ASC',
+    args: [userId]
+  })
+  return result.rows.map((row) => Object.fromEntries(Object.entries(row)))
 }
 
 export async function countRows(client: Client, table: string): Promise<number> {

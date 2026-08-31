@@ -47,6 +47,19 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
 
   // A magic link cannot grant a session once the account has a password. This keeps a leaked or
   // replayed link inert after onboarding. Send them to sign in with their password instead.
+  //
+  // DO NOT move this rule onto onboarded_at. It is deliberately on a different column from the
+  // session flag a few lines below, and the two are not the same question. This one is about
+  // credentials, so it asks whether the account can already authenticate, and it has to stay on
+  // password_hash or a magic link would come back to life for an account whose owner has a
+  // password, which is a security regression. The flag below is about setup state and reads
+  // onboarded_at, which is what lets an admin who reset their own onboarding reach the wizard at
+  // all. Two rules, two columns, in one file, on purpose. A reader wondering why this file tests
+  // two different columns for what looks like the same thing has the answer here.
+  //
+  // server/api/magic-link/handlers/request.ts refuses to send a link to an account with a password
+  // for the same reason, and it stays on password_hash too. A reset account keeps its password, so
+  // it is correctly still outside the magic-link path.
   if (user!.passwordHash) {
     return sendRedirect(event, '/')
   }
@@ -64,7 +77,14 @@ export async function verifyMagicLink(event: H3Event, query: z.infer<typeof Veri
       firstName: user!.firstName,
       lastName: user!.lastName,
       avatarUrl: user!.avatarUrl,
-      onboarded: !!user!.passwordHash,
+      // Setup state, read from the stored column rather than inferred from the password. This
+      // computes false for every session this handler mints, because the redirect above already
+      // returned for any account that has a password and such an account is the only kind the old
+      // expression could have called onboarded. So nothing about today's behaviour changes here.
+      // It moves anyway, because leaving one site reading the password would keep the conflation
+      // alive in the one file where both rules sit next to each other, which is precisely where a
+      // later reader would collapse them back together.
+      onboarded: !!user!.onboardedAt,
       role: user!.role,
       lightTheme: preferences.lightTheme,
       darkTheme: preferences.darkTheme,
