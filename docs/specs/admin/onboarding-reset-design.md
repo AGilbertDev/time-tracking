@@ -168,7 +168,7 @@ UModal v-model:open="confirmOpen" scrollable
 **This is the part worth reading carefully, because `UModal` builds the dialog's accessible description
 from a prop and a named slot, and putting the text anywhere else is silent.**
 
-In [`Modal.vue`](../../../node_modules/@nuxt/ui/dist/runtime/components/Modal.vue) the header renders a
+In Nuxt UI 4.10.0's `Modal.vue` ([upstream source](https://github.com/nuxt/ui/blob/v4/src/runtime/components/Modal.vue)) the header renders a
 reka-ui `DialogDescription` only when `props.description` is set or the `#description` slot is filled.
 When neither is, the component still mounts an empty `DialogDescription` inside a `VisuallyHidden`
 wrapper, and reka-ui's `DialogContent` points `aria-describedby` at that element's id. So a modal whose
