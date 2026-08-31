@@ -6,8 +6,15 @@ The owner wants a fast way to walk through the first-run wizard again without re
 by hand. In their words, "I want a way to quick reset my onboarding process as admin", and on what
 it should do, "it resets all my settings and calls onboarding again". Asked whether it should be
 limited to development, they answered "for admins only", so this is a real product feature guarded
-by the admin role rather than a development-mode shortcut. Nothing in it is gated on
-`import.meta.dev` or on a `NODE_ENV` check in the code.
+by the admin role rather than a development-mode shortcut, and it is built to the standard of one.
+
+That sentence was written before the runtime switch existed, and the switch qualifies it rather than
+contradicting it. The owner later said the control would be turned off once the app is finished, so
+the feature gained a configuration key whose unset default does resolve through `import.meta.dev`.
+The distinction that matters is unchanged. The role check is the access rule and it is never
+environment-dependent, while the switch decides whether a finished product still carries a control
+built for building it. Turning the switch on in production would leave a fully guarded admin
+feature rather than exposing a development shortcut.
 
 The feature adds one nullable timestamp column that records when an account finished setup, moves
 the session's `onboarded` flag onto that column, and adds one admin-gated endpoint that clears the
@@ -250,8 +257,18 @@ alongside `cronSecret` and `avatarStorageDriver`. There is no `public` section i
 config today and this does not add one.
 
 ```
-onboardingResetEnabled: process.env.NODE_ENV !== 'production'
+onboardingResetEnabled: ''
 ```
+
+The default is an empty string rather than a boolean, and the resolution lives in
+`server/utils/onboardingReset.ts`, which returns true for `'true'`, false for `'false'`, and otherwise
+falls back to `import.meta.dev`. This follows the `avatarStorageDriver` entry beside it, where an
+empty default means decide by environment. It was specced as a boolean `process.env.NODE_ENV` check
+first and changed during the build, because an explicit parse is written down where it can be read
+and tested rather than depending on Nuxt coercing an environment string by the default's type, and
+because `import.meta.dev` is true only under `nuxt dev` where `NODE_ENV !== 'production'` is also
+true under `NODE_ENV=test` and when the variable is unset. The shipped form is the more fail-closed
+of the two.
 
 It is private rather than public because a private key is readable by the server, which is where the
 decision has to be made. The client is told the resolved answer through an existing payload, as set
@@ -492,10 +509,10 @@ database, how many production `users` rows have a null `created_at`, and what ti
 actually writes. Those are the owner's manual apply step. The pull request should record the row count
 the backfill reported, so the reconstruction is a recorded fact rather than an assumption.
 
-Also not verifiable here, that the production deploy actually bakes the flag off. The default is
-evaluated at build time from `NODE_ENV`, and this environment runs no production build, so the first
-deploy should be checked by confirming the section does not render for the admin on the live site
-before any `NUXT_ONBOARDING_RESET_ENABLED` variable is set.
+Also not verifiable here, that the production deploy actually bakes the flag off. The default resolves through
+`import.meta.dev`, which Nuxt substitutes as a literal at build time, and this environment runs no
+production build, so the first deploy should be checked by confirming the section does not render for
+the admin on the live site before any `NUXT_ONBOARDING_RESET_ENABLED` variable is set.
 
 ## Inputs
 
