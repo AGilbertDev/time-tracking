@@ -33,4 +33,4 @@ Copy `.env.example` to `.env` and fill in values.
 
 ## License
 
-Copyright (c) 2026 Alexandre Gilbert. All rights reserved. This code is published for viewing only. See [LICENSE](./LICENSE).
+All rights reserved, with one narrow permission. Anyone may install and run it as published to evaluate my work. That covers running it and nothing else, so not adopting it in your own projects, not adapting it, and not redistributing it. See [LICENSE](./LICENSE).
