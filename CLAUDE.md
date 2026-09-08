@@ -1,6 +1,5 @@
 # Project memory
 
-Personal conventions load from the shared recipe. Project-specific facts live in AGENTS.md.
+The always-on conventions arrive with the `workflow` plugin, so nothing is imported here. Project-specific facts live in AGENTS.md.
 
-@.recipes/CLAUDE.md
 @AGENTS.md

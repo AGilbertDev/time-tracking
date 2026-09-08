@@ -26,8 +26,10 @@ logs
 .env.*
 !.env.example
 
-# agent skills (downloaded, re-installable from .recipes)
-.claude/skills/
-skills-lock.json
+# Claude, local only. Everything shared arrives with the plugins.
 .claude/settings.local.json
-.claude/agents/
+.claude/worktrees/
+
+# Tests
+coverage
+.test-report
