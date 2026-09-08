@@ -87,6 +87,15 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
       not being measured at all rather than measured as low. Both are pre-existing and were noticed
       while fixing the quota engine's coverage.
 
+- [ ] **`fitAccountName` and `ACCOUNT_NAME_MAX_CHARS` have no acceptance criterion anywhere.**
+      `docs/specs/settings/profile-menu-popover.md` stops at "long values should truncate or wrap" and
+      explicitly calls that not a blocking criterion, so the abbreviation rules in `app/utils/account.ts`
+      are the module's own invention. They are now pinned by tests, including the French convention for
+      compound given names, `Marie-Hélène` shortening to `M.-H.` and `Jean Paul` to `J. P.`, which the
+      owner should confirm as a translator rather than inherit from a test. Found while covering that
+      file. The tests encode the module's declared contract, so if the intended rule differs they will
+      need changing, which is the right way round.
+
 - [ ] **Overall coverage is 67 percent, and the gate only ever weighs the files a pull request
       touched.** So a branch is held to 80 percent on what it changed while the untouched remainder is
       never asked, which means the number drifts down quietly and any branch that so much as brushes an
@@ -271,6 +280,13 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
       and was verified to produce foreign keys and indexes identical to migrations 0004, 0005, 0010 and
       0014. A harness built that way has no second copy to drift, which beats detecting drift after the
       fact. Porting `taskTestDb` onto it is the real fix and is still its own piece of work.
+      **Two gaps in the seeders, found while covering the admin handlers.** There is no allowlist seed
+      or reader at all, and `seedSettings` takes a timezone but no locale, so a suite needing either has
+      to write raw SQL of its own. The admin suites did exactly that in a local
+      `adminUsersFixtures.ts` rather than editing a shared helper while other work was in flight, which
+      is the right call for one branch and the wrong shape to leave permanently, since a fixture living
+      next to one suite is the next thing to drift. Fold both into `taskTestDb.ts` when the port above
+      happens.
 
 - [ ] **Every `error`-coloured control in the app fails WCAG 1.4.3 in light mode.** Measured on the two
       controls the admin onboarding reset adds, but neither the cause nor the blast radius is that
