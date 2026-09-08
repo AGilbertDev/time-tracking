@@ -8,6 +8,7 @@ import type { TaskListItem, TaskUpdateInput } from '../../../models/tasks'
 
 import { useDb } from '../../../db/index'
 import { tasks } from '../../../db/schema'
+import { stampDaySettings } from '../../../utils/stampDaySettings'
 import { readTaskForUser } from './projection'
 import {
   assertStatusFitsCategory,
@@ -126,12 +127,17 @@ export async function updateTask(
     else if (snapshot.outcome !== 'no-quota-for-category') values.quotaWphOverride = null
   }
 
+  // Whether this patch actually moves the task to another day. Two separate things below turn on it,
+  // so it is named once rather than spelled out twice and left to drift apart.
+  const movedToDate =
+    values.date !== undefined && values.date !== existing.date ? values.date : null
+
   // A task changing date is moving to another day, where its old sort_order was an ordinal in a
   // different list and means nothing, so carrying it over would drop the task at an arbitrary
   // position. Reassigning keeps one invariant true everywhere: sort_order is always the server's
   // answer relative to the row's own day.
-  if (values.date !== undefined && values.date !== existing.date) {
-    values.sortOrder = await nextSortOrder(user.id, values.date)
+  if (movedToDate !== null) {
+    values.sortOrder = await nextSortOrder(user.id, movedToDate)
   }
 
   // updatedAt is set by hand on every mutation. $defaultFn fires on insert only, so an update that
@@ -140,6 +146,18 @@ export async function updateTask(
     .update(tasks)
     .set({ ...values, updatedAt: new Date() })
     .where(and(eq(tasks.id, id), eq(tasks.userId, user.id)))
+
+  // The day settings snapshot, and only when the task actually moved. A patch that changes a word
+  // count has no new day to record, so the table is left alone rather than restamped. The date the
+  // task left keeps its row, because a day that once held work is a day whose settings were real, and
+  // a task coming back to it then resolves what that day was measured against rather than today's
+  // figures.
+  //
+  // This runs after the update rather than beside the sort_order reassignment above, so the task is
+  // already committed when the stamp is attempted and a failed stamp cannot cost the user the edit.
+  if (movedToDate !== null) {
+    await stampDaySettings(user.id, movedToDate)
+  }
 
   const updated = await readTaskForUser(user.id, id)
 

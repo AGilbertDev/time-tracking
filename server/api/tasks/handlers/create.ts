@@ -4,6 +4,7 @@ import type { TaskCreateInput, TaskListItem } from '../../../models/tasks'
 
 import { useDb } from '../../../db/index'
 import { tasks } from '../../../db/schema'
+import { stampDaySettings } from '../../../utils/stampDaySettings'
 import { readTaskForUser } from './projection'
 import {
   assertStatusFitsCategory,
@@ -77,6 +78,12 @@ export async function createTask(event: H3Event, body: TaskCreateInput): Promise
     })
     .returning({ id: tasks.id })
     .get()
+
+  // The day settings snapshot. The task is already committed, so a failure to record the day cannot
+  // refuse the work, which is why this is awaited after the insert rather than before it and why the
+  // stamp swallows its own errors. The date stamped is the task's own, not today, so a task created
+  // for a future day carries that day's settings.
+  await stampDaySettings(user.id, body.date)
 
   const created = await readTaskForUser(user.id, inserted.id)
 

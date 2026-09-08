@@ -160,6 +160,43 @@ const CATEGORY_QUOTAS_INDEX_DDL = `
     ON category_quotas (user_id, category_id)
 `
 
+// The day_settings table as migration 0014 leaves it, per AC1 of
+// docs/specs/planning/day-settings-snapshot.md. One row per user and date holding the work minutes,
+// the work days and the buffer that were in force on that day, so a settings change made next month
+// can never reach backward into a figure that has already been reported.
+//
+// work_days is text because it holds a JSON array, the same representation settings.work_days and
+// work_schedule.work_days already use, and it is read back through the same defensive coercion. That
+// is what makes the corrupt-value case in AC9 expressible as a fixture rather than only as prose.
+//
+// buffer_minutes is stamped even though the settings row carries no such column yet, per AC5, so the
+// column exists with the documented default of 60 and adding the real setting later needs no
+// migration.
+//
+// This DDL has to keep matching the live table for the same reason TASKS_DDL does. A harness missing
+// a column the shipped stamp writes leaves every suite green while the write throws against the real
+// database.
+const DAY_SETTINGS_DDL = `
+  CREATE TABLE day_settings (
+    id text PRIMARY KEY NOT NULL,
+    user_id text NOT NULL,
+    date text NOT NULL,
+    work_minutes integer NOT NULL,
+    work_days text DEFAULT '[1,2,3,4,5]' NOT NULL,
+    buffer_minutes integer DEFAULT 60 NOT NULL,
+    created_at integer,
+    updated_at integer,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE cascade
+  )
+`
+
+// The unique index AC1 names. It is what makes the second task created on the same fresh day a no-op
+// rather than a duplicate stamp, so a suite exercising two writes in a row conflicts the way
+// production does instead of quietly accumulating rows.
+const DAY_SETTINGS_INDEX_DDL = `
+  CREATE UNIQUE INDEX day_settings_user_id_date_idx ON day_settings (user_id, date)
+`
+
 export type TaskTestDb = {
   client: Client
   db: ReturnType<typeof drizzle>
@@ -222,6 +259,8 @@ export async function createTaskTestDb(options: TaskTestDbOptions = {}): Promise
     WORK_SCHEDULE_DDL,
     CATEGORY_QUOTAS_DDL,
     CATEGORY_QUOTAS_INDEX_DDL,
+    DAY_SETTINGS_DDL,
+    DAY_SETTINGS_INDEX_DDL,
     MAGIC_LINK_TOKENS_DDL,
     ALLOWED_EMAILS_DDL
   ]) {
@@ -298,15 +337,88 @@ export async function seedTask(client: Client, row: TaskRowSeed): Promise<string
 // Inserts a settings row so a test can pin the timezone the overdue comparison is made in. There is no
 // quota argument, because the global quota_wph column retired in migration 0011 and a quota is now one
 // row per category in category_quotas.
+//
+// The optional fourth argument sets the two work columns the day settings snapshot stamps from. It is
+// optional so every existing caller keeps the column defaults of 450 minutes and Monday through
+// Friday, and a suite asserting that a stamp carries the user's own current settings can hand it
+// figures that are visibly not those defaults.
 export async function seedSettings(
   client: Client,
   userId: string,
-  timezone: string
+  timezone: string,
+  work: { dailyWorkMinutes?: number; workDays?: readonly number[] } = {}
+): Promise<void> {
+  const columns = ['id', 'user_id', 'timezone']
+  const args: (number | string)[] = [`settings-${userId}`, userId, timezone]
+
+  if (work.dailyWorkMinutes !== undefined) {
+    columns.push('daily_work_minutes')
+    args.push(work.dailyWorkMinutes)
+  }
+  if (work.workDays !== undefined) {
+    columns.push('work_days')
+    args.push(JSON.stringify(work.workDays))
+  }
+
+  await client.execute({
+    sql: `INSERT INTO settings (${columns.join(', ')})
+          VALUES (${columns.map(() => '?').join(', ')})`,
+    args
+  })
+}
+
+// Inserts a day_settings row with raw SQL, bypassing every stamp path so a starting state can never
+// be shaped by the code a test is checking. work_days is passed as the raw stored text rather than as
+// an array, because the corrupt-value case in AC9 has to be able to store something no serializer
+// would ever produce.
+export async function seedDaySettings(
+  client: Client,
+  userId: string,
+  date: string,
+  values: { bufferMinutes?: number; workDays?: string; workMinutes?: number } = {}
 ): Promise<void> {
   await client.execute({
-    sql: 'INSERT INTO settings (id, user_id, timezone) VALUES (?, ?, ?)',
-    args: [`settings-${userId}`, userId, timezone]
+    sql: `INSERT INTO day_settings (id, user_id, date, work_minutes, work_days, buffer_minutes)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      `day-${userId}-${date}`,
+      userId,
+      date,
+      values.workMinutes ?? 450,
+      values.workDays ?? '[1,2,3,4,5]',
+      values.bufferMinutes ?? 60
+    ]
   })
+}
+
+// Every stored day_settings row for one user, raw, ordered by date. What a stamp wrote and what it
+// left alone are both read through this rather than through any handler, so the code under test is
+// never also what reports on its own writes.
+export async function readDaySettingsRows(
+  client: Client,
+  userId: string
+): Promise<Record<string, unknown>[]> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM day_settings WHERE user_id = ? ORDER BY date ASC',
+    args: [userId]
+  })
+  return result.rows.map((row) => Object.fromEntries(Object.entries(row)))
+}
+
+// The stored day_settings row for one user and date, or undefined when that day carries none. The
+// absence is as load-bearing as the presence here, since a day nobody worked has no row and still
+// resolves, so the helper reports it as undefined rather than throwing.
+export async function readDaySettingsRow(
+  client: Client,
+  userId: string,
+  date: string
+): Promise<Record<string, unknown> | undefined> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM day_settings WHERE user_id = ? AND date = ?',
+    args: [userId, date]
+  })
+  const row = result.rows[0]
+  return row ? Object.fromEntries(Object.entries(row)) : undefined
 }
 
 // Inserts a work_schedule row. The erasure path has to clear this table as well as tasks, so a test
@@ -371,14 +483,122 @@ export async function deactivateUser(
 //
 // The log records the attempt rather than the success, so a forced failure still shows where the
 // handler had got to when it stopped. That is the point of the ordering assertions.
+// What a select statement is about to do, handed to the beforeSelect hook below. `table` is whatever
+// the chain named through .from(), and `issued` is the same live write log the `order` array
+// collects, so a hook can fire on one specific read of a request rather than on every read.
+export type InstrumentedSelect = {
+  issued: readonly string[]
+  table?: string
+}
+
+export type InstrumentedDbHooks = {
+  // Runs immediately before a select executes, and is awaited, so the hook can issue statements of
+  // its own against the same database first.
+  //
+  // That is what makes a row vanishing between two of a handler's own statements reproducible. The
+  // task update writes its row and then reads it back to return it in list shape, and a second tab
+  // deleting the row inside that window is a real production race rather than an impossibility. It
+  // is forced here, at the same infrastructure boundary the rest of this helper mocks at, so every
+  // statement either side of the chosen moment still runs for real. Stubbing the handler's own
+  // read-back instead would assert that a stubbed undefined produces a 404, which is testing the
+  // test.
+  beforeSelect?: (statement: InstrumentedSelect) => Promise<void> | void
+}
+
+// The builder methods that continue a select chain, and the ones that end it by executing.
+//
+// `then` is deliberately in neither list. Drizzle's builders are thenable, so a caller can await one
+// directly, and a wrapper that returned a promise from `then` rather than invoking the callbacks it
+// was handed would break the protocol and hang the await. It therefore falls through to the
+// pass-through branch below and runs unwrapped, which is safe: every read the hook needs to observe
+// ends in an explicit terminal.
+const SELECT_CHAIN = new Set([
+  '$dynamic',
+  'from',
+  'fullJoin',
+  'groupBy',
+  'having',
+  'innerJoin',
+  'leftJoin',
+  'limit',
+  'offset',
+  'orderBy',
+  'rightJoin',
+  'where'
+])
+const SELECT_TERMINAL = new Set(['all', 'execute', 'get', 'run', 'values'])
+
+// The table a select names, or undefined when the source is something with no name of its own such
+// as a subquery. Read rather than guessed, and never allowed to throw, since the instrument must not
+// be what breaks the statement it is watching.
+function selectSourceName(source: unknown): string | undefined {
+  try {
+    return getTableName(source as never)
+  } catch {
+    return undefined
+  }
+}
+
+// Follows one select chain so the hook can run at the instant the statement executes rather than at
+// the instant it was composed. Every method is invoked on the real builder, so the statement itself
+// is untouched and only its timing is observed.
+function wrapSelectChain(
+  node: object,
+  statement: InstrumentedSelect,
+  hook: (statement: InstrumentedSelect) => Promise<void> | void
+): object {
+  return new Proxy(node, {
+    get(target, property) {
+      const value = Reflect.get(target, property)
+      if (typeof value !== 'function') return value
+
+      const name = String(property)
+      const method = value as (...args: never[]) => unknown
+
+      if (SELECT_TERMINAL.has(name)) {
+        return async (...args: never[]) => {
+          await hook(statement)
+          return method.apply(target, args)
+        }
+      }
+
+      if (SELECT_CHAIN.has(name)) {
+        return (...args: never[]) => {
+          const result = method.apply(target, args)
+          const next =
+            name === 'from' ? { ...statement, table: selectSourceName(args[0]) } : statement
+          return result && typeof result === 'object'
+            ? wrapSelectChain(result as object, next, hook)
+            : result
+        }
+      }
+
+      return method.bind(target)
+    }
+  })
+}
+
 export function instrumentedDb(
   db: unknown,
   order: string[],
-  failOn?: 'category_quotas' | 'settings' | 'tasks' | 'users'
+  failOn?: 'category_quotas' | 'settings' | 'tasks' | 'users',
+  hooks?: InstrumentedDbHooks
 ): unknown {
   return new Proxy(db as object, {
     get(target, property) {
       const value = Reflect.get(target, property)
+
+      // Reads are only followed when a caller asked to be told about them, so every existing suite
+      // sees the same object it always did and the `order` log keeps recording writes alone.
+      if (property === 'select' && hooks?.beforeSelect) {
+        const hook = hooks.beforeSelect
+        return (...args: never[]) => {
+          const builder = (value as (...a: never[]) => unknown).apply(target, args)
+          return builder && typeof builder === 'object'
+            ? wrapSelectChain(builder as object, { issued: order }, hook)
+            : builder
+        }
+      }
 
       if (property === 'update' || property === 'delete' || property === 'insert') {
         return (table: never) => {

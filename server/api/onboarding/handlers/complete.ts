@@ -8,6 +8,7 @@ import type { CompleteOnboardingSchema } from '../../../models/onboarding'
 import { useDb } from '../../../db/index'
 import { settings, users } from '../../../db/schema'
 import { isPasswordBreached } from '../../../utils/checkPasswordBreached'
+import { refreshDaySettings } from '../../../utils/stampDaySettings'
 
 export async function completeOnboarding(
   event: H3Event,
@@ -86,6 +87,13 @@ export async function completeOnboarding(
   } else {
     await db.insert(settings).values({ userId: user.id, ...settingsValues })
   }
+
+  // Bring the day settings snapshot into line, for today and every day still ahead. This is the only
+  // other path that writes daily_work_minutes and work_days, so leaving it out would let a re-run of
+  // the wizard after an admin onboarding reset go through on different hours while today's already
+  // stamped row kept the old figure, with nothing left to correct it. Same rule as the settings save
+  // and the same reason a past day is never touched.
+  await refreshDaySettings(user.id)
 
   // Read back the persisted preferences through the single read path so the session and
   // cookies reflect exactly what the database holds.

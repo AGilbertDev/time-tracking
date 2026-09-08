@@ -5,6 +5,7 @@ import { useDb } from '../../db/index'
 import {
   allowedEmails,
   categoryQuotas,
+  daySettings,
   magicLinkTokens,
   settings,
   tasks,
@@ -80,14 +81,15 @@ export default defineEventHandler(async (event) => {
   // and the outcome never depends on a cascade. A deactivated account is normally already off the
   // allowlist, but any lingering row is removed defensively by email.
   //
-  // DO NOT remove the tasks, work_schedule, or category_quotas deletes as redundant. They look
-  // redundant, because all three tables declare onDelete('cascade') in server/db/schema.ts, and they
-  // are load-bearing anyway. That cascade only fires when PRAGMA foreign_keys is ON, nothing in this
-  // repo issues that pragma, and the schema comment on the tasks foreign key records honestly that it
+  // DO NOT remove the tasks, work_schedule, category_quotas, or day_settings deletes as redundant.
+  // They look redundant, because all four tables declare onDelete('cascade') in server/db/schema.ts,
+  // and they are load-bearing anyway. That cascade only fires when PRAGMA foreign_keys is ON,
+  // nothing in this repo issues that pragma, and the schema comment on the tasks foreign key records
+  // honestly that it
   // was probed against the development database on 2026-07-29 and that production was never probed.
   // So on the one database where a failed erasure actually matters, the cascade is unverified. This
   // endpoint's entire job is erasure, and a reader seeing only some of the tables named would
-  // reasonably conclude those are all the tables involved, which was false. Naming all seven removes
+  // reasonably conclude those are all the tables involved, which was false. Naming all eight removes
   // the dependency on an unverified platform default rather than adding behaviour, and it stays
   // correct whether the pragma is on or off.
   //
@@ -101,6 +103,12 @@ export default defineEventHandler(async (event) => {
   // to outlive the account either. Its table arrived after the other six, which is why this delete
   // reads as an addition rather than as part of the original list.
   await db.delete(categoryQuotas).where(inArray(categoryQuotas.userId, ids))
+  // The day settings snapshot records how long each of the user's own working days was, which is a
+  // description of their working life and has no reason to outlive the account. Its table arrived
+  // with the quota engine, after the seven above, which is why this delete reads as a second
+  // addition. It is explicit for the same reason every other delete here is, that the cascade
+  // depends on a pragma nothing in this repo issues.
+  await db.delete(daySettings).where(inArray(daySettings.userId, ids))
   await db.delete(settings).where(inArray(settings.userId, ids))
   await db.delete(magicLinkTokens).where(inArray(magicLinkTokens.email, emails))
   await db.delete(allowedEmails).where(inArray(allowedEmails.email, emails))

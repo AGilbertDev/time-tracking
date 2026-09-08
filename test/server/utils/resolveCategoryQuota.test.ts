@@ -230,6 +230,110 @@ describe('resolveCategoryQuota', () => {
       })
     })
   })
+
+  describe('a stored category figure that cannot be a divisor', () => {
+    // The ride-along fix recorded in the edge-case list of
+    // docs/specs/planning/quota-engine.md: "resolveTaskQuota guards the task's own
+    // quota_wph_override but resolveCategoryQuota returns a stored category_quotas figure untouched,
+    // so a zero row there reaches the division unguarded. An earlier draft claimed the guard covered
+    // both, which was wrong. A one-line ride-along fix makes the category figure fall through as the
+    // override does."
+    //
+    // So this describe is the same reasoning as "a stored figure that cannot be a divisor" further
+    // down this file, applied one tier lower. A quota is the divisor in words over quota, so a stored
+    // 0 is not a small quota, it is a division by zero waiting for the engine to read it. No API path
+    // can write one, because quotaWphSchema floors the field at 1 on every boundary that accepts it,
+    // so this is latent rather than live and it is defence against a row that arrived some other way.
+    //
+    // "as the override does" fixes the shape of the guard rather than only its two named values. The
+    // override tier admits a figure strictly greater than zero, which rejects a NaN as well, so NaN
+    // is in the table below for the same reason it is in the table for the tier above. An unusable
+    // value takes the path a NULL takes, which is the next tier down, so the answer is the shipped
+    // default rather than none.
+    const UNUSABLE_STORED_FIGURES: Array<[string, number]> = [
+      ['zero', 0],
+      ['a negative figure', -100],
+      ['NaN', Number.NaN]
+    ]
+
+    it.each(UNUSABLE_STORED_FIGURES)(
+      'falls through to the shipped default when the stored figure is %s',
+      (_label, quotaWph) => {
+        expect(resolveCategoryQuota('translation', [record('translation', quotaWph)])).toEqual({
+          quotaWph: 240,
+          source: 'default'
+        })
+      }
+    )
+
+    // Each trackable category falls through to its own shipped figure rather than to translation's,
+    // so the fix cannot be written as one hardcoded number.
+    it.each(SHIPPED_DEFAULTS)(
+      'falls through to %s own shipped figure of %i rather than to another category',
+      (categoryId, expected) => {
+        expect(resolveCategoryQuota(categoryId, [record(categoryId, 0)])).toEqual({
+          quotaWph: expected,
+          source: 'default'
+        })
+      }
+    )
+
+    // The two answers this must never give, stated as their own case so a regression says which of
+    // the two failures happened. Handing back the unusable figure is the division this fix exists to
+    // prevent, and returning none would hide a shipped quota the category plainly has.
+    it.each(UNUSABLE_STORED_FIGURES)(
+      'never reports %s as the figure and never returns none for a trackable category',
+      (_label, quotaWph) => {
+        const records = [record('translation', quotaWph)]
+
+        expect(resolveCategoryQuota('translation', records)).not.toBeNull()
+        expect(resolveCategoryQuota('translation', records)?.source).not.toBe('user')
+        expect(resolveCategoryQuota('translation', records)?.quotaWph).not.toBe(quotaWph)
+      }
+    )
+
+    // The boundary the condition turns on, so a floor written as greater than 1 would fail here
+    // rather than pass quietly. 1 is a legal stored figure and it wins, 0 is not and it does not.
+    it('keeps a stored 1 while a stored 0 falls through', () => {
+      expect(resolveCategoryQuota('translation', [record('translation', 1)])).toMatchObject({
+        quotaWph: 1,
+        source: 'user'
+      })
+      expect(resolveCategoryQuota('translation', [record('translation', 0)])).toMatchObject({
+        quotaWph: 240,
+        source: 'default'
+      })
+    })
+
+    // The gate still comes first, so an unusable stored figure on a non-trackable category resolves
+    // to none rather than falling through to anything. There is no shipped figure to fall to, and the
+    // fix must not turn one into an invention.
+    it.each(NON_TRACKABLE_IDS)(
+      'still returns none for the non-trackable %s carrying a zero stored figure',
+      (categoryId) => {
+        expect(resolveCategoryQuota(categoryId, [record(categoryId, 0)])).toBeNull()
+      }
+    )
+
+    it.each(NON_TRACKABLE_IDS)(
+      'still returns none for the non-trackable %s carrying a negative stored figure',
+      (categoryId) => {
+        expect(resolveCategoryQuota(categoryId, [record(categoryId, -100)])).toBeNull()
+      }
+    )
+
+    // An unusable row for one category cannot reach another category's answer, so the fall-through
+    // reads the shipped figure rather than any other stored row.
+    it('leaves another category own stored figure alone', () => {
+      const records = [record('translation', 0), record('proofreading', 1800)]
+
+      expect(resolveCategoryQuota('translation', records)?.quotaWph).toBe(240)
+      expect(resolveCategoryQuota('proofreading', records)).toEqual({
+        quotaWph: 1800,
+        source: 'user'
+      })
+    })
+  })
 })
 
 describe('resolveTaskQuota', () => {
@@ -405,6 +509,29 @@ describe('resolveTaskQuota', () => {
     it('falls through to the shipped default when the user has no row', () => {
       expect(resolveTaskQuota({ category: 'proofreading' }, [])).toEqual({
         quotaWph: 2000,
+        source: 'default'
+      })
+    })
+
+    // Both tiers unusable at once, which is the path the quota engine actually reads. A task carrying
+    // no figure of its own, whose category row holds a figure that cannot be a divisor, resolves the
+    // shipped default rather than the zero. This is the case the engine's AC11 block depends on: it is
+    // the only route by which a zero could have reached the division, and after the ride-along fix it
+    // no longer can.
+    it.each([
+      ['zero', 0],
+      ['a negative figure', -100]
+    ])('resolves the shipped default when the stored category figure is %s', (_label, quotaWph) => {
+      expect(
+        resolveTaskQuota({ category: 'translation' }, [record('translation', quotaWph)])
+      ).toEqual({ quotaWph: 240, source: 'default' })
+    })
+
+    it('resolves the shipped default when both the task figure and the stored row are unusable', () => {
+      const task = { category: 'translation', quotaWphOverride: 0 }
+
+      expect(resolveTaskQuota(task, [record('translation', 0)])).toEqual({
+        quotaWph: 240,
         source: 'default'
       })
     })

@@ -227,6 +227,32 @@ export function getWeekDays(date: string): string[] {
   return Array.from({ length: 7 }, (_unused, index) => addDays(from, index))
 }
 
+// The calendar month containing `date`, `from` its first day and `to` its last, both inclusive and
+// in the same shape getWeekRange returns, so a caller reads one contract for all four stat periods
+// rather than a different one per period.
+//
+// The last day is derived rather than looked up in a table of month lengths, by taking day 0 of the
+// following month, which UTC resolves to the last day of this one. That is what makes February
+// correct in a leap year and in an ordinary one with no leap rule written here.
+export function getMonthRange(date: string): WeekRange {
+  const start = toUtcDate(date)
+  const year = start.getUTCFullYear()
+  const month = start.getUTCMonth()
+
+  return {
+    from: toYmd(new Date(Date.UTC(year, month, 1))),
+    to: toYmd(new Date(Date.UTC(year, month + 1, 0)))
+  }
+}
+
+// The calendar year containing `date`, `from` its 1 January and `to` its 31 December, inclusive.
+// Both ends are fixed dates in every year, leap or not, so nothing here is derived from a length.
+export function getYearRange(date: string): WeekRange {
+  const year = toUtcDate(date).getUTCFullYear()
+
+  return { from: `${year}-01-01`, to: `${year}-12-31` }
+}
+
 // Whether the weekday of `date`, numbered 0 for Sunday through 6 for Saturday, is one of the user's
 // work days. An empty `workDays` makes every day an off day.
 export function isWorkDay(date: string, workDays: readonly number[]): boolean {
@@ -425,6 +451,38 @@ export const DEFAULT_SCHEDULE: ResolvedSchedule = {
   bufferMinutes: 60
 }
 
+// Parses a stored `work_days` JSON array defensively. The column is text in three tables now
+// (settings, work_schedule and day_settings), so a stored value can be corrupt, hand-edited, or
+// legacy, and every reader needs the same answer for the same bad input.
+//
+// A non-JSON or non-array value falls back to the default set. Any entry that is not an integer 0
+// through 6 is dropped, duplicates are removed, and a legitimately empty array is preserved as an
+// empty set, which means a week with no work days and is a real setting rather than a corrupt one.
+//
+// This lives here because it had been copied byte for byte into loadWorkSettings and
+// loadWorkSchedule, and the day settings snapshot would have been a third copy. It is pure, so the
+// day settings resolver can reach it without reaching a database.
+export function coerceWorkDays(raw: string): number[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return [...DEFAULT_SCHEDULE.workDays]
+  }
+
+  if (!Array.isArray(parsed)) return [...DEFAULT_SCHEDULE.workDays]
+
+  const seen = new Set<number>()
+  const days: number[] = []
+  for (const entry of parsed) {
+    if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 0 || entry > 6) continue
+    if (seen.has(entry)) continue
+    seen.add(entry)
+    days.push(entry)
+  }
+  return days
+}
+
 // The work schedule in effect on `date`, resolved from the user's history. A record applies from
 // its effectiveFrom up to but not including the next record's, so the value for a date is the
 // record with the greatest effectiveFrom that is on or before that date (an inclusive lower bound,
@@ -455,6 +513,26 @@ export function resolveSchedule(
     workDays: [...winner.workDays],
     bufferMinutes: winner.bufferMinutes
   }
+}
+
+// Whether any schedule record is in force on or before `date`, which is to say whether
+// resolveSchedule above has a record to answer with at all.
+//
+// This exists because resolveSchedule cannot say so itself. It returns DEFAULT_SCHEDULE for an empty
+// history and for a date preceding every record, so its answer alone cannot distinguish "no record
+// applies" from "a record applies and happens to hold the default figures". A caller that needs to
+// fall through to something else when the history has nothing to say, as the day settings resolver
+// does, has to ask that question separately.
+//
+// The bound is inclusive and the comparison is a string comparison, both matching resolveSchedule
+// exactly, so the two can never disagree about whether a record applies. It is here rather than in
+// the caller precisely so that stays true: the effective-dating rule lives in this file and is not
+// restated anywhere else. Pure, DB-free, and order-independent of the input.
+export function hasScheduleOnOrBefore(
+  records: readonly WorkScheduleRecord[],
+  date: string
+): boolean {
+  return records.some((record) => record.effectiveFrom <= date)
 }
 
 // --- day capacity (PLAN-05) ----------------------------------------------------------------------

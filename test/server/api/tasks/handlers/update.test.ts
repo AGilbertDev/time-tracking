@@ -8,6 +8,7 @@ import type { TaskTestDb } from '../../../../helpers/taskTestDb'
 import {
   countTasks,
   createTaskTestDb,
+  instrumentedDb,
   OTHER_USER_ID,
   OWNER_ID,
   readStoredRow,
@@ -1024,5 +1025,116 @@ describe('updateTask and the notes column (AC11, AC12)', () => {
         status: null
       })
     })
+  })
+})
+
+// The second not-found throw in updateTask, the one after the read-back, per AC4 of
+// docs/specs/planning/task-write-api.md.
+//
+// The handler writes the update and then reads the row back so the response is resolved exactly as
+// the list endpoint would have resolved it. Another client deleting the row inside that window is a
+// real production race rather than an impossibility, and it is the only path to that throw, so
+// nothing reached it and the throw could have been deleted with the rest of this file still green.
+//
+// The delete is forced at the database boundary, through the instrumentedDb proxy this helper
+// already exists to provide, at the moment the read-back select is issued. Every statement either
+// side of that moment runs for real against the real database, so the partial state the handler is
+// left holding is the partial state production would leave it holding. Stubbing readTaskForUser
+// instead would assert that a stubbed undefined produces a 404, which is testing the test.
+describe('updateTask when the row is deleted between the update and the read-back (AC4)', () => {
+  const order: string[] = []
+
+  // Armed per case rather than always on, because the same instrument has to be able to show the
+  // request succeeding. It disarms itself after firing so a single request cannot lose its row
+  // twice, and the counter is what proves the race was actually forced rather than assumed.
+  let deleteOnReadBack = false
+  let deletesForced = 0
+
+  beforeEach(async () => {
+    order.length = 0
+    deleteOnReadBack = false
+    deletesForced = 0
+
+    dbRef.current = instrumentedDb(harness.db, order, undefined, {
+      beforeSelect: async ({ issued, table }) => {
+        // The read-back and nothing else: a select on tasks issued after the UPDATE statement has
+        // already gone out. The handler's own first read of the row happens before the UPDATE, and
+        // the settings read inside the projection names another table.
+        if (!deleteOnReadBack || table !== 'tasks' || !issued.includes('update:tasks')) return
+
+        deleteOnReadBack = false
+        deletesForced += 1
+        await client.execute({ sql: 'DELETE FROM tasks WHERE id = ?', args: ['task-1'] })
+      }
+    })
+
+    await seedTask(client, {
+      id: 'task-1',
+      date: '2026-07-20',
+      category: 'translation',
+      client: 'Acme'
+    })
+  })
+
+  it('returns the patched row when nothing deletes it', async () => {
+    // The positive control the two race cases are read against. A 404 arriving because the
+    // instrument broke every select would satisfy them for the wrong reason.
+    const updated = await updateTask(event, 'task-1', patch({ client: 'Beta' }))
+
+    expect(updated).toMatchObject({ id: 'task-1', client: 'Beta' })
+    expect(order).toContain('update:tasks')
+    expect(deletesForced).toBe(0)
+  })
+
+  it('returns 404 when the row is deleted between the update and the read-back', async () => {
+    expect.assertions(3)
+    deleteOnReadBack = true
+
+    await expect(updateTask(event, 'task-1', patch({ client: 'Beta' }))).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'task_not_found'
+    })
+
+    // The race landed where it was aimed: the UPDATE went out first, and the row was gone by the
+    // time the handler read it back.
+    expect(order).toContain('update:tasks')
+    expect(deletesForced).toBe(1)
+  })
+
+  it('returns the same status and message a missing id returns, so the two are indistinguishable from outside', async () => {
+    expect.assertions(3)
+
+    const missing = await updateTask(event, 'no-such-task', patch({ client: 'Beta' })).catch(
+      (error) => error
+    )
+
+    deleteOnReadBack = true
+    const raced = await updateTask(event, 'task-1', patch({ client: 'Beta' })).catch(
+      (error) => error
+    )
+
+    expect(deletesForced).toBe(1)
+    expect({ statusCode: missing.statusCode, statusMessage: missing.statusMessage }).toEqual({
+      statusCode: 404,
+      statusMessage: 'task_not_found'
+    })
+    // Read as one object rather than as two separate status assertions, because the property being
+    // checked is that nothing observable differs between the two. A caller that could tell them
+    // apart could learn which ids are real by patching them.
+    expect({ statusCode: raced.statusCode, statusMessage: raced.statusMessage }).toEqual({
+      statusCode: missing.statusCode,
+      statusMessage: missing.statusMessage
+    })
+  })
+
+  it('leaves no row behind after the read-back 404, so the patch is still never an upsert', async () => {
+    expect.assertions(2)
+    deleteOnReadBack = true
+
+    await expect(updateTask(event, 'task-1', patch({ client: 'Beta' }))).rejects.toThrow()
+
+    // The handler does not put the row back and does not create a replacement. The row the other
+    // client deleted stays deleted, which is the outcome the client already handles.
+    expect(await countTasks(client)).toBe(0)
   })
 })
