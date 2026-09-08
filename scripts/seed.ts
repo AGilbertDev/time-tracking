@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/libsql'
 import {
   allowedEmails,
   categoryQuotas,
+  daySettings,
   settings,
   tasks,
   users,
@@ -578,6 +579,10 @@ weeks.forEach((weekDays, weekIndex) => {
 const deletedTasks = await db.delete(tasks).where(eq(tasks.userId, ownerId))
 const deletedSchedule = await db.delete(workSchedule).where(eq(workSchedule.userId, ownerId))
 const deletedQuotas = await db.delete(categoryQuotas).where(eq(categoryQuotas.userId, ownerId))
+// The day settings snapshot goes too. A stamp is written by the task write path, so a re-run that
+// left them behind would keep stamps for days whose tasks had just been replaced, and those stale
+// figures feed the very scheduled and unaccounted minutes a re-seeded database exists to check.
+const deletedDaySettings = await db.delete(daySettings).where(eq(daySettings.userId, ownerId))
 
 // Insert in chunks. A single statement binds one parameter per column per row, and the whole span is
 // well over a hundred rows, so chunking keeps the statement under any SQLite variable limit rather
@@ -634,7 +639,8 @@ const to = weeks.at(-1)![6]!
 
 console.log(
   `Deleted ${deletedTasks.rowsAffected} task(s), ${deletedSchedule.rowsAffected} ` +
-    `work_schedule row(s), and ${deletedQuotas.rowsAffected} category_quotas row(s) for ${ownerEmail}.`
+    `work_schedule row(s), ${deletedQuotas.rowsAffected} category_quotas row(s), and ` +
+    `${deletedDaySettings.rowsAffected} day_settings row(s) for ${ownerEmail}.`
 )
 console.log(
   `Seeded ${rows.length} tasks across ${weeks.length} weeks, ${from} to ${to} (today ${today}, ` +

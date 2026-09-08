@@ -63,8 +63,19 @@ export function resolveCategoryQuota(
 ): ResolvedCategoryQuota | null {
   if (!isTrackableCategory(categoryId)) return null
 
+  // A stored figure has to be a usable divisor before it wins, exactly as the task's own figure does
+  // in resolveTaskQuota below. An unusable value is treated as no figure at all, so the category
+  // falls through to its shipped default rather than handing the quota engine a zero to divide words
+  // by. The comparison is `> 0` rather than `!== 0`, which also rejects a NaN, since NaN fails every
+  // comparison.
+  //
+  // This guard was missing while the override's was present, which was an asymmetry rather than a
+  // decision, and the quota engine is the first runtime caller that would have divided by the result.
+  // No such row can exist today, because quotaWphSchema floors the field at 1 at the write boundary,
+  // so this was latent rather than live. Do not remove it as dead defensive code: the whole point of
+  // this file's fail-closed direction is that a bad divisor never reaches the division.
   const stored = records.find((record) => record.categoryId === categoryId)
-  if (stored) return { quotaWph: stored.quotaWph, source: 'user' }
+  if (stored && stored.quotaWph > 0) return { quotaWph: stored.quotaWph, source: 'user' }
 
   // The shipped default, and null when there is none. A user-created category from PLAN-30 has no
   // shipped number, so a trackable one with no stored row resolves to null rather than to a figure
@@ -90,10 +101,11 @@ export function resolveCategoryQuota(
 // inserted outside the write path, which today means the dev seed. All three are real, so the fallback
 // is live code rather than a leftover.
 //
-// This has no runtime caller. The write path resolves a category rather than a task, so PLAN-22 is
-// still the feature that reads this one. It is written down here with tests anyway, because the
-// resolution order is a decided rule and writing it once is what stops it being re-derived under
-// pressure later.
+// This now has a runtime caller. It was written with tests and none, because the resolution order is
+// a decided rule and writing it once is what stops it being re-derived under pressure, and the quota
+// engine (server/utils/computeQuotaStats.ts) is the feature that was named as its eventual reader.
+// That engine asks this function for every task it measures, so the order below is live code on the
+// path of every reported figure rather than a rule kept warm for later.
 export function resolveTaskQuota(
   task: { category: unknown; quotaWphOverride?: number | null },
   records: readonly CategoryQuotaRecord[]

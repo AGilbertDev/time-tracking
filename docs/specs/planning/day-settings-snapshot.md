@@ -66,19 +66,40 @@ AC5. `buffer_minutes` is stamped even though `settings` carries no such column t
 `DEFAULT_SCHEDULE`'s 60 until a real setting exists, so adding that setting later needs no migration.
 
 AC6. The resolution order for any date is the day's own row, then the effective-dated `work_schedule`
-through the shipped `resolveSchedule`, then `DEFAULT_SCHEDULE`. A day nobody worked has no row and
-still resolves.
+through the shipped `resolveSchedule`, then the user's **current settings row**, then
+`DEFAULT_SCHEDULE`. A day nobody worked has no row and still resolves.
+
+The current settings tier was added on 2026-09-07 after code review. Without it an unstamped day
+answered with the shipped 7 h 30 rather than the hours actually set, so a six-hour day had every
+leftover overstated by 90 minutes per unstamped day and the same day reported 7 h 30 before its first
+task and the real figure after. Reaching for the live row does move the leftover on past days that
+were never logged, which is accepted rather than overlooked, since such a day holds no recorded work
+so the figure moving is noise where the shipped default was simply wrong. The same review found the
+dashboard capacity meter reads only `work_schedule` and so shows 7 h 30 whatever the setting says,
+which is pre-existing, not this feature's to fix, and recorded in `docs/TODO.md`.
 
 AC7. A failed stamp never blocks a task write. The task still lands and the failure is logged, because
 refusing to record real work over a bookkeeping row would police the user, which `spec.md` §2 forbids.
 
-AC8. The resolver is pure and database-free, taking a date, a day row or null, and the schedule
-records, so every criterion above is testable against fixtures with no database.
+AC8. The resolver is pure and database-free, taking a date, a day row or null, the schedule records,
+and the user's current settings or null, so every criterion is testable against fixtures with no
+database. Telling AC6's second tier from its third needs something the shared layer did not expose,
+since `resolveSchedule` answers with `DEFAULT_SCHEDULE` for an empty history and cannot say whether a
+record applied. `shared/planning.ts` gains an exported `hasScheduleOnOrBefore(records, date)`, keeping
+the rule in the file that owns effective dating, with the same inclusive lower bound.
 
 AC9. `work_days` is stored as JSON text and read through the same defensive coercion
-`loadWorkSchedule` already applies, so a corrupt value falls back rather than reaching the engine.
+`loadWorkSchedule` already applies, so a corrupt value falls back rather than reaching the engine. It
+falls back to that coercion's own default set and never to the next AC6 tier, because a row that
+exists is not a missing row. A legitimately empty array stays empty, meaning a week with no work days,
+which is a real setting rather than a corrupt one.
 
 AC10. Every stamp path is scoped to the session user, so no write can reach another user's day.
+
+AC11. The `work_days` coercion AC9 names exists once. It had been copied byte for byte into
+`loadWorkSettings` and `loadWorkSchedule`, and this feature would have been the third copy, so it
+moves to `shared/planning.ts` and both existing readers import it. Behaviour is unchanged for both,
+which their own suites prove, and the resolver can reach it without reaching a database.
 
 ## Edge cases and interrupted paths
 
@@ -104,6 +125,14 @@ AC10. Every stamp path is scoped to the session user, so no write can reach anot
 - Backfilling existing days. There is no honest value to backfill with, so days that already exist
   resolve through AC6.
 - A buffer setting on the settings page.
+- Clearing the table on an admin onboarding reset, and this is a decision rather than an omission.
+  That reset deletes `settings` and `category_quotas` and deliberately leaves `tasks` and
+  `work_schedule` alone, because it clears configuration and not history. A day stamp is history, a
+  record of what a worked day was measured against, so it stays for the same reason a task does. It
+  also has to stay for the reset to be safe: re-onboarding on different hours must not restate the
+  periods already reported, which is the whole point of the snapshot. Recorded here because the
+  admin onboarding reset's own spec had to reason about `work_schedule` and the next reader will ask
+  the same question about this table.
 
 ## Verification
 

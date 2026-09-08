@@ -160,6 +160,43 @@ const CATEGORY_QUOTAS_INDEX_DDL = `
     ON category_quotas (user_id, category_id)
 `
 
+// The day_settings table as migration 0014 leaves it, per AC1 of
+// docs/specs/planning/day-settings-snapshot.md. One row per user and date holding the work minutes,
+// the work days and the buffer that were in force on that day, so a settings change made next month
+// can never reach backward into a figure that has already been reported.
+//
+// work_days is text because it holds a JSON array, the same representation settings.work_days and
+// work_schedule.work_days already use, and it is read back through the same defensive coercion. That
+// is what makes the corrupt-value case in AC9 expressible as a fixture rather than only as prose.
+//
+// buffer_minutes is stamped even though the settings row carries no such column yet, per AC5, so the
+// column exists with the documented default of 60 and adding the real setting later needs no
+// migration.
+//
+// This DDL has to keep matching the live table for the same reason TASKS_DDL does. A harness missing
+// a column the shipped stamp writes leaves every suite green while the write throws against the real
+// database.
+const DAY_SETTINGS_DDL = `
+  CREATE TABLE day_settings (
+    id text PRIMARY KEY NOT NULL,
+    user_id text NOT NULL,
+    date text NOT NULL,
+    work_minutes integer NOT NULL,
+    work_days text DEFAULT '[1,2,3,4,5]' NOT NULL,
+    buffer_minutes integer DEFAULT 60 NOT NULL,
+    created_at integer,
+    updated_at integer,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE cascade
+  )
+`
+
+// The unique index AC1 names. It is what makes the second task created on the same fresh day a no-op
+// rather than a duplicate stamp, so a suite exercising two writes in a row conflicts the way
+// production does instead of quietly accumulating rows.
+const DAY_SETTINGS_INDEX_DDL = `
+  CREATE UNIQUE INDEX day_settings_user_id_date_idx ON day_settings (user_id, date)
+`
+
 export type TaskTestDb = {
   client: Client
   db: ReturnType<typeof drizzle>
@@ -222,6 +259,8 @@ export async function createTaskTestDb(options: TaskTestDbOptions = {}): Promise
     WORK_SCHEDULE_DDL,
     CATEGORY_QUOTAS_DDL,
     CATEGORY_QUOTAS_INDEX_DDL,
+    DAY_SETTINGS_DDL,
+    DAY_SETTINGS_INDEX_DDL,
     MAGIC_LINK_TOKENS_DDL,
     ALLOWED_EMAILS_DDL
   ]) {
@@ -298,15 +337,88 @@ export async function seedTask(client: Client, row: TaskRowSeed): Promise<string
 // Inserts a settings row so a test can pin the timezone the overdue comparison is made in. There is no
 // quota argument, because the global quota_wph column retired in migration 0011 and a quota is now one
 // row per category in category_quotas.
+//
+// The optional fourth argument sets the two work columns the day settings snapshot stamps from. It is
+// optional so every existing caller keeps the column defaults of 450 minutes and Monday through
+// Friday, and a suite asserting that a stamp carries the user's own current settings can hand it
+// figures that are visibly not those defaults.
 export async function seedSettings(
   client: Client,
   userId: string,
-  timezone: string
+  timezone: string,
+  work: { dailyWorkMinutes?: number; workDays?: readonly number[] } = {}
+): Promise<void> {
+  const columns = ['id', 'user_id', 'timezone']
+  const args: (number | string)[] = [`settings-${userId}`, userId, timezone]
+
+  if (work.dailyWorkMinutes !== undefined) {
+    columns.push('daily_work_minutes')
+    args.push(work.dailyWorkMinutes)
+  }
+  if (work.workDays !== undefined) {
+    columns.push('work_days')
+    args.push(JSON.stringify(work.workDays))
+  }
+
+  await client.execute({
+    sql: `INSERT INTO settings (${columns.join(', ')})
+          VALUES (${columns.map(() => '?').join(', ')})`,
+    args
+  })
+}
+
+// Inserts a day_settings row with raw SQL, bypassing every stamp path so a starting state can never
+// be shaped by the code a test is checking. work_days is passed as the raw stored text rather than as
+// an array, because the corrupt-value case in AC9 has to be able to store something no serializer
+// would ever produce.
+export async function seedDaySettings(
+  client: Client,
+  userId: string,
+  date: string,
+  values: { bufferMinutes?: number; workDays?: string; workMinutes?: number } = {}
 ): Promise<void> {
   await client.execute({
-    sql: 'INSERT INTO settings (id, user_id, timezone) VALUES (?, ?, ?)',
-    args: [`settings-${userId}`, userId, timezone]
+    sql: `INSERT INTO day_settings (id, user_id, date, work_minutes, work_days, buffer_minutes)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      `day-${userId}-${date}`,
+      userId,
+      date,
+      values.workMinutes ?? 450,
+      values.workDays ?? '[1,2,3,4,5]',
+      values.bufferMinutes ?? 60
+    ]
   })
+}
+
+// Every stored day_settings row for one user, raw, ordered by date. What a stamp wrote and what it
+// left alone are both read through this rather than through any handler, so the code under test is
+// never also what reports on its own writes.
+export async function readDaySettingsRows(
+  client: Client,
+  userId: string
+): Promise<Record<string, unknown>[]> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM day_settings WHERE user_id = ? ORDER BY date ASC',
+    args: [userId]
+  })
+  return result.rows.map((row) => Object.fromEntries(Object.entries(row)))
+}
+
+// The stored day_settings row for one user and date, or undefined when that day carries none. The
+// absence is as load-bearing as the presence here, since a day nobody worked has no row and still
+// resolves, so the helper reports it as undefined rather than throwing.
+export async function readDaySettingsRow(
+  client: Client,
+  userId: string,
+  date: string
+): Promise<Record<string, unknown> | undefined> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM day_settings WHERE user_id = ? AND date = ?',
+    args: [userId, date]
+  })
+  const row = result.rows[0]
+  return row ? Object.fromEntries(Object.entries(row)) : undefined
 }
 
 // Inserts a work_schedule row. The erasure path has to clear this table as well as tasks, so a test

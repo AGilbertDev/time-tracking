@@ -13,8 +13,11 @@ import {
   formatDeliveryDate,
   formatDuration,
   formatWeekLabel,
+  getMonthRange,
   getWeekDays,
   getWeekRange,
+  getYearRange,
+  hasScheduleOnOrBefore,
   isWorkDay,
   normalizeFreeText,
   nowInZone,
@@ -243,6 +246,97 @@ describe('getWeekDays', () => {
       '2026-01-02',
       '2026-01-03'
     ])
+  })
+})
+
+// The month and the year ranges the quota engine derives its two longer periods from, per AC1 of
+// docs/specs/planning/quota-engine.md. They return the same inclusive { from, to } pair of
+// 'YYYY-MM-DD' strings the shipped getWeekRange returns, so the engine reads all four periods
+// through one shape.
+//
+// Every expected value below is a calendar fact rather than anything read off an implementation.
+// The month lengths are the ones the Gregorian calendar gives: July has 31 days, April and
+// September have 30, February has 28 in 2026 and 29 in 2028, which is a leap year because 2028 is
+// divisible by 4 and is not a century. The spec's own edge-case list asks for exactly this, that the
+// ranges are derived rather than assumed to be fixed lengths.
+describe('getMonthRange', () => {
+  it('returns the first and last day of a 31-day month', () => {
+    expect(getMonthRange('2026-07-20')).toEqual({ from: '2026-07-01', to: '2026-07-31' })
+  })
+
+  it('returns the first and last day of a 30-day month', () => {
+    expect(getMonthRange('2026-09-09')).toEqual({ from: '2026-09-01', to: '2026-09-30' })
+  })
+
+  // February in a leap year, so the last day is the 29th and not the 28th.
+  it('ends February on the 29th in a leap year', () => {
+    expect(getMonthRange('2028-02-10')).toEqual({ from: '2028-02-01', to: '2028-02-29' })
+  })
+
+  // The same month in a non-leap year, which is the pair that would both pass under a hardcoded
+  // 28 or a hardcoded 29 and cannot both pass under either.
+  it('ends February on the 28th in a non-leap year', () => {
+    expect(getMonthRange('2026-02-10')).toEqual({ from: '2026-02-01', to: '2026-02-28' })
+  })
+
+  it('returns the same range for the 29th of a leap February', () => {
+    expect(getMonthRange('2028-02-29')).toEqual({ from: '2028-02-01', to: '2028-02-29' })
+  })
+
+  // Both ends of the month resolve to the month they are in rather than spilling into a neighbour.
+  it('returns the month itself for its first day', () => {
+    expect(getMonthRange('2026-09-01')).toEqual({ from: '2026-09-01', to: '2026-09-30' })
+  })
+
+  it('returns the month itself for its last day', () => {
+    expect(getMonthRange('2026-09-30')).toEqual({ from: '2026-09-01', to: '2026-09-30' })
+  })
+
+  // The year boundary in both directions. A December date must not roll forward into January and a
+  // January date must not roll back into the previous December.
+  it('keeps a December date inside December', () => {
+    expect(getMonthRange('2026-12-31')).toEqual({ from: '2026-12-01', to: '2026-12-31' })
+  })
+
+  it('keeps a January date inside January', () => {
+    expect(getMonthRange('2026-01-01')).toEqual({ from: '2026-01-01', to: '2026-01-31' })
+  })
+
+  // The same inclusive shape getWeekRange returns, so a caller reads one contract for all four
+  // periods rather than a different one per period.
+  it('returns from before to, both as calendar-day strings', () => {
+    const range = getMonthRange('2026-09-09')
+
+    expect(range.from < range.to).toBe(true)
+    expect(range.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(range.to).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})
+
+describe('getYearRange', () => {
+  it('returns the first and last day of the year containing the date', () => {
+    expect(getYearRange('2026-09-09')).toEqual({ from: '2026-01-01', to: '2026-12-31' })
+  })
+
+  it('returns the year itself for its first day', () => {
+    expect(getYearRange('2026-01-01')).toEqual({ from: '2026-01-01', to: '2026-12-31' })
+  })
+
+  it('returns the year itself for its last day', () => {
+    expect(getYearRange('2026-12-31')).toEqual({ from: '2026-01-01', to: '2026-12-31' })
+  })
+
+  // A leap year still ends on 31 December, so the leap day changes the length of the range without
+  // changing either end.
+  it('returns 31 December for a leap year, from the leap day itself', () => {
+    expect(getYearRange('2028-02-29')).toEqual({ from: '2028-01-01', to: '2028-12-31' })
+  })
+
+  // The year boundary, which is the case a week range crosses and a year range must not. The week
+  // containing 2026-01-01 starts in December 2025, and the year containing it does not.
+  it('does not reach into the previous year for a date whose week does', () => {
+    expect(getWeekRange('2026-01-01').from).toBe('2025-12-28')
+    expect(getYearRange('2026-01-01').from).toBe('2026-01-01')
   })
 })
 
@@ -834,6 +928,93 @@ describe('resolveSchedule', () => {
     expect(resolveSchedule(reversed, '2026-07-01').workMinutes).toBe(480)
     expect(resolveSchedule(reversed, '2026-08-15').workMinutes).toBe(480)
     expect(resolveSchedule(reversed, '2025-12-31')).toEqual(resolveSchedule(history, '2025-12-31'))
+  })
+})
+
+// hasScheduleOnOrBefore, added to this module by the 2026-09-07 amendment to AC6 of
+// docs/specs/planning/day-settings-snapshot.md. The amended resolution order puts the user's current
+// settings row between the effective-dated work_schedule and DEFAULT_SCHEDULE, and telling those two
+// apart needs something resolveSchedule cannot say: it returns DEFAULT_SCHEDULE both for an empty
+// history and for a date that precedes every record, so its answer alone never reveals whether a
+// record actually applied.
+//
+// The predicate answers exactly that, whether any record's effectiveFrom is on or before `date`. It
+// lives here rather than in the resolver so the effective-dating rule stays in the one file that
+// already owns it, which is the same reason resolveSchedule is called rather than reimplemented.
+//
+// The lower bound is inclusive, matching resolveSchedule's documented "an inclusive lower bound, so a
+// record takes effect on its own effective date". A predicate disagreeing with resolveSchedule on the
+// boundary would send a date whose record does apply to the wrong tier, so the boundary is asserted
+// against resolveSchedule's own behaviour as well as against a literal.
+describe('hasScheduleOnOrBefore', () => {
+  const history: WorkScheduleRecord[] = [
+    { workMinutes: 450, workDays: [1, 2, 3, 4, 5], bufferMinutes: 60, effectiveFrom: '2026-01-01' },
+    { workMinutes: 480, workDays: [1, 2, 3, 4], bufferMinutes: 90, effectiveFrom: '2026-07-01' }
+  ]
+
+  // No history at all is the state every user is in, since nothing in the app writes work_schedule.
+  // This is the answer that sends an unstamped day to the current settings tier.
+  it('returns false for an empty history', () => {
+    expect(hasScheduleOnOrBefore([], '2026-07-20')).toBe(false)
+  })
+
+  it('returns true when a record precedes the date', () => {
+    expect(hasScheduleOnOrBefore(history, '2026-03-15')).toBe(true)
+  })
+
+  it('returns true when every record precedes the date', () => {
+    expect(hasScheduleOnOrBefore(history, '2026-08-15')).toBe(true)
+  })
+
+  // The boundary. effectiveFrom equal to the date counts, because the record takes effect on its own
+  // effective date.
+  it('returns true when a record effectiveFrom equals the date', () => {
+    expect(hasScheduleOnOrBefore(history, '2026-01-01')).toBe(true)
+  })
+
+  it('returns true on the later record own effective date as well', () => {
+    expect(hasScheduleOnOrBefore(history, '2026-07-01')).toBe(true)
+  })
+
+  // The same boundary read through resolveSchedule, so the two cannot drift apart. On 2026-07-01 the
+  // resolver picks the record effective that day, so the predicate saying a record applies is the
+  // only answer consistent with it.
+  it('agrees with resolveSchedule on the inclusive lower bound', () => {
+    expect(resolveSchedule(history, '2026-07-01').workMinutes).toBe(480)
+    expect(hasScheduleOnOrBefore(history, '2026-07-01')).toBe(true)
+  })
+
+  // The case the amendment turns on. resolveSchedule answers DEFAULT_SCHEDULE for this date, so
+  // without the predicate a caller cannot tell it apart from a record that really applies.
+  it('returns false when every record postdates the date', () => {
+    expect(hasScheduleOnOrBefore(history, '2025-12-31')).toBe(false)
+  })
+
+  it('returns false on the day before the first record own effective date', () => {
+    expect(hasScheduleOnOrBefore([history[1]!], '2026-06-30')).toBe(false)
+  })
+
+  it('returns true when only one of several records qualifies', () => {
+    expect(hasScheduleOnOrBefore(history, '2026-06-30')).toBe(true)
+  })
+
+  it('is order-independent of the input array', () => {
+    const reversed = [...history].reverse()
+
+    expect(hasScheduleOnOrBefore(reversed, '2026-06-30')).toBe(true)
+    expect(hasScheduleOnOrBefore(reversed, '2025-12-31')).toBe(false)
+  })
+
+  it('leaves the records it was handed untouched', () => {
+    const records: WorkScheduleRecord[] = history.map((record) => ({
+      ...record,
+      workDays: [...record.workDays]
+    }))
+    const before = JSON.stringify(records)
+
+    hasScheduleOnOrBefore(records, '2026-07-20')
+
+    expect(JSON.stringify(records)).toBe(before)
   })
 })
 

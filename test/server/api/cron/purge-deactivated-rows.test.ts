@@ -11,27 +11,38 @@ import {
   foreignKeysEnabled,
   OTHER_USER_ID,
   OWNER_ID,
+  readDaySettingsRows,
   seedCategoryQuota,
+  seedDaySettings,
   seedSettings,
   seedTask,
   seedWorkSchedule
 } from '../../../helpers/taskTestDb'
 
 // The purge endpoint against a real database, covering the one thing the existing
-// purge-deactivated.test.ts cannot: that a purged user's tasks, work_schedule, and category_quotas
+// purge-deactivated.test.ts cannot: that a purged user's tasks, work_schedule, category_quotas and
+// day_settings
 // rows are actually gone afterwards. That suite mocks useDb with a fake whose delete() resolves to nothing, which proves
 // the statements were issued and proves nothing about what any table ends up holding. So the seam here
 // is moved one layer down to a genuine in-memory libSQL database, and every assertion reads raw SQL.
 //
 // Why this runs with foreign keys OFF, which is the whole point and is not a shortcut.
 //
-// tasks, work_schedule, and category_quotas all declare onDelete('cascade'), so with referential
+// tasks, work_schedule, category_quotas and day_settings all declare onDelete('cascade'), so with
+// referential
 // integrity in force the rows would vanish when the users row went, whatever the endpoint did or did
 // not delete explicitly. This suite would pass, it would prove nothing about the endpoint, and it would
-// keep passing if someone deleted the three explicit statements as redundant. That is the exact regression it exists to
+// keep passing if someone deleted the four explicit statements as redundant. That is the exact regression it exists to
 // catch. The cascade also only fires because Turso switches PRAGMA foreign_keys on server-side, and
 // server/db/schema.ts records that this was probed against development and never against production,
 // so leaning on it is leaning on something unverified where it matters most.
+//
+// day_settings joined that list last and it is the reason this comment was edited rather than left
+// alone. Its schema comment claims the purge clears it explicitly, and the delete is there, but until
+// the case below existed nothing seeded a row for it, so the statement could have been removed with
+// every assertion in this file still green. A check that cannot fail is the failure this project's
+// build trail keeps recording in new disguises, so the row is seeded for both users and the deletion
+// is read back.
 //
 // Turning it off is only meaningful if it really turned off, so the first test asserts the pragma reads
 // 0 rather than trusting that it was requested. A pragma that silently failed to apply would leave the
@@ -140,6 +151,10 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
     })
     await seedWorkSchedule(client, OWNER_ID)
     await seedCategoryQuota(client, OWNER_ID)
+    // The day the purged task was logged on, stamped the way the day settings snapshot stamps it. It
+    // is personal data of the same kind as the rest, a record of how long that user's working day was,
+    // so an erasure that left it behind would leave a trace of the account it erased.
+    await seedDaySettings(client, OWNER_ID, '2026-07-20', { workMinutes: 400 })
 
     // A second, active account with rows of its own, so the deletes have to be scoped by user id
     // rather than clearing the tables.
@@ -152,6 +167,7 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
     })
     await seedWorkSchedule(client, OTHER_USER_ID)
     await seedCategoryQuota(client, OTHER_USER_ID)
+    await seedDaySettings(client, OTHER_USER_ID, '2026-07-21', { workMinutes: 300 })
   })
 
   it('confirms the cascade is genuinely unavailable before anything is concluded from it', async () => {
@@ -175,10 +191,41 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
     expect(remainingSchedules.rows.map((row) => row.user_id)).toEqual([OTHER_USER_ID])
   })
 
+  it('deletes the purged user day_settings rows', async () => {
+    // The row exists first, and it is read by date rather than counted, so the absence asserted
+    // afterwards is a deletion rather than a fixture that never landed. That distinction is the whole
+    // reason this case exists: the endpoint's day_settings delete was already written and already
+    // passing, but nothing seeded a row for it, so removing the statement would have left every
+    // assertion in this file green.
+    expect(await countRows(client, 'day_settings')).toBe(2)
+    expect((await readDaySettingsRows(client, OWNER_ID)).map((row) => row.date)).toEqual([
+      '2026-07-20'
+    ])
+
+    const result = await purgeDeactivated(event)
+
+    expect(result).toEqual({ purged: 1 })
+    expect(await readDaySettingsRows(client, OWNER_ID)).toEqual([])
+
+    // The scoped half, asserted here rather than in a case of its own because the same purge answers
+    // both questions. The active user's stamp survives with the figure it was written with, so the
+    // delete names a user rather than clearing the table.
+    expect(await readDaySettingsRows(client, OTHER_USER_ID)).toMatchObject([
+      { date: '2026-07-21', work_minutes: 300 }
+    ])
+  })
+
   it('leaves no row of the purged user in any table', async () => {
     await purgeDeactivated(event)
 
-    for (const table of ['tasks', 'work_schedule', 'category_quotas', 'settings', 'users']) {
+    for (const table of [
+      'tasks',
+      'work_schedule',
+      'category_quotas',
+      'day_settings',
+      'settings',
+      'users'
+    ]) {
       const result = await client.execute({
         sql: `SELECT COUNT(*) AS n FROM ${table} WHERE ${table === 'users' ? 'id' : 'user_id'} = ?`,
         args: [OWNER_ID]
@@ -191,7 +238,7 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
   it('leaves the active user rows untouched, so the deletes are scoped by user id', async () => {
     await purgeDeactivated(event)
 
-    for (const table of ['tasks', 'work_schedule', 'category_quotas', 'settings']) {
+    for (const table of ['tasks', 'work_schedule', 'category_quotas', 'day_settings', 'settings']) {
       const result = await client.execute({
         sql: `SELECT COUNT(*) AS n FROM ${table} WHERE user_id = ?`,
         args: [OTHER_USER_ID]
@@ -212,5 +259,6 @@ describe('purge-deactivated erases dependent rows without the cascade (AC68, AC7
     expect(result).toEqual({ purged: 0 })
     expect(await countRows(client, 'tasks')).toBe(2)
     expect(await countRows(client, 'work_schedule')).toBe(2)
+    expect(await countRows(client, 'day_settings')).toBe(2)
   })
 })

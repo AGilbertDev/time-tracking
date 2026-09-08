@@ -2,48 +2,49 @@
 
 ## Intent
 
-This turns recorded tasks into the throughput figures the work is reviewed and priced against, one
-row per kind of work per period, for the day, the week, the month and the year. It also reports how
-much of each scheduled day no task accounts for, which is a warning that the logging is incomplete
-rather than a measure of idle time. It is pure server-side calculation plus one authenticated read,
-so the stats bar that follows in PLAN-23 is a view with no arithmetic of its own.
+This turns recorded tasks into the throughput figures the work is reviewed and priced against, a row
+per kind of work per period for the day, week, month and year. It also reports how much of each
+scheduled day no task accounts for, which warns that the logging is incomplete rather than measuring
+idle time. It is pure server-side calculation plus one authenticated read, so PLAN-23's bar is a view
+with no arithmetic.
 
 ## Prior art
 
-memoQ's editing time report divides source words by the actual editing time recorded per segment.
-That is the same words-over-time shape used here, and it is the industry precedent for measuring
-throughput per kind of work rather than against a scheduled day. Toggl and Clockify both report time
-by category for a period and stop there, because a general tracker has no output target to compare
-against. Harvest computes a billable figure as an amount over hours, so the arithmetic pattern is
-ordinary bookkeeping rather than anything invented here.
+memoQ's editing time report divides source words by the actual editing time recorded per segment,
+which is the same words-over-time shape used here and the industry precedent for measuring throughput
+per kind of work rather than against a scheduled day. Toggl and Clockify report time by category and
+stop there, a general tracker having no output target to compare against, and Harvest computes a
+billable figure as an amount over hours, so the arithmetic is ordinary bookkeeping.
 
-Where this differs is that the target is per category. No general tracker does that, because none of
-them knows that revising runs four times faster than translating. The difference is deliberate and it
-is most of the reason the product exists.
+Where this differs is that the target is per category, which no general tracker does because none of
+them knows revising runs four times faster than translating. That is deliberate and it is most of the
+reason the product exists.
 
-Three corrections to the record, made here rather than left to mislead the next reader. The research
-note in [overview.md](overview.md) says the headline quota "divides by scheduled hours", which
-described the availability model the buckets decision superseded on 2026-07-29. This feature divides
-by scheduled hours nowhere. Scheduled hours reach only the leftover in AC10. The overview's own
-PLAN-22 entry then carries two stale criteria that this document replaces. Its AC3 names `words_done`,
-which migration 0008 dropped. Its AC6 describes overtime raising the quota over a fixed scheduled
-denominator, which is availability arithmetic the per-category buckets removed.
+Three things in [overview.md](overview.md) are superseded, annotated here rather than rewritten there,
+following that document's own practice of marking a record instead of editing it. Its research note
+saying the headline "divides by scheduled hours" is the availability model the buckets decision
+replaced on 2026-07-29, so scheduled hours now reach only AC10's leftover, and its PLAN-22 entry
+carries an AC3 naming the dropped `words_done` plus an AC6 pricing overtime against that same
+denominator.
 
 ## Inputs
 
-`GET /api/stats`. Session required, no body, no writes.
-
-- `date`, optional, `YYYY-MM-DD`. The anchor the four periods derive from. Defaults to today in the
-  user's own timezone.
-
-Reads, every one scoped to the session user. Tasks over the union of the four ranges, the user's
-`category_quotas` rows, the `day_settings` rows in range, and the `work_schedule` history.
+`GET /api/stats`. Session required, no body, no writes. One optional `date` query param,
+`YYYY-MM-DD`, the anchor the four periods derive from, defaulting to today in the user's own timezone.
+Every read is scoped to the session user and covers tasks over the union of the four ranges, the
+user's `category_quotas` rows, the `day_settings` rows in range, and the `work_schedule` history.
 
 ## Outputs and acceptance criteria
 
+Every criterion below is proved by the `describe` block carrying its own number in
+`test/server/utils/computeQuotaStats.test.ts`, except where one names its own test. The two range
+helpers AC1 needs are proved in `test/shared/planning.test.ts`.
+
 AC1. One anchor date resolves four periods, the day, the week through the shipped `getWeekRange`, the
 month, and the year. Each period carries a row for every trackable category holding at least one task
-in range, and no row for a category holding none.
+in range, and no row for a category holding none. The row keys on a task being present rather than on
+one contributing, so a category whose every task is excluded under AC6 still gets a row of zeroes and
+null ratios. Hiding a zero row is presentation and belongs to PLAN-23.
 
 AC2. A category row reports `words`, `minutes`, `achievedWph`, `targetWph` and `attainment`.
 `achievedWph` is words over minutes expressed in hours. `attainment` is summed target minutes over
@@ -83,66 +84,67 @@ that are work days under the settings resolved for them. Consumed sums the effec
 task in range, trackable or not, excluded or not. Unaccounted is scheduled minus consumed, and it may
 be negative, which reads as working past the schedule.
 
-AC11. A trackable category whose quota resolves to `null` reports its words and minutes with a null
-target and a null attainment. That is a user-created category from PLAN-30 carrying no figure, so the
-time is never lost and no target is invented for work nobody has described yet.
+AC11. A task **in a trackable category** whose quota resolves to `null` reports its words and minutes
+with a null target and attainment, so no target is invented for work nobody has described. The
+trackable qualifier matters, since `resolveTaskQuota` returns null for a non-trackable task too and
+AC5 puts that one in no bucket at all. A missing quota anywhere in a bucket nulls the whole bucket's
+target rather than pricing a partial one, which is fail-closed and is what separates it from AC9's
+real zero. **The branch is unreachable today**, an unknown id coercing to the non-trackable `other`
+while all four trackable defaults carry a figure, so PLAN-30 reaches it and the exported fold tests it.
 
-AC12. A period is computed only from tasks dated inside it. Nothing is cached and nothing is stored,
-so editing a past task restates that period and reaches no other. A settings change reaches no past
-period at all, which is what the day settings snapshot guarantees.
+AC12. A period is computed only from tasks dated inside it, nothing being cached or stored, so editing
+a past task restates that period and reaches no other. A settings change reaches no past period at
+all, which is what the day settings snapshot guarantees.
 
-AC13. The engine is pure and database-free, taking tasks, quota records, day rows and schedule records
-as arguments, so every criterion above is unit-testable against fixtures with no database.
+AC13. The engine is pure and database-free, taking tasks, quota records, day rows and schedule
+records as arguments.
 
 AC14. The endpoint requires a session and scopes every read to the session user, never to an id from
-the request, so one user can never read another's figures. A malformed `date` returns 400 through the
-shipped `sendZodError`.
-
-AC15. One range query per table covers all four periods, over the union of their ranges, so a week
-crossing a year boundary is still a single indexed scan over `(user_id, date)`.
+the request, so one user can never read another's figures. A malformed `date` returns 422 through the
+shipped `sendZodError`, that being the code the helper throws for every validation failure in the app.
+An earlier draft said 400, which was wrong about the shipped helper. Test
+`test/server/api/stats/handlers/getStats.test.ts`.
 
 ## Edge cases and interrupted paths
 
-There are no interrupted paths. This is one authenticated read with no multi-step flow, no token and
-no write, so it either answers or it fails and the caller asks again.
+There are no interrupted paths. One authenticated read, no multi-step flow, no token and no write, so
+it either answers or fails and the caller asks again.
 
-- A week crossing a month or a year boundary. The union range in AC15 covers it and each period counts
-  only its own dates.
-- 29 February and a leap year. Month and year ranges are derived rather than assumed to be fixed
-  lengths.
-- A task on a non-work day. It joins its category bucket normally. The day contributes no scheduled
-  minutes, so the work shows up as negative unaccounted time.
-- An empty period. Zero category rows rather than a row of zeroes for every category, with its
-  scheduled minutes intact and a leftover equal to them.
+- A week crossing a month or year boundary, and 29 February. The union range above covers the first
+  and each period counts only its own dates; month and year ranges are derived, never fixed lengths.
+- A task on a non-work day. It joins its bucket normally and the day contributes no scheduled minutes,
+  so the work reads as negative unaccounted time.
+- An empty period. Zero category rows, its scheduled minutes intact and a leftover equal to them.
 - A stored category id the contract no longer knows. `coerceCategory` resolves it to the non-trackable
-  fallback, so it reaches consumed time and no bucket.
-- `projectWordCount` null. Reads as zero words.
-- A zero or negative stored quota. Already guarded inside `resolveTaskQuota`, which treats it as no
-  figure at all and falls through to the category.
-- A date with no day settings row, which is every day worked before this feature shipped. It resolves
-  through the fallback chain in the snapshot spec's AC6, so the figure is the effective-dated schedule
-  or `DEFAULT_SCHEDULE`. Existing days are deliberately not backfilled, because there is no honest
-  value to backfill them with.
+  fallback, so it reaches consumed time and no bucket. A null `projectWordCount` reads as zero words.
+- A zero or negative stored quota. `resolveTaskQuota` guarded the task's own `quota_wph_override` while
+  `resolveCategoryQuota` returned a stored figure untouched, so a zero row there reached the division
+  unguarded. An earlier draft claimed the guard covered both, which was wrong, and a one-line ride-along
+  fix makes the category figure fall through as the override does. No such row can exist today, the write
+  boundary flooring the field at 1, so this was latent rather than live.
+- A date with no day settings row, which is every day worked before this shipped. It resolves through
+  the snapshot spec's AC6 chain, and existing days are not backfilled for want of an honest value.
 
 ## Out of scope
 
 - The stats bar and every visible string, which is PLAN-23. No French or English copy ships here.
-- The performance history view and the export, PLAN-24. The category charts, PLAN-31.
-- Any change to how `estimated_minutes` is produced, or to the capacity bar that reads it.
-- Caching. Every figure is computed per request.
+- The performance history view and export, PLAN-24, and the category charts, PLAN-31. Any change to how
+  `estimated_minutes` is produced or to the capacity bar reading it. Caching, every figure being
+  computed per request.
 
 ## Verification
 
-- `bun run test` exits 0, run unpiped. The `workflow:unit-test` agent derives fixtures for AC1 through
-  AC13 from this document before the engine exists, and they arrive failing.
-- `bun run lint` exits 0, run unpiped.
-- Against the seeded dev database, one category row is checked by hand. Words and minutes are read off
-  the seeded tasks, the figure is worked out separately, and the endpoint has to match it exactly.
-- A period with no tasks and a period whose tasks carry no actual minutes are both requested, proving
-  AC8 and AC7 on real data rather than only in fixtures.
-- A work-settings change is saved and a past period is re-requested, confirming its figures do not
-  move. That is the whole point of the snapshot and it is checked end to end rather than trusted.
-- No browser verification, because the feature ships no interface.
+- `bun run test` and `bun run lint` both exit 0, run unpiped. The `workflow:unit-test` agent derived
+  the fixtures for AC1 through AC13 from this document before the engine existed, arriving failing.
+- Against the real dev database, one category row is checked by hand, its figure worked out separately
+  from the stored words and minutes, and the engine has to match exactly. The same run proves AC8 on a
+  period with no tasks and AC7 on one with no actual minutes.
+- A work-settings change is saved and a past period re-read, confirming its figures do not move, which
+  is the point of the snapshot and so is checked rather than trusted. No browser verification, the
+  feature shipping no interface.
+- At code review, one range query per table covers all four periods over the union of their ranges, so
+  a week crossing a year boundary stays one indexed scan over `(user_id, date)`. That counts queries
+  rather than describing behaviour, so it is read in the diff rather than faked with a spy.
 
 ## Open questions
 

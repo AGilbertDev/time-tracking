@@ -7,6 +7,7 @@ import type { WorkSettings } from '../../../utils/loadWorkSettings'
 
 import { useDb } from '../../../db/index'
 import { settings } from '../../../db/schema'
+import { refreshDaySettings } from '../../../utils/stampDaySettings'
 
 // Writes the provided work-setting fields to the current user's settings row and returns the
 // full current set so the client can reconcile. Only the provided fields are written, so a
@@ -42,6 +43,13 @@ export async function saveWorkSettings(
   } else {
     await db.insert(settings).values({ userId: user.id, ...values })
   }
+
+  // Bring the day settings snapshot into line, for today and every day still ahead. A day already
+  // past has been reported against and is deliberately left alone, which is the whole reason the
+  // snapshot exists. This runs after the settings write so it reads what was actually saved, and it
+  // swallows its own failures, because the save has already succeeded and the response below is the
+  // user's answer.
+  await refreshDaySettings(user.id)
 
   // Read back through the single read path so the response reflects exactly what the database
   // now holds, including the columns filled by defaults on an insert.

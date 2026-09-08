@@ -342,3 +342,62 @@ export const categoryQuotas = sqliteTable(
     uniqueIndex('category_quotas_user_id_category_id_idx').on(table.userId, table.categoryId)
   ]
 )
+
+// The day settings snapshot. A day's throughput is measured against how long that day was supposed
+// to be, and that length lives on the mutable settings row, so changing it next month would rewrite
+// every figure already reported for every past day. One row here records the work minutes, work days
+// and buffer that were in force on one day, written the first time a task lands on it.
+//
+// This is the same snapshot model categoryQuotas above describes, where the figure is stored on the
+// thing it describes rather than looked up through a date. Here the day carries it.
+//
+// workSchedule above is not retired by this and the two are not a duplication. This table answers
+// for a day that was worked, and it answers from a fact recorded at the time. workSchedule answers
+// for a day that was not, where there is no such fact to have recorded. The order is this table,
+// then workSchedule through resolveSchedule, then DEFAULT_SCHEDULE, and it lives in
+// server/utils/resolveDaySettings.ts and nowhere else.
+//
+// The row is updated rather than appended. A work-settings save refreshes every row dated today or
+// later and touches nothing earlier, which is what makes a day hold the last setting saved on that
+// day while a past day stays frozen. It also leaves the correction path open for a setting that was
+// wrong for a stretch of time, which is a later feature rather than a later migration.
+export const daySettings = sqliteTable(
+  'day_settings',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id').notNull(),
+    // 'YYYY-MM-DD', the calendar day these values were in force on. Text so lexicographic order
+    // equals chronological order, matching tasks.date and workSchedule.effectiveFrom, which is what
+    // makes a period read a plain indexed range scan.
+    date: text('date').notNull(),
+    // The daily work target in whole minutes that was in force on this day.
+    workMinutes: integer('work_minutes').notNull(),
+    // JSON array of weekday numbers 0-6 (0 = Sunday), the same representation settings.work_days and
+    // workSchedule.work_days use. Coerced defensively on read before the resolver sees it, so a
+    // corrupt value falls back to the default set rather than reaching the quota engine.
+    workDays: text('work_days').notNull().default('[1,2,3,4,5]'),
+    // The buffer kept for urgent work, in whole minutes. Stamped even though the settings row has no
+    // such column yet, so the value is the documented 60 until a real setting exists and adding that
+    // setting later needs no migration.
+    bufferMinutes: integer('buffer_minutes').notNull().default(60),
+    // True lifecycle instants, Unix-seconds mode 'timestamp', matching every other table here.
+    createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date())
+  },
+  (table) => [
+    // Deleting a user deletes their day rows. They are the user's own recorded configuration with no
+    // reason to outlive the account, so cascade leaves no orphans. It fires for the same reason the
+    // tasks foreign key does, Turso's server default rather than anything the libSQL client sets,
+    // and the check behind that and its limits are recorded on that key rather than a fourth time.
+    // The purge endpoint deletes this table explicitly as well, precisely because the pragma is
+    // unverified on the one database where a failed erasure would matter.
+    foreignKey({ columns: [table.userId], foreignColumns: [users.id] }).onDelete('cascade'),
+    // One row per user and day as a database guarantee rather than a convention. It is what makes a
+    // second task on the same fresh day a no-op instead of a duplicate stamp, with no read-then-write
+    // race to lose, and it is the conflict target the stamp inserts against. user_id first so it also
+    // serves the range read WHERE user_id = ? AND date BETWEEN ? AND ?.
+    uniqueIndex('day_settings_user_id_date_idx').on(table.userId, table.date)
+  ]
+)
