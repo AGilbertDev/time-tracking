@@ -1,5 +1,13 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { configDefaults, defineConfig } from 'vitest/config'
+import { configDefaults, coverageConfigDefaults, defineConfig } from 'vitest/config'
+
+// The exclusions file is the one source of truth. The pull request report reads
+// it to list what was left out and why, and this config reads it so the totals
+// on the pull request agree with the numbers here.
+const exclusions = JSON.parse(
+  readFileSync(new URL('./.github/test-exclusions.json', import.meta.url), 'utf8')
+)
 
 // Minimal Vitest setup for pure-logic unit tests only. The node environment is
 // deliberate, since these tests never touch a Nuxt runtime, a browser DOM, or a
@@ -14,7 +22,12 @@ export default defineConfig({
     // create while they work, so collecting their tests was never meaningful.
     // Vitest replaces its default exclude list rather than extending it, so the
     // defaults are spread back in here.
-    exclude: [...configDefaults.exclude, '**/.claude/**']
+    exclude: [...configDefaults.exclude, '**/.claude/**'],
+    coverage: {
+      include: ['app/**', 'server/**', 'shared/**'],
+      exclude: [...coverageConfigDefaults.exclude, ...exclusions.files.map((f) => f.path)],
+      reportOnFailure: true
+    }
   },
   resolve: {
     alias: {

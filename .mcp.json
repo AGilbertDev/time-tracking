@@ -1,0 +1,9 @@
+{
+  "$comment": "The pipeline checks a UI change in a real browser before opening the pull request. The Playwright server defaults to the Chrome channel, which is absent on a plain Linux box, so chromium is named here.",
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
+    }
+  }
+}

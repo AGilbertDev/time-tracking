@@ -8,9 +8,9 @@ Two things at once.
 
 ## How work happens here
 
-Pipeline-driven, not hand-written. Every feature, page, route, or non-trivial change goes through the agent pipeline described in [docs/pipeline.md](docs/pipeline.md): specs, then design, then the build stages, then review, then commit. One feature at a time, start to finish, before the next one begins. The autonomous build stages are meant to run isolated in the devcontainer sandbox (`.devcontainer/`). Specs and code review are never skipped.
+Pipeline-driven, not hand-written. Every feature, page, route, or non-trivial change goes through `/workflow:pipeline`, described in [docs/pipeline.md](docs/pipeline.md). The spec is approved first, the tests are written from it before the code exists, and the run ends at an open pull request. One feature at a time, start to finish, before the next one begins. The spec and the review are never skipped.
 
-This replaces the old tutorial mode. The project used to be a learning exercise where the code was written by hand, step by step. It is now a demonstration of the pipeline, so the agents do the building and the trail they leave is the artifact.
+This replaces the old tutorial mode. The project used to be a learning exercise where the code was written by hand, step by step. It is now a demonstration of the pipeline, so the agents do the building and the trail they leave is the artifact. The method itself changed after Feature 20, and [docs/pipeline.md](docs/pipeline.md) records what changed and why.
 
 ## Maintaining the build trail
 
@@ -24,13 +24,9 @@ The ledger is listed in `.prettierignore`, and it has to stay there for the appe
 
 ## Conventions and skills
 
-This repo uses the shared [agilbertdev-recipes](https://github.com/AGilbertDev/agilbertdev-recipes) (vendored as the `.recipes` submodule). Personal conventions and the curated skill set come from there, not from this file. After cloning:
+Everything shared arrives as installed plugins rather than as files copied into the repository. `.claude/settings.json` enables `workflow` and `nuxt-conventions` from the [`agilbertdev`](https://github.com/AGilbertDev/claude-plugins) marketplace at project scope, so a clone needs no setup step. Claude offers to install them on the first session.
 
-```bash
-git submodule update --init && bash .recipes/bin/install
-```
-
-The always-loaded core conventions (git identity, writing voice, security, confidentiality, and the agent pipeline) load through `.recipes/CLAUDE.md`. Stack rules load on demand from the `my-frontend-conventions`, `my-styling-conventions`, and `my-backend-conventions` skills.
+The `workflow` plugin carries the pipeline, the always-on conventions, the `unit-test` agent, and the hooks that block a commit under the wrong identity, one touching a secret file, or one with a failing suite. The `nuxt-conventions` plugin carries the stack rules and the review checklists. Move every project forward at once with `claude plugin update workflow@agilbertdev`.
 
 ## Product non-negotiables
 
@@ -40,4 +36,4 @@ The always-loaded core conventions (git identity, writing voice, security, confi
 
 ## Stack
 
-Nuxt 4, Nuxt UI 4, Tailwind 4, Turso + Drizzle, nuxt-auth-utils (owner-managed auth), @nuxtjs/i18n, Zod, Resend. Deployed on Vercel.
+Nuxt 4, Nuxt UI 4, Tailwind 4, Turso with Drizzle, nuxt-auth-utils for owner-managed auth, @nuxtjs/i18n, Zod, Resend. Deployed on Vercel. Vitest covers the logic, and [`AGilbertDev/test-report`](https://github.com/AGilbertDev/test-report) reports it on every pull request against the threshold in `.github/workflows/tests.yml`.
