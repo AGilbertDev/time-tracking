@@ -79,6 +79,19 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
       not exist today since sessions are stateless signed cookies and only the deactivation check in
       `server/middleware/validate-session.ts` revokes one, and an audit record, since silently wiping another
       person's configuration is a different act from wiping your own.
+- [ ] **The dashboard capacity meter ignores `daily_work_minutes` and always shows 7 h 30.**
+      `app/pages/index.vue` reads `/api/me/work-schedule` and resolves it through `resolveSchedule`,
+      and nothing in the app has ever written that table, so the meter answers from `DEFAULT_SCHEDULE`
+      for every day whatever the settings page was told. Set a six-hour day and the meter still prices
+      it at 450 minutes. Pre-existing and not introduced by the quota engine, found by that feature's
+      code review, and it is why the day settings resolver gained a current-settings tier rather than
+      inheriting the same wrong number. The consequence of fixing only one side is that `/api/stats`
+      now respects the setting while the meter does not, so the two disagree about today until the
+      meter is pointed at the same resolution. Doing that properly means the client can read day
+      stamps, which is an endpoint it does not have, so this is its own small feature rather than a
+      one-line change. It pairs with the entry below, since a `work_schedule` writer would also fix
+      the meter without touching the frontend at all.
+
 - [ ] **Nothing in the app writes `work_schedule`.** The effective-dated history table exists, is read by
       `server/utils/loadWorkSchedule.ts` and resolved by `resolveSchedule`, and the only insert anywhere in
       `app/`, `server/`, `shared/` or `scripts/` is in `scripts/seed.ts`. So the capacity denominator for a past
@@ -153,7 +166,15 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
       arrangement. The entry exists so this is not re-argued on the next `ADD COLUMN`. It pairs with
       the `0006` entry above, which is the same gap wearing a worse comment.
 
-- [ ] **The app has no legal pages and no compliance record, and it is live on a public domain.** There is no
+- [ ] **The app has no legal pages and no compliance record, and it is live on a public domain.**
+      **Deferred by the owner on 2026-09-07, and recorded as deferred rather than left looking open.** The
+      decision was made with the access model confirmed rather than assumed: there is no signup endpoint at
+      all, only login, and magic links are refused unless the address is already in `allowed_emails`, so no
+      stranger can create an account or reach any authenticated surface. The obligation does not disappear,
+      and the trigger for revisiting it is explicit. Reopen this the moment any of three things becomes true,
+      which are that a person outside the owner's own accounts is invited, that self-signup is added, or that
+      anything the app holds is exposed on a public route. Until then it is a real item with no urgency, not
+      an oversight. There is no
       `/legal/privacy`, no `/legal/terms`, no account-deletion page, and no `COMPLIANCE.md`, in either
       language. The app is invite-only and authenticated, which limits who sees it but changes nothing about
       what it holds, which is a real person's name, email address, password hash, working hours, working days,
