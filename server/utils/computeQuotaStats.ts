@@ -166,12 +166,17 @@ export function foldBucket(entries: readonly BucketEntry[]): Bucket {
   }
 }
 
-// The contract's own order, so two categories always come back in the same sequence and a caller
-// never sorts. A category the contract does not know sorts after the ten by id, which is where a
-// PLAN-30 category with a retired id would land.
+// The contract's own order, so two categories always come back in the same sequence and a caller never
+// sorts.
+//
+// Every key this is asked about came through coerceCategory, which answers with one of the ten known
+// ids and never with anything else, so indexOf always finds it and the order is always unique. There
+// is deliberately no not-found branch and no tiebreak: both were written first, both were unreachable
+// by construction, and unreachable code that cannot be tested is worse than an assumption written
+// down. PLAN-30 is what breaks the assumption, since a user-created category has no place in the
+// shipped order, and it has to revisit this rather than inherit it.
 function categoryOrder(categoryId: string): number {
-  const index = DEFAULT_CATEGORY_IDS.indexOf(categoryId as never)
-  return index === -1 ? DEFAULT_CATEGORY_IDS.length : index
+  return DEFAULT_CATEGORY_IDS.indexOf(categoryId as never)
 }
 
 // Every calendar day from `from` to `to`, both inclusive.
@@ -211,13 +216,18 @@ function computePeriod(
     entries.push({
       measured: typeof task.actualMinutes === 'number',
       minutes: effectiveDuration(task),
+      // The null side of this is unreachable from here and is not dead. The category is already
+      // through the trackable gate above and all four trackable defaults carry a figure, so
+      // resolveTaskQuota cannot answer null today, and PLAN-30's user-created categories are what
+      // make it possible. What a null quota does to a bucket is covered against foldBucket instead,
+      // which is why that fold is exported.
       quotaWph: resolveTaskQuota(task, quotas)?.quotaWph ?? null,
       words: task.projectWordCount ?? 0
     })
   }
 
   const categories = [...buckets.entries()]
-    .sort(([a], [b]) => categoryOrder(a) - categoryOrder(b) || (a < b ? -1 : a > b ? 1 : 0))
+    .sort(([a], [b]) => categoryOrder(a) - categoryOrder(b))
     .map(([categoryId, entries]) => ({ categoryId, ...foldBucket(entries) }))
 
   // The headline is the same fold with the category filter removed rather than a blend of the rows,

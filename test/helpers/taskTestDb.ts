@@ -483,14 +483,122 @@ export async function deactivateUser(
 //
 // The log records the attempt rather than the success, so a forced failure still shows where the
 // handler had got to when it stopped. That is the point of the ordering assertions.
+// What a select statement is about to do, handed to the beforeSelect hook below. `table` is whatever
+// the chain named through .from(), and `issued` is the same live write log the `order` array
+// collects, so a hook can fire on one specific read of a request rather than on every read.
+export type InstrumentedSelect = {
+  issued: readonly string[]
+  table?: string
+}
+
+export type InstrumentedDbHooks = {
+  // Runs immediately before a select executes, and is awaited, so the hook can issue statements of
+  // its own against the same database first.
+  //
+  // That is what makes a row vanishing between two of a handler's own statements reproducible. The
+  // task update writes its row and then reads it back to return it in list shape, and a second tab
+  // deleting the row inside that window is a real production race rather than an impossibility. It
+  // is forced here, at the same infrastructure boundary the rest of this helper mocks at, so every
+  // statement either side of the chosen moment still runs for real. Stubbing the handler's own
+  // read-back instead would assert that a stubbed undefined produces a 404, which is testing the
+  // test.
+  beforeSelect?: (statement: InstrumentedSelect) => Promise<void> | void
+}
+
+// The builder methods that continue a select chain, and the ones that end it by executing.
+//
+// `then` is deliberately in neither list. Drizzle's builders are thenable, so a caller can await one
+// directly, and a wrapper that returned a promise from `then` rather than invoking the callbacks it
+// was handed would break the protocol and hang the await. It therefore falls through to the
+// pass-through branch below and runs unwrapped, which is safe: every read the hook needs to observe
+// ends in an explicit terminal.
+const SELECT_CHAIN = new Set([
+  '$dynamic',
+  'from',
+  'fullJoin',
+  'groupBy',
+  'having',
+  'innerJoin',
+  'leftJoin',
+  'limit',
+  'offset',
+  'orderBy',
+  'rightJoin',
+  'where'
+])
+const SELECT_TERMINAL = new Set(['all', 'execute', 'get', 'run', 'values'])
+
+// The table a select names, or undefined when the source is something with no name of its own such
+// as a subquery. Read rather than guessed, and never allowed to throw, since the instrument must not
+// be what breaks the statement it is watching.
+function selectSourceName(source: unknown): string | undefined {
+  try {
+    return getTableName(source as never)
+  } catch {
+    return undefined
+  }
+}
+
+// Follows one select chain so the hook can run at the instant the statement executes rather than at
+// the instant it was composed. Every method is invoked on the real builder, so the statement itself
+// is untouched and only its timing is observed.
+function wrapSelectChain(
+  node: object,
+  statement: InstrumentedSelect,
+  hook: (statement: InstrumentedSelect) => Promise<void> | void
+): object {
+  return new Proxy(node, {
+    get(target, property) {
+      const value = Reflect.get(target, property)
+      if (typeof value !== 'function') return value
+
+      const name = String(property)
+      const method = value as (...args: never[]) => unknown
+
+      if (SELECT_TERMINAL.has(name)) {
+        return async (...args: never[]) => {
+          await hook(statement)
+          return method.apply(target, args)
+        }
+      }
+
+      if (SELECT_CHAIN.has(name)) {
+        return (...args: never[]) => {
+          const result = method.apply(target, args)
+          const next =
+            name === 'from' ? { ...statement, table: selectSourceName(args[0]) } : statement
+          return result && typeof result === 'object'
+            ? wrapSelectChain(result as object, next, hook)
+            : result
+        }
+      }
+
+      return method.bind(target)
+    }
+  })
+}
+
 export function instrumentedDb(
   db: unknown,
   order: string[],
-  failOn?: 'category_quotas' | 'settings' | 'tasks' | 'users'
+  failOn?: 'category_quotas' | 'settings' | 'tasks' | 'users',
+  hooks?: InstrumentedDbHooks
 ): unknown {
   return new Proxy(db as object, {
     get(target, property) {
       const value = Reflect.get(target, property)
+
+      // Reads are only followed when a caller asked to be told about them, so every existing suite
+      // sees the same object it always did and the `order` log keeps recording writes alone.
+      if (property === 'select' && hooks?.beforeSelect) {
+        const hook = hooks.beforeSelect
+        return (...args: never[]) => {
+          const builder = (value as (...a: never[]) => unknown).apply(target, args)
+          return builder && typeof builder === 'object'
+            ? wrapSelectChain(builder as object, { issued: order }, hook)
+            : builder
+        }
+      }
 
       if (property === 'update' || property === 'delete' || property === 'insert') {
         return (table: never) => {

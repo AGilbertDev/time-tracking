@@ -12,6 +12,7 @@ import {
   OWNER_ID,
   readDaySettingsRow,
   readDaySettingsRows,
+  readSettingsRows,
   seedDaySettings,
   seedSettings
 } from '../../../../helpers/taskTestDb'
@@ -84,6 +85,9 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.useRealTimers()
+  // The failure cases below silence console.error while they run, so the spy is put back rather
+  // than left in place for whatever runs next.
+  vi.restoreAllMocks()
 })
 
 describe('the day settings refresh on saveWorkSettings', () => {
@@ -244,5 +248,152 @@ describe('the day settings refresh on saveWorkSettings', () => {
       expect((await readDaySettingsRow(client, OWNER_ID, TODAY))?.work_minutes).toBe(500)
       expect((await readDaySettingsRow(client, OTHER_USER_ID, TODAY))?.work_minutes).toBe(300)
     })
+  })
+
+  // AC7 of the same spec, read on the refresh side rather than on the stamp side.
+  //
+  //   AC7. "A failed stamp never blocks a task write. The task still lands and the failure is logged,
+  //   because refusing to record real work over a bookkeeping row would police the user, which
+  //   `spec.md` §2 forbids."
+  //
+  // The refresh is the harder half of that rule, because by the time it runs the settings write has
+  // already committed. Throwing here would report a failure for a save that actually worked, so the
+  // save has to keep returning its answer and the failure has to be visible in the log rather than
+  // nowhere. The spec's own edge case says the same thing about the state left behind: "A failure
+  // leaves the affected days holding their previous values, which is stale rather than wrong, and the
+  // next save reconciles them."
+  //
+  // The failure is injected by dropping day_settings, the technique
+  // test/server/api/tasks/handlers/dayStamp.test.ts already uses for the stamp side. It is a real
+  // database refusing a real statement, so the handler's own error handling runs rather than a stub of
+  // it, and nothing else about the save is faked.
+  describe('AC7: a failed refresh never fails the settings save', () => {
+    it('still returns the saved settings', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      await seedSettings(client, OWNER_ID, 'America/Toronto')
+      await client.execute('DROP TABLE day_settings')
+
+      await expect(
+        saveWorkSettings(event, patch({ dailyWorkMinutes: 500 }))
+      ).resolves.toMatchObject({ dailyWorkMinutes: 500, timezone: 'America/Toronto' })
+    })
+
+    it('does not let the failure propagate to the caller', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      await seedSettings(client, OWNER_ID, 'America/Toronto')
+      await client.execute('DROP TABLE day_settings')
+
+      await expect(
+        saveWorkSettings(event, patch({ dailyWorkMinutes: 500, workDays: [1, 2] }))
+      ).resolves.toBeTruthy()
+    })
+
+    // The settings write is the part the user asked for, and it has already committed by the time the
+    // refresh runs. A swallowed failure must not also mean a lost save.
+    it('leaves the settings row holding what was saved', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      await seedSettings(client, OWNER_ID, 'America/Toronto')
+      await client.execute('DROP TABLE day_settings')
+
+      await saveWorkSettings(event, patch({ dailyWorkMinutes: 500, workDays: [1, 2] }))
+
+      expect(await readSettingsRows(client, OWNER_ID)).toMatchObject([
+        { daily_work_minutes: 500, work_days: '[1,2]' }
+      ])
+    })
+
+    it('logs the failure rather than swallowing it silently', async () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      await seedSettings(client, OWNER_ID, 'America/Toronto')
+      await client.execute('DROP TABLE day_settings')
+
+      await saveWorkSettings(event, patch({ dailyWorkMinutes: 500 }))
+
+      expect(error.mock.calls.length + warn.mock.calls.length).toBeGreaterThan(0)
+    })
+  })
+})
+
+// The insert half of the write, from docs/specs/settings/settings-page.md.
+//
+//   "update only the provided fields on the user's `settings` row; if the row is missing, insert it
+//   with the provided fields and let the column defaults fill the rest rather than failing the write"
+//
+//   "No `settings` row yet. The GET returns coded defaults and a PATCH inserts the row with the
+//   provided fields plus defaults, so the user can save from a clean slate."
+//
+// A user who reaches the settings page before any settings write has no row at all, which is the
+// state every account starts in, so this is the first save rather than an exotic one. Each case seeds
+// no settings row and reads the stored row back with raw SQL, because the response is resolved through
+// the loader's own defaults and would look identical whether a row had been written or not.
+describe('saveWorkSettings with no settings row yet', () => {
+  it('creates the row rather than failing the write', async () => {
+    await saveWorkSettings(event, patch({ dailyWorkMinutes: 500 }))
+
+    expect(await readSettingsRows(client, OWNER_ID)).toHaveLength(1)
+  })
+
+  it('stores the provided fields on the new row', async () => {
+    await saveWorkSettings(
+      event,
+      patch({ dailyWorkMinutes: 500, timezone: 'Europe/Paris', workDays: [1, 2] })
+    )
+
+    expect(await readSettingsRows(client, OWNER_ID)).toMatchObject([
+      { daily_work_minutes: 500, timezone: 'Europe/Paris', work_days: '[1,2]' }
+    ])
+  })
+
+  // "let the column defaults fill the rest". A partial first save must not write nulls over the
+  // columns the request said nothing about.
+  it('leaves the column defaults to fill the fields the request did not name', async () => {
+    await saveWorkSettings(event, patch({ dailyWorkMinutes: 500 }))
+
+    expect(await readSettingsRows(client, OWNER_ID)).toMatchObject([
+      {
+        dark_theme: 'pastel',
+        light_theme: 'pastel',
+        locale: 'fr',
+        timezone: 'America/Toronto',
+        work_days: '[1,2,3,4,5]'
+      }
+    ])
+  })
+
+  it('returns the full current set read back through the loader', async () => {
+    const saved = await saveWorkSettings(event, patch({ workDays: [2, 4] }))
+
+    expect(saved).toEqual({
+      dailyWorkMinutes: 450,
+      timezone: 'America/Toronto',
+      workDays: [2, 4]
+    })
+  })
+
+  it('writes the row under the session user and under no other', async () => {
+    await saveWorkSettings(event, patch({ dailyWorkMinutes: 500 }))
+
+    expect(await readSettingsRows(client, OTHER_USER_ID)).toEqual([])
+  })
+
+  // The second save has a row to find, so it updates rather than inserting a second one. Without this
+  // the insert branch could be reached every time and no assertion above would notice.
+  it('updates that same row on the next save instead of inserting another', async () => {
+    await saveWorkSettings(event, patch({ dailyWorkMinutes: 500 }))
+
+    await saveWorkSettings(event, patch({ dailyWorkMinutes: 400 }))
+
+    expect(await readSettingsRows(client, OWNER_ID)).toMatchObject([{ daily_work_minutes: 400 }])
+  })
+
+  // A first save on a day that already carries a stamp still refreshes it, so the insert branch is
+  // not a path where the snapshot is quietly skipped.
+  it('still refreshes a stamped day dated today', async () => {
+    await seedDaySettings(client, OWNER_ID, TODAY, { workMinutes: 300 })
+
+    await saveWorkSettings(event, patch({ dailyWorkMinutes: 500 }))
+
+    expect((await readDaySettingsRow(client, OWNER_ID, TODAY))?.work_minutes).toBe(500)
   })
 })

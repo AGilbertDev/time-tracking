@@ -79,6 +79,31 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
       not exist today since sessions are stateless signed cookies and only the deactivation check in
       `server/middleware/validate-session.ts` revokes one, and an audit record, since silently wiping another
       person's configuration is a different act from wiping your own.
+- [ ] **`vitest` and `@vitest/coverage-v8` are on mismatched versions and the coverage run warns about
+      it.** `vitest@4.1.10` against `@vitest/coverage-v8@4.1.11`. It has not visibly produced a wrong
+      number, and it is worth closing anyway now that per-file coverage is a merge gate, because a
+      tool that warns about its own version is a poor instrument to conclude from. Separately, `.vue`
+      files fail to parse during the coverage run and are silently excluded, so component coverage is
+      not being measured at all rather than measured as low. Both are pre-existing and were noticed
+      while fixing the quota engine's coverage.
+
+- [ ] **Overall coverage is 67 percent, and the gate only ever weighs the files a pull request
+      touched.** So a branch is held to 80 percent on what it changed while the untouched remainder is
+      never asked, which means the number drifts down quietly and any branch that so much as brushes an
+      old file inherits its debt as a red check. The quota engine hit exactly that: `server/db/schema.ts`
+      was already at 68 percent and was flagged only because the branch touched it, and the first
+      instinct was to add it to `.github/test-exclusions.json`, which the owner correctly rejected.
+      Testing it properly turned out to be worthwhile rather than busywork, because the uncovered lines
+      were the declared defaults and the foreign-key and unique-index callbacks, so the tests now assert
+      that a declared cascade actually cascades and a declared unique key actually refuses a duplicate.
+      The rest of the 33 percent is mostly `app/composables`, `app/queries` and the admin user handlers,
+      all at 0. Two things to decide. Whether the gate should also fail on a drop in the overall figure,
+      which would stop the drift but would block unrelated branches. And whether the untested surface
+      gets a deliberate pass of its own rather than being paid off a file at a time by whoever
+      unluckily edits one. Note that the printed coverage table omits rows for fully covered
+      directories, so read `coverage/coverage-final.json` rather than the table when deciding what is
+      actually missing.
+
 - [ ] **The dashboard capacity meter ignores `daily_work_minutes` and always shows 7 h 30.**
       `app/pages/index.vue` reads `/api/me/work-schedule` and resolves it through `resolveSchedule`,
       and nothing in the app has ever written that table, so the meter answers from `DEFAULT_SCHEDULE`
@@ -235,6 +260,17 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
       and comparing after it is load-bearing here rather than a habit, and it belongs written down as a rule.
       A green suite that collects fewer tests than before is a false clean, not a pass.
       Found while writing the unit tests for the admin onboarding reset, after the second occurrence.
+      **A third occurrence and a fourth fix, better than the three above, both from the quota engine.**
+      The harness DDL omits `work_schedule`'s unique index on `(user_id, effective_from)` entirely, so
+      that constraint was untestable through the harness and a duplicate would have been accepted under
+      test while production refused it. That is the same drift again, and note it is an omission rather
+      than a lag, so the column-comparison fix in candidate one would not have caught it. The better fix
+      is now demonstrated in the repository rather than proposed: `test/server/db/schema.test.ts`
+      generates the DDL from `server/db/schema.ts` itself with `drizzle-kit/api`
+      (`generateSQLiteDrizzleJson` plus `generateSQLiteMigration`), applies it to an in-memory database,
+      and was verified to produce foreign keys and indexes identical to migrations 0004, 0005, 0010 and
+      0014. A harness built that way has no second copy to drift, which beats detecting drift after the
+      fact. Porting `taskTestDb` onto it is the real fix and is still its own piece of work.
 
 - [ ] **Every `error`-coloured control in the app fails WCAG 1.4.3 in light mode.** Measured on the two
       controls the admin onboarding reset adds, but neither the cause nor the blast radius is that
