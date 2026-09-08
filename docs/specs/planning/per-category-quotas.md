@@ -91,7 +91,9 @@ and stored on two endpoints. `AC12` is the whole of it.
    [the category set](overview.md#the-category-set-and-the-real-quotas-from-the-user).
 4. **The table shape and the resolution order**, decided by the owner and reproduced in full below.
 5. **The mandatory convention headed "Any list is customizable, modular, and extensible"**, in
-   [`.recipes/CLAUDE.md`](../../../.recipes/CLAUDE.md). It arrived mid-run, after the shape above was
+   the always-on conventions, which lived in the `.recipes` submodule when this spec was written and
+   now ship in the [`workflow`](https://github.com/AGilbertDev/claude-plugins/tree/main/plugins/workflow)
+   plugin. It arrived mid-run, after the shape above was
    agreed, and it changes none of it. What it changes is the standing of the choices, which are a
    named requirement the design is measured against rather than a happy consequence. The section
    [the extensibility rule](#the-extensibility-rule-and-where-each-choice-satisfies-it) goes through
