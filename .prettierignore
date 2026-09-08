@@ -6,9 +6,7 @@
 # reason.
 .claude/
 
-# Vendored and generated. `.recipes` is a submodule and belongs to another repository, so its
-# formatting is decided there. The rest is build output and coverage, none of it hand-edited.
-.recipes/
+# Generated. Build output and coverage, none of it hand-edited.
 .nuxt/
 .output/
 .data/
