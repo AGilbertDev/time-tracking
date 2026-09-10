@@ -36,7 +36,7 @@ Each visual change applies to both light and dark mode.
   background. Raise the contrast between the page background and the card surface, give the
   card a subtle border and a soft shadow, and widen the gap between stacked cards (today the
   stack is `space-y-3.5` in `Week.vue` and the card is `bg-default ring ring-default
-  shadow-sm` in `DayCard.vue`). Cards no longer melt into the background or into one another.
+shadow-sm` in `DayCard.vue`). Cards no longer melt into the background or into one another.
 - **AC2. Day header structural tone.** On a work-day card the day header sits on a subtly
   darker or muted structural fill against the card body, so the header reads as its own band.
   The tone is structural and neutral, never a loud or saturated colour. Today this header
@@ -93,8 +93,8 @@ Saturday distinction.
 
 **Key changed:**
 
-| Key | FR before | FR after | EN before | EN after |
-| --- | --- | --- | --- | --- |
+| Key              | FR before                | FR after          | EN before              | EN after    |
+| ---------------- | ------------------------ | ----------------- | ---------------------- | ----------- |
 | `planning.title` | `Planning de traduction` | `Tableau de bord` | `Translation planning` | `Dashboard` |
 
 **Kept.** `planning.offDay.base` stays `Congé` (FR) and `Day off` (EN).

@@ -8,18 +8,18 @@ This document is the source of truth for that process. The portfolio project pag
 
 Two human gates bracket the work. I approve the spec before any code exists, and I merge the pull request at the end. Everything in between runs without a question, and minimising that middle is the point rather than a shortcut. A well written spec is what makes it possible.
 
-| Step | Who | What happens |
-| --- | --- | --- |
-| 1. Intent | Me | I describe the feature in a sentence or two. |
-| 2. Spec | Claude, in plan mode | The spec is written with me, one question at a time, and lands in `docs/specs/`. |
-| 3. Spec review | Me | I approve it. It becomes the first commit on the branch, before any code. |
-| 4. Tests | Agent | A separate agent writes the tests from the spec. It never reads the implementation, so the tests check the intent rather than confirm the build. They arrive failing. |
-| 5. Build | Claude | The implementation is written until those tests pass. |
-| 6. Checks | Claude | The conventions checklist always, plus accessibility, SEO, and compliance where they apply. A UI change is driven in a real browser against each acceptance criterion. |
-| 7. Review | `/code-review` | The diff is reviewed in a fresh context. Findings are fixed or declined with a reason. |
-| 8. Pull request | Claude | One commit, one pull request, then it stops. |
-| 9. Report | Automation | [`AGilbertDev/test-report`](https://github.com/AGilbertDev/test-report) posts the failures, the coverage of the changed files, and the difference against `main`. The check is red whenever a test fails. |
-| 10. Merge | Me | I read the diff and the report, then merge. |
+| Step            | Who                  | What happens                                                                                                                                                                                              |
+| --------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Intent       | Me                   | I describe the feature in a sentence or two.                                                                                                                                                              |
+| 2. Spec         | Claude, in plan mode | The spec is written with me, one question at a time, and lands in `docs/specs/`.                                                                                                                          |
+| 3. Spec review  | Me                   | I approve it. It becomes the first commit on the branch, before any code.                                                                                                                                 |
+| 4. Tests        | Agent                | A separate agent writes the tests from the spec. It never reads the implementation, so the tests check the intent rather than confirm the build. They arrive failing.                                     |
+| 5. Build        | Claude               | The implementation is written until those tests pass.                                                                                                                                                     |
+| 6. Checks       | Claude               | The conventions checklist always, plus accessibility, SEO, and compliance where they apply. A UI change is driven in a real browser against each acceptance criterion.                                    |
+| 7. Review       | `/code-review`       | The diff is reviewed in a fresh context. Findings are fixed or declined with a reason.                                                                                                                    |
+| 8. Pull request | Claude               | One commit, one pull request, then it stops.                                                                                                                                                              |
+| 9. Report       | Automation           | [`AGilbertDev/test-report`](https://github.com/AGilbertDev/test-report) posts the failures, the coverage of the changed files, and the difference against `main`. The check is red whenever a test fails. |
+| 10. Merge       | Me                   | I read the diff and the report, then merge.                                                                                                                                                               |
 
 ## What runs it
 

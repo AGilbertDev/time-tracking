@@ -17,10 +17,10 @@ the interface shows only what is functional.
 
 | #   | Question                               | Decision                                                                                                                                                                                 |
 | --- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | The nine colours                       | The user's hues kept verbatim where they were given. `revision_external` 115, `admin` 305, `dtp` 60, `proofreading` 230. Worst measured cell in the whole set is 5.07:1.                          |
+| 1   | The nine colours                       | The user's hues kept verbatim where they were given. `revision_external` 115, `admin` 305, `dtp` 60, `proofreading` 230. Worst measured cell in the whole set is 5.07:1.                 |
 | 2   | Does fixed lightness survive at 4.5:1  | Yes, whole, with **zero exceptions**. One lightness and one chroma per mode carries all nine and in fact carries all 360 hues. Light moves from 0.55 to 0.47, dark stays at 0.74.        |
-| 3   | Proofreading's pale grey               | It does not survive. `Relecture` becomes slate blue at hue 230. Measured reason below, and it goes back to the user as a substitution rather than a silent fix.                  |
-| 4   | The status collision                   | Positional first, typographic second. Chromatic separation is measured as unavailable and is explicitly not relied on, which is what lets the user's hues survive verbatim.                     |
+| 3   | Proofreading's pale grey               | It does not survive. `Relecture` becomes slate blue at hue 230. Measured reason below, and it goes back to the user as a substitution rather than a silent fix.                          |
+| 4   | The status collision                   | Positional first, typographic second. Chromatic separation is measured as unavailable and is explicitly not relied on, which is what lets the user's hues survive verbatim.              |
 | 5   | The task column on a non-trackable row | The em dash with `planning.notSet` behind it. No new key.                                                                                                                                |
 | 6   | Column position and width              | Track 2, right after the grip, `9rem`. `min-w-[52rem]` becomes `min-w-[62rem]`. The container does not widen, because it already does at `xl`.                                           |
 | 7   | The delivery separator                 | A plain space, no glyph. The join moves into a pure `formatDeadline` in `shared/planning.ts` that returns the two parts, so the two-tone rendering survives and the space is assertable. |
@@ -85,7 +85,7 @@ surface the `--planning-cat-l` comment already names, measured against the stric
 
 ### The resolved palette
 
-| Category            | The user's colour              | Hue | Light     | Effective C | Dark      | Effective C |
+| Category            | The user's colour       | Hue | Light     | Effective C | Dark      | Effective C |
 | ------------------- | ----------------------- | --- | --------- | ----------- | --------- | ----------- |
 | `translation`       | cyan                    | 195 | `#006b6c` | 0.080       | `#00c4c4` | 0.126       |
 | `revision_internal` | apple green             | 140 | `#36692a` | 0.110       | `#7dbf6e` | 0.130       |

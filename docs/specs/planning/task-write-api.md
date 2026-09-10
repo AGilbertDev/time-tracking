@@ -34,15 +34,15 @@ Each body arrives as JSON and is read with `readValidatedBody` against a Zod sch
 
 The authority on every individual field is [the writable field contract](#the-writable-field-contract), which gives the create column, the update column, and the validation rule for each one. It is not repeated here, because two copies of a field list drift and the copy further from the schema is the one that goes stale. The grouping below is the shape of the request at a glance.
 
-| Field group                                                                    | Create       | Update   |
-| ------------------------------------------------------------------------------ | ------------ | -------- |
-| `date` and `category`, the day and the kind of work                             | **required** | optional |
-| `client` and `project`, free text                                               | optional     | optional |
-| `deliveryDate` and `deliveryTime`                                               | optional     | optional |
-| `projectWordCount`, `quotaWphOverride`, `estimatedMinutes`, `actualMinutes`     | optional     | optional |
-| `status` and `excludeFromStats`                                                 | optional     | optional |
-| `id`, `userId`, `createdAt`, `updatedAt`, all server-owned                      | refused      | refused  |
-| `wordsDone`, `sortOrder`, `splitGroupId`, each owned by another feature         | refused      | refused  |
+| Field group                                                                 | Create       | Update   |
+| --------------------------------------------------------------------------- | ------------ | -------- |
+| `date` and `category`, the day and the kind of work                         | **required** | optional |
+| `client` and `project`, free text                                           | optional     | optional |
+| `deliveryDate` and `deliveryTime`                                           | optional     | optional |
+| `projectWordCount`, `quotaWphOverride`, `estimatedMinutes`, `actualMinutes` | optional     | optional |
+| `status` and `excludeFromStats`                                             | optional     | optional |
+| `id`, `userId`, `createdAt`, `updatedAt`, all server-owned                  | refused      | refused  |
+| `wordsDone`, `sortOrder`, `splitGroupId`, each owned by another feature     | refused      | refused  |
 
 **Refused means a 422, not a silent drop.** Both object schemas are `.strict()`, so an unknown key and a server-owned key are both errors. A client that sends `userId` and gets a 200 has been told its write succeeded as sent, which is false, and the owning user always comes from the session regardless of what the body claims.
 
@@ -131,27 +131,27 @@ Every body is parsed with Zod at the route, and a failure returns a structured 4
 
 Field by field over the live schema. "Create" and "Update" say whether a client may send the field on that endpoint.
 
-| Column             | Create             | Update             | Rule                                                                                                   |
-| ------------------ | ------------------ | ------------------ | ------------------------------------------------------------------------------------------------------ |
-| `id`               | never              | never              | Server-owned, `$defaultFn` uuid.                                                                         |
-| `userId`           | never              | never              | Server-owned, from the session.                                                                          |
-| `date`             | **required**       | optional           | `isValidCalendarDay`. Column is `NOT NULL`.                                                              |
-| `client`           | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                                           |
-| `project`          | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                                           |
-| `category`         | **required**       | optional           | Must be one of `DEFAULT_CATEGORY_IDS`. Column is `NOT NULL`.                                             |
-| `deliveryDate`     | optional, nullable | optional, nullable | `isValidCalendarDay`.                                                                                    |
-| `deliveryTime`     | optional, nullable | optional, nullable | `HH:MM`, 24-hour.                                                                                        |
-| `projectWordCount` | optional, nullable | optional, nullable | Integer, `0` to `10000000`.                                                                              |
-| `wordsDone`        | never              | never              | Never written at all. See [below](#the-words_done-question-and-how-it-was-settled).                      |
-| `quotaWphOverride` | optional, nullable | optional, nullable | Integer, `1` to `10000`. Never zero.                                                                     |
-| `estimatedMinutes` | optional, nullable | optional, nullable | Integer, `0` to `100000`. Stored verbatim, never computed here.                                          |
-| `actualMinutes`    | optional, nullable | optional, nullable | Integer, `0` to `100000`. **Never auto-filled.**                                                         |
-| `status`           | optional, nullable | optional, nullable | One of the shared status tuple, cross-checked against trackability.                                      |
-| `excludeFromStats` | optional           | optional           | Boolean. Defaults to `false` through the column default.                                                 |
-| `splitGroupId`     | never              | never              | `PLAN-18` owns it.                                                                                       |
-| `sortOrder`        | never              | never              | Server-assigned. `PLAN-15` owns reordering.                                                              |
-| `createdAt`        | never              | never              | Server-owned.                                                                                            |
-| `updatedAt`        | never              | never              | Server-owned, set by hand on update.                                                                     |
+| Column             | Create             | Update             | Rule                                                                                |
+| ------------------ | ------------------ | ------------------ | ----------------------------------------------------------------------------------- |
+| `id`               | never              | never              | Server-owned, `$defaultFn` uuid.                                                    |
+| `userId`           | never              | never              | Server-owned, from the session.                                                     |
+| `date`             | **required**       | optional           | `isValidCalendarDay`. Column is `NOT NULL`.                                         |
+| `client`           | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                      |
+| `project`          | optional, nullable | optional, nullable | Trimmed, max 200, empty string becomes `null`.                                      |
+| `category`         | **required**       | optional           | Must be one of `DEFAULT_CATEGORY_IDS`. Column is `NOT NULL`.                        |
+| `deliveryDate`     | optional, nullable | optional, nullable | `isValidCalendarDay`.                                                               |
+| `deliveryTime`     | optional, nullable | optional, nullable | `HH:MM`, 24-hour.                                                                   |
+| `projectWordCount` | optional, nullable | optional, nullable | Integer, `0` to `10000000`.                                                         |
+| `wordsDone`        | never              | never              | Never written at all. See [below](#the-words_done-question-and-how-it-was-settled). |
+| `quotaWphOverride` | optional, nullable | optional, nullable | Integer, `1` to `10000`. Never zero.                                                |
+| `estimatedMinutes` | optional, nullable | optional, nullable | Integer, `0` to `100000`. Stored verbatim, never computed here.                     |
+| `actualMinutes`    | optional, nullable | optional, nullable | Integer, `0` to `100000`. **Never auto-filled.**                                    |
+| `status`           | optional, nullable | optional, nullable | One of the shared status tuple, cross-checked against trackability.                 |
+| `excludeFromStats` | optional           | optional           | Boolean. Defaults to `false` through the column default.                            |
+| `splitGroupId`     | never              | never              | `PLAN-18` owns it.                                                                  |
+| `sortOrder`        | never              | never              | Server-assigned. `PLAN-15` owns reordering.                                         |
+| `createdAt`        | never              | never              | Server-owned.                                                                       |
+| `updatedAt`        | never              | never              | Server-owned, set by hand on update.                                                |
 
 **Only `date` and `category` are required on create**, because they are the only two columns that are `NOT NULL` without a default. Everything else the table needs is either nullable or defaulted, so the smallest legal task is a day and a kind of work. That matches the product and not only the schema: the user adds a break or a meeting with nothing but those two, and `PLAN-10`'s `AC3` says adding is never blocked.
 

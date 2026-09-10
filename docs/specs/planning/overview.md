@@ -229,17 +229,17 @@ That second message matters as much as the first, because it resolves what would
 
 Given 2026-07-29, from the app the user uses today. **Implemented by `PLAN-32c`**, specced in [category-column-coloured-names.md](category-column-coloured-names.md) and designed in [category-column-coloured-names-design.md](category-column-coloured-names-design.md). The user's hues ship verbatim wherever they named one, with a single exception recorded under the table. The invented palette that shipped in `PLAN-02` is gone.
 
-| Category           | The user's colour    | Shipped hue | Note                                                          |
-| ------------------ | ------------- | ----------- | ------------------------------------------------------------- |
-| Translation        | cyan          | 195         | The user's, kept                                                    |
-| Revision, internal | apple green   | 140         | The user's, kept. The user gave one green for both                       |
-| Revision, external | apple green   | 115         | Derived sibling, 25 degrees off internal, the closest pair    |
-| Proofreading       | pale gray     | 230         | **Overridden.** Slate blue rather than the user's grey, reason below |
-| Terminology        | wine red      | 20          | The user's, kept                                                    |
-| Meetings           | pink          | 340         | The user's, kept                                                    |
-| Breaks             | navy          | 265         | The user's, kept                                                    |
-| Administration     | not specified | 305         | Chosen, violet. The user named no colour for it                    |
-| DTP                | not specified | 60          | Chosen, ochre. The user named no colour for it                     |
+| Category           | The user's colour | Shipped hue | Note                                                                 |
+| ------------------ | ----------------- | ----------- | -------------------------------------------------------------------- |
+| Translation        | cyan              | 195         | The user's, kept                                                     |
+| Revision, internal | apple green       | 140         | The user's, kept. The user gave one green for both                   |
+| Revision, external | apple green       | 115         | Derived sibling, 25 degrees off internal, the closest pair           |
+| Proofreading       | pale gray         | 230         | **Overridden.** Slate blue rather than the user's grey, reason below |
+| Terminology        | wine red          | 20          | The user's, kept                                                     |
+| Meetings           | pink              | 340         | The user's, kept                                                     |
+| Breaks             | navy              | 265         | The user's, kept                                                     |
+| Administration     | not specified     | 305         | Chosen, violet. The user named no colour for it                      |
+| DTP                | not specified     | 60          | Chosen, ochre. The user named no colour for it                       |
 
 **Proofreading does not ship the user's pale grey, and this is an override of a colour the user gave rather than a gap they left.** `Relecture` prints at hue 230, a slate blue. The reason is measured. A grey dark enough to clear the 4.5:1 text floor lands at `L 0.47`, and all five themes put their light `text-muted` in the `L 0.47` to `L 0.53` band, so a chroma-zero category name would sit inside the tone the row already uses for its own dimmed text. `Relecture` would read as the one row whose colour failed to load rather than as one of the user's nine colours. The obvious compromise, a very low chroma slate, is worse rather than better, because encre's `neutral-500` is itself a blue-grey at `L 0.52 C 0.046 H 259`, so a slate at the same lightness and chroma near the same hue reproduces exactly the failure it was meant to avoid. Hue 230 is the centre of the widest empty arc in the user's own palette, so the substitution costs the least separation from everything else the user named. Approved by the owner, who will tell the user it changed and why. It stays the user's to overrule.
 

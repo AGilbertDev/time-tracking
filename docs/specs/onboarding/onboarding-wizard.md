@@ -158,7 +158,7 @@ These resolve every ambiguity the brief left open so the build runs hands-off wi
 
 ## Open questions
 
-None blocking. The assumptions above resolve the brief's ambiguities for a hands-off build. Two items need owner confirmation before the feature is *done* but do not block the build: the researched Québécois FR wording for the new labels (day names, "work hours per day", "base quota, words per hour", "timezone", Back/Next/Finish), and confirmation that shipping the work settings without also surfacing them on the session (assumption 2) is acceptable until the dashboard feature lands.
+None blocking. The assumptions above resolve the brief's ambiguities for a hands-off build. Two items need owner confirmation before the feature is _done_ but do not block the build: the researched Québécois FR wording for the new labels (day names, "work hours per day", "base quota, words per hour", "timezone", Back/Next/Finish), and confirmation that shipping the work settings without also surfacing them on the session (assumption 2) is acceptable until the dashboard feature lands.
 
 ## Notes for later stages
 

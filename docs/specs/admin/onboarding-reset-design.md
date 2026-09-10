@@ -137,13 +137,13 @@ work hours.
 
 **What was considered and rejected.**
 
-| Option | Why not |
-| --- | --- |
+| Option                                                                  | Why not                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A danger-zone card with `ring-error` and a tinted surface, GitHub style | A permanent red block on a page used routinely becomes furniture, and the section's actual copy is two short strings, so a bordered zone would be a frame around almost nothing. GitHub's danger zone holds several irreversible actions. This holds one. |
-| A `UAlert color="warning"` inside the card restating the consequence | There is no i18n key for it, so it would mean inventing copy the spec did not write, and it would say at rest what the modal says at the moment of decision. Warning twice is how the first warning stops being read. |
-| `text-error` on the heading icon | A standing alarm on a heading, with no decision attached to it. |
-| Solid `color="error"` on the section button | Loudest element on the page, and it spends the escalation before the modal needs it. |
-| A typed confirmation string | Settled by the spec against the prior art. Typing is reserved for deletion of something irreplaceable, and what is cleared here is a handful of numbers and preferences. |
+| A `UAlert color="warning"` inside the card restating the consequence    | There is no i18n key for it, so it would mean inventing copy the spec did not write, and it would say at rest what the modal says at the moment of decision. Warning twice is how the first warning stops being read.                                     |
+| `text-error` on the heading icon                                        | A standing alarm on a heading, with no decision attached to it.                                                                                                                                                                                           |
+| Solid `color="error"` on the section button                             | Loudest element on the page, and it spends the escalation before the modal needs it.                                                                                                                                                                      |
+| A typed confirmation string                                             | Settled by the spec against the prior art. Typing is reserved for deletion of something irreplaceable, and what is cleared here is a handful of numbers and preferences.                                                                                  |
 
 **Why none of this is policing.** The project rule forbids blocking the user from recording what they
 actually did. Nothing here refuses an action, nothing is disabled, no condition prevents the reset, and
@@ -194,12 +194,12 @@ spaces them, which works because the children are block-level.
 Three levels of emphasis, all from semantic tokens, all still legible with colour removed because the
 words carry the meaning on their own.
 
-| Order | Key | Classes on the span | Why that weight |
-| --- | --- | --- | --- |
-| 1 | `settings.reset.confirm.cleared` | `block text-default` | The consequence, and the only sentence naming the theme and the language. Stepped up out of `text-muted` so it is the most legible line in the dialog, directly under the title, which is where a reader's eye lands first. |
-| 2 | `settings.reset.confirm.kept` | `block` | The reassurance, inheriting `text-muted`. This is Chrome's reset dialog structure, where naming what survives is what makes the warning proportionate instead of frightening. |
-| 3 | `settings.reset.confirm.password` | `block` | The heads-up about the wizard asking for a password again. Same weight as the reassurance, because it is a thing to expect rather than a thing to fear. |
-| 4 | `settings.reset.confirm.irreversible` | `block font-medium text-highlighted` | The last thing read before the two buttons. Weight rather than colour, because the confirm button below it is already solid red and a red sentence above a red button is the same signal twice with less legibility. |
+| Order | Key                                   | Classes on the span                  | Why that weight                                                                                                                                                                                                             |
+| ----- | ------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `settings.reset.confirm.cleared`      | `block text-default`                 | The consequence, and the only sentence naming the theme and the language. Stepped up out of `text-muted` so it is the most legible line in the dialog, directly under the title, which is where a reader's eye lands first. |
+| 2     | `settings.reset.confirm.kept`         | `block`                              | The reassurance, inheriting `text-muted`. This is Chrome's reset dialog structure, where naming what survives is what makes the warning proportionate instead of frightening.                                               |
+| 3     | `settings.reset.confirm.password`     | `block`                              | The heads-up about the wizard asking for a password again. Same weight as the reassurance, because it is a thing to expect rather than a thing to fear.                                                                     |
+| 4     | `settings.reset.confirm.irreversible` | `block font-medium text-highlighted` | The last thing read before the two buttons. Weight rather than colour, because the confirm button below it is already solid red and a red sentence above a red button is the same signal twice with less legibility.        |
 
 **The consequence the user will not expect is the theme and the language.** It sits inside sentence one,
 which is the sentence the design makes the most legible and puts first. That is as far as layout can
@@ -212,10 +212,10 @@ enumeration inside one long sentence, which is a copy shape no arrangement of pi
 
 `:ui="{ footer: 'justify-end' }"`, the same footer override the shipped modal uses.
 
-| Action | Component | Why |
-| --- | --- | --- |
-| Cancel | `UButton color="neutral" variant="ghost" :label="t('settings.reset.confirm.cancel')"` closing the modal | Character for character the shipped cancel in `admin/users.vue`. It sends nothing, which is `AC24`. |
-| Reset | `UButton color="error" :label="t('settings.reset.confirm.submit')" :loading="resetting"` | Solid `error` at its default variant, which is the shipped destructive confirm on the users page. No icon, matching that confirm, because a labelled button at the end of a dialog that has just explained itself needs no glyph. |
+| Action | Component                                                                                               | Why                                                                                                                                                                                                                               |
+| ------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cancel | `UButton color="neutral" variant="ghost" :label="t('settings.reset.confirm.cancel')"` closing the modal | Character for character the shipped cancel in `admin/users.vue`. It sends nothing, which is `AC24`.                                                                                                                               |
+| Reset  | `UButton color="error" :label="t('settings.reset.confirm.submit')" :loading="resetting"`                | Solid `error` at its default variant, which is the shipped destructive confirm on the users page. No icon, matching that confirm, because a labelled button at the end of a dialog that has just explained itself needs no glyph. |
 
 **Cancel is the safe option and it is quieter than Confirm.** That is deliberate and it is the app's
 existing idiom, but it is worth naming rather than leaving implied. A ghost cancel beside a solid red
@@ -279,9 +279,9 @@ The section has no load, so this is only about the write.
   refreshed session cookie is on the response, and the next navigation routes correctly. So the
   permissive option is the one whose worst case is already documented as safe.
 - **Success.** A toast, `toast.add({ title: t('settings.reset.success'), color: 'success', icon:
-  'i-ph-check-circle' })`, identical in construction to the three shipped success toasts.
+'i-ph-check-circle' })`, identical in construction to the three shipped success toasts.
 - **Failure.** The modal closes and a toast appears, `toast.add({ title:
-  t('settings.reset.errors.generic'), color: 'error', icon: 'i-ph-warning-circle' })`, identical in
+t('settings.reset.errors.generic'), color: 'error', icon: 'i-ph-warning-circle' })`, identical in
   construction to the three shipped error toasts. There is no inline error region in the card and no
   `UAlert`, because the only `UAlert` on this page is the load-failure alert on the two sections that
   load, and this one does not. `resetting` is cleared in a `finally`, so the button never keeps
@@ -424,13 +424,13 @@ three existing sections untouched.
 
 ## Nuxt UI components chosen, with a reason for each
 
-| Component | Where | Why this one |
-| --- | --- | --- |
-| `UCard` | The section body | The shipped card on all three sections. Anything else would make the fourth section read as a bolt-on. |
-| `UIcon` | The heading | The shipped heading construction. |
-| `UButton` | The section control, and both modal actions | First in the solution priority order, and the only button primitive in the app. `color` and `variant` carry every distinction this design needs, so no custom class does. |
-| `UModal` | The confirmation | The Nuxt UI primitive for a dialog, already the app's confirmation idiom on the users page. It brings the reka-ui focus trap, the Escape dismissal, the focus restore, `aria-modal`, and the title and description wiring, all of which a hand-built dialog would have to reproduce and would reproduce worse. |
-| `useToast` | Success and failure | The shipped announcement channel on this page, which reaches `UApp`'s live region. |
+| Component  | Where                                       | Why this one                                                                                                                                                                                                                                                                                                   |
+| ---------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UCard`    | The section body                            | The shipped card on all three sections. Anything else would make the fourth section read as a bolt-on.                                                                                                                                                                                                         |
+| `UIcon`    | The heading                                 | The shipped heading construction.                                                                                                                                                                                                                                                                              |
+| `UButton`  | The section control, and both modal actions | First in the solution priority order, and the only button primitive in the app. `color` and `variant` carry every distinction this design needs, so no custom class does.                                                                                                                                      |
+| `UModal`   | The confirmation                            | The Nuxt UI primitive for a dialog, already the app's confirmation idiom on the users page. It brings the reka-ui focus trap, the Escape dismissal, the focus restore, `aria-modal`, and the title and description wiring, all of which a hand-built dialog would have to reproduce and would reproduce worse. |
+| `useToast` | Success and failure                         | The shipped announcement channel on this page, which reaches `UApp`'s live region.                                                                                                                                                                                                                             |
 
 **No `UForm` and no `UFormField` anywhere.** There is no input, no validation, and nothing to submit. The
 spec rejected a typed confirmation and rejected a `confirm: true` body field, so the modal has no field
@@ -442,11 +442,11 @@ in it, and wrapping two buttons in a form would add a submit path that means not
 
 Three, all Phosphor, all present in the installed collection and all already used in this app.
 
-| Icon | Where | Why |
-| --- | --- | --- |
+| Icon                                | Where                                      | Why                                                                              |
+| ----------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------- |
 | `i-ph-arrow-counter-clockwise-bold` | The section heading and the section button | The action returns the account to a previous state rather than deleting a thing. |
-| `i-ph-check-circle` | The success toast | The shipped success toast icon on this page. |
-| `i-ph-warning-circle` | The error toast | The shipped error toast icon on this page. |
+| `i-ph-check-circle`                 | The success toast                          | The shipped success toast icon on this page.                                     |
+| `i-ph-warning-circle`               | The error toast                            | The shipped error toast icon on this page.                                       |
 
 No icon on the modal's confirm button, matching the shipped confirmation modal, and no icon inside the
 description, because four short sentences with a glyph each is a list pretending to be prose.
@@ -460,20 +460,20 @@ is copied from the spec byte for byte, including the real U+00A0 before `?`**, w
 editor and in a diff. `settings.reset.confirm.title` is the one string in the set carrying that
 character.
 
-| Key | Renders as | EN gloss |
-| --- | --- | --- |
-| `settings.reset.heading` | The `h2` text, after the icon | Reset |
-| `settings.reset.subtitle` | The `p` under the heading | Clear your settings and go through the initial setup again. |
-| `settings.reset.submit` | The section button label | Reset |
-| `settings.reset.confirm.title` | The modal `title` prop | Reset your settings? |
-| `settings.reset.confirm.cleared` | Description span 1, `text-default` | Your work hours, work days, timezone, theme, language and quotas will be cleared. |
-| `settings.reset.confirm.kept` | Description span 2 | Your tasks, your name and your password are not affected. |
-| `settings.reset.confirm.password` | Description span 3 | The initial setup will ask you for a password again. |
-| `settings.reset.confirm.irreversible` | Description span 4, `font-medium text-highlighted` | This cannot be undone. |
-| `settings.reset.confirm.cancel` | The footer's first button label | Cancel |
-| `settings.reset.confirm.submit` | The footer's second button label | Reset |
-| `settings.reset.success` | The success toast title | Your settings have been reset. |
-| `settings.reset.errors.generic` | The error toast title | Something went wrong. Please try again. |
+| Key                                   | Renders as                                         | EN gloss                                                                          |
+| ------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `settings.reset.heading`              | The `h2` text, after the icon                      | Reset                                                                             |
+| `settings.reset.subtitle`             | The `p` under the heading                          | Clear your settings and go through the initial setup again.                       |
+| `settings.reset.submit`               | The section button label                           | Reset                                                                             |
+| `settings.reset.confirm.title`        | The modal `title` prop                             | Reset your settings?                                                              |
+| `settings.reset.confirm.cleared`      | Description span 1, `text-default`                 | Your work hours, work days, timezone, theme, language and quotas will be cleared. |
+| `settings.reset.confirm.kept`         | Description span 2                                 | Your tasks, your name and your password are not affected.                         |
+| `settings.reset.confirm.password`     | Description span 3                                 | The initial setup will ask you for a password again.                              |
+| `settings.reset.confirm.irreversible` | Description span 4, `font-medium text-highlighted` | This cannot be undone.                                                            |
+| `settings.reset.confirm.cancel`       | The footer's first button label                    | Cancel                                                                            |
+| `settings.reset.confirm.submit`       | The footer's second button label                   | Reset                                                                             |
+| `settings.reset.success`              | The success toast title                            | Your settings have been reset.                                                    |
+| `settings.reset.errors.generic`       | The error toast title                              | Something went wrong. Please try again.                                           |
 
 That is the complete set of visible strings, and it matches the spec's table exactly. **This design adds
 no key and needs none**, which is `AC25` satisfied without a copy round trip. The keys sit under
