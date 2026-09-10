@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@iconify-json/ph": "^1.2.2",
-    "@tanstack/vue-table": "8.21.3",
+    "@tanstack/vue-table": "9.2.4",
     "@vitest/coverage-v8": "^4.1.10",
     "drizzle-kit": "^0.31.10",
     "eslint-config-prettier": "^10.1.8",
