@@ -44,14 +44,14 @@ The module contains only ids, the `trackable` flag, and the pure functions above
 
 A `categories` namespace is added to `i18n/locales/fr.json` and `i18n/locales/en.json`, keyed by the stable category id, following the existing nested-object structure. The i18n key convention is locked as `categories.<id>`, so a component resolves a name with `t('categories.' + category.id)` (or `t(\`categories.${id}\`)`). The entries are:
 
-| id | `categories.<id>` FR | `categories.<id>` EN |
-| --- | --- | --- |
-| `translation` | Traduction | Translation |
-| `revision` | Révision | Revision |
-| `terminology` | Terminologie | Terminology |
-| `meetings` | Réunions | Meetings |
-| `breaks` | Pauses | Breaks |
-| `admin` | Administration | Admin |
+| id            | `categories.<id>` FR | `categories.<id>` EN |
+| ------------- | -------------------- | -------------------- |
+| `translation` | Traduction           | Translation          |
+| `revision`    | Révision             | Revision             |
+| `terminology` | Terminologie         | Terminology          |
+| `meetings`    | Réunions             | Meetings             |
+| `breaks`      | Pauses               | Breaks               |
+| `admin`       | Administration       | Admin                |
 
 - **AC4.** `i18n/locales/fr.json` and `i18n/locales/en.json` each carry a `categories` object with a key for every one of the six default ids, and every key resolves to a non-empty string in both locales. The FR and EN objects have the same key set (no missing translation on either side). Verifiable by asserting each `DEFAULT_CATEGORY_IDS` entry has a matching key in both files.
 

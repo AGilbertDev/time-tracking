@@ -65,17 +65,17 @@ are the decisions it implements and the shipped code it amends.
 From the app the user uses today, given 2026-07-29. The proposed hues are the overview's, not the user's, and
 they are a starting point for the design stage rather than a decision.
 
-| Category           | The user's colour  | Proposed hue   | What this feature owes it                     |
-| ------------------ | ----------- | -------------- | --------------------------------------------- |
-| Translation        | cyan        | 195            | Already the shipped hue, by coincidence       |
-| Revision, internal | apple green | 140            | The user gave one green for both members           |
-| Revision, external | apple green | needs its own  | A second green, related but distinct          |
-| Proofreading       | pale gray   | none, chroma 0 | Passes as text or becomes a documented case   |
-| Terminology        | wine red    | 20             | Sits 7 degrees from error 27                  |
-| Meetings           | pink        | 340            | Sits 40 degrees from wine red at equal weight |
-| Breaks             | navy        | 265            | Sits 7 degrees from info 258                  |
-| Administration     | invented    | 305            | The user did not specify one                       |
-| DTP                | invented    | 60             | The user did not specify one, and 78 is warning    |
+| Category           | The user's colour | Proposed hue   | What this feature owes it                       |
+| ------------------ | ----------------- | -------------- | ----------------------------------------------- |
+| Translation        | cyan              | 195            | Already the shipped hue, by coincidence         |
+| Revision, internal | apple green       | 140            | The user gave one green for both members        |
+| Revision, external | apple green       | needs its own  | A second green, related but distinct            |
+| Proofreading       | pale gray         | none, chroma 0 | Passes as text or becomes a documented case     |
+| Terminology        | wine red          | 20             | Sits 7 degrees from error 27                    |
+| Meetings           | pink              | 340            | Sits 40 degrees from wine red at equal weight   |
+| Breaks             | navy              | 265            | Sits 7 degrees from info 258                    |
+| Administration     | invented          | 305            | The user did not specify one                    |
+| DTP                | invented          | 60             | The user did not specify one, and 78 is warning |
 
 Two decisions of the user's travel with the table and both stand.
 

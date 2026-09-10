@@ -51,7 +51,7 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
 ### 3. Settings page (spec §4)
 
 - [ ] `settings` table already exists (daily_work_minutes, work_days, quota_wph, and now light_theme/dark_theme/locale). Build the API + a settings page so the user can edit daily work duration, working days, default WPH quota, holidays.
-- Note: theme and locale persistence already shipped (Persist user preferences, see Done). This item is now only the settings *page* for the work-related fields.
+- Note: theme and locale persistence already shipped (Persist user preferences, see Done). This item is now only the settings _page_ for the work-related fields.
 
 ### 4. Stats (spec §5)
 
@@ -277,8 +277,7 @@ The dashboard (`app/pages/index.vue`) is an empty placeholder. This is the heart
       is now demonstrated in the repository rather than proposed: `test/server/db/schema.test.ts`
       generates the DDL from `server/db/schema.ts` itself with `drizzle-kit/api`
       (`generateSQLiteDrizzleJson` plus `generateSQLiteMigration`), applies it to an in-memory database,
-      and was verified to produce foreign keys and indexes identical to migrations 0004, 0005, 0010 and
-      0014. A harness built that way has no second copy to drift, which beats detecting drift after the
+      and was verified to produce foreign keys and indexes identical to migrations 0004, 0005, 0010 and 0014. A harness built that way has no second copy to drift, which beats detecting drift after the
       fact. Porting `taskTestDb` onto it is the real fix and is still its own piece of work.
       **Two gaps in the seeders, found while covering the admin handlers.** There is no allowlist seed
       or reader at all, and `seedSettings` takes a timezone but no locale, so a suite needing either has

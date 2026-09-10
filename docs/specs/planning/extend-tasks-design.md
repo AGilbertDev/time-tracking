@@ -17,17 +17,17 @@ category colour, and an exclusion marker. So the net has to come out calmer, whi
 
 The arithmetic that makes it possible, counted per task row:
 
-| | Drawn per row today | Drawn per row after |
-| --- | --- | --- |
-| Status carriers | dot + badge pill = 2 | 1 coloured word |
-| Category | 1 neutral chip pill | 1 border edge (0 nodes) |
-| Field labels | 2 tiny uppercase labels | 0 |
-| Meta line | 1 line | 0 |
-| Data values | 3 (name, mots, durée) | 4 (name, livraison, mots, durée) |
-| Split tag | 1 badge pill (conditional) | 1 dimmed word (conditional) |
-| Grip | 1 | 1 |
-| **Boxes drawn per row** | **3 pills** | **0** |
-| **Total at-rest elements** | **10** | **7** |
+|                            | Drawn per row today        | Drawn per row after              |
+| -------------------------- | -------------------------- | -------------------------------- |
+| Status carriers            | dot + badge pill = 2       | 1 coloured word                  |
+| Category                   | 1 neutral chip pill        | 1 border edge (0 nodes)          |
+| Field labels               | 2 tiny uppercase labels    | 0                                |
+| Meta line                  | 1 line                     | 0                                |
+| Data values                | 3 (name, mots, durée)      | 4 (name, livraison, mots, durée) |
+| Split tag                  | 1 badge pill (conditional) | 1 dimmed word (conditional)      |
+| Grip                       | 1                          | 1                                |
+| **Boxes drawn per row**    | **3 pills**                | **0**                            |
+| **Total at-rest elements** | **10**                     | **7**                            |
 
 A five-row card goes from fifty drawn elements to thirty-five, and from fifteen pill boxes to
 zero, while gaining a field. That is the whole design.
@@ -75,16 +75,16 @@ grid grid-cols-[1rem_minmax(12rem,1fr)_9rem_7.5rem_4.5rem_6rem_3rem]
 gap-x-4 items-center
 ```
 
-| # | Track | Width | Align | Why here |
-| --- | --- | --- | --- | --- |
-| — | Category edge | 3 px border | — | Outside the grid, on the row's own left border. Costs no track and no node. |
-| 1 | Grip | `1rem` | centre | Structural. Leftmost because a drag handle that is not at the edge is not a drag handle. |
-| 2 | Identity + markers | `minmax(12rem,1fr)` | left | Who the work is for. First readable track, takes all slack (D3). Hosts both conditional markers inline (D9). |
-| 3 | Livraison | `9rem` | left | When it is due. Second because the spec's reading order is who, when, how big, how long, where it stands, and because the deadline is the fact the user cannot see today. |
-| 4 | Mots | `7.5rem` | right | How big, and how much is left. |
-| 5 | Durée | `4.5rem` | right | How long. Sits immediately left of the status so the two numbers that explain the capacity bar are adjacent. |
-| 6 | Statut | `6rem` | left | Where it stands. Last readable track, because it is the field you check after you have identified the row, and because a status column at the right edge is the convention the original app already taught the user's. |
-| 7 | Row actions | `3rem` | right | Reserved, empty. Hover actions land here (D10, see below). |
+| #   | Track              | Width               | Align  | Why here                                                                                                                                                                                                               |
+| --- | ------------------ | ------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —   | Category edge      | 3 px border         | —      | Outside the grid, on the row's own left border. Costs no track and no node.                                                                                                                                            |
+| 1   | Grip               | `1rem`              | centre | Structural. Leftmost because a drag handle that is not at the edge is not a drag handle.                                                                                                                               |
+| 2   | Identity + markers | `minmax(12rem,1fr)` | left   | Who the work is for. First readable track, takes all slack (D3). Hosts both conditional markers inline (D9).                                                                                                           |
+| 3   | Livraison          | `9rem`              | left   | When it is due. Second because the spec's reading order is who, when, how big, how long, where it stands, and because the deadline is the fact the user cannot see today.                                              |
+| 4   | Mots               | `7.5rem`            | right  | How big, and how much is left.                                                                                                                                                                                         |
+| 5   | Durée              | `4.5rem`            | right  | How long. Sits immediately left of the status so the two numbers that explain the capacity bar are adjacent.                                                                                                           |
+| 6   | Statut             | `6rem`              | left   | Where it stands. Last readable track, because it is the field you check after you have identified the row, and because a status column at the right edge is the convention the original app already taught the user's. |
+| 7   | Row actions        | `3rem`              | right  | Reserved, empty. Hover actions land here (D10, see below).                                                                                                                                                             |
 
 Width derivations, so the frontend stage does not re-guess them.
 
@@ -138,12 +138,10 @@ sequence rather than as a name with things stuck to it.
 ```
 
 ```html
-class="flex min-w-0 items-baseline gap-x-1.5"
-  span.sr-only                    → the localized category, AC16
-  span "Éditions Pluriel"         → truncate text-[15px] font-semibold tracking-tight text-highlighted
-  span "· P-4821"                 → shrink-0 text-sm text-muted        (only when both exist)
-  span "· ⇄ suite"                → shrink-0 text-xs text-dimmed       (conditional)
-  span "· hors stats"             → shrink-0 text-xs text-muted        (conditional)
+class="flex min-w-0 items-baseline gap-x-1.5" span.sr-only → the localized category, AC16 span
+"Éditions Pluriel" → truncate text-[15px] font-semibold tracking-tight text-highlighted span "·
+P-4821" → shrink-0 text-sm text-muted (only when both exist) span "· ⇄ suite" → shrink-0 text-xs
+text-dimmed (conditional) span "· hors stats" → shrink-0 text-xs text-muted (conditional)
 ```
 
 Only the primary name truncates. Both markers are `shrink-0`, so a rare marker is never the thing
@@ -210,7 +208,8 @@ accessible header are the same object.**
 ```html
 <div role="table">
   <div role="row" class="grid grid-cols-[…] gap-x-4 border-b border-default px-5 py-2">
-    <span role="columnheader" class="sr-only">Catégorie</span>   <!-- grip / edge track -->
+    <span role="columnheader" class="sr-only">Catégorie</span>
+    <!-- grip / edge track -->
     <span role="columnheader">Tâche</span>
     <span role="columnheader">Livraison</span>
     <span role="columnheader" class="text-right">Mots</span>
@@ -287,9 +286,9 @@ The edge is the row's own left border, so it adds no DOM node.
 ```html
 <!-- trackable, with a hue -->
 <div class="planning-cat-edge border-l-[3px] …" style="--planning-cat-hue: 195">
-
-<!-- non-trackable, or any category with no hue -->
-<div class="border-l-[3px] border-l-transparent …">
+  <!-- non-trackable, or any category with no hue -->
+  <div class="border-l-[3px] border-l-transparent …"></div>
+</div>
 ```
 
 Every row carries the 3 px border whether or not it is drawn, so the geometry is identical and no
@@ -323,9 +322,7 @@ Add beside the existing `.planning-buffer` block in `app/assets/css/main.css`:
 }
 
 .planning-cat-edge {
-  border-left-color: oklch(
-    var(--planning-cat-l) var(--planning-cat-c) var(--planning-cat-hue)
-  );
+  border-left-color: oklch(var(--planning-cat-l) var(--planning-cat-c) var(--planning-cat-hue));
 }
 ```
 
@@ -367,10 +364,10 @@ Why this shape rather than a set of named tokens:
 
 Contrast, approximate and to be confirmed by the accessibility stage per theme:
 
-| Mode | Card surface | Edge L | Contrast |
-| --- | --- | --- | --- |
-| Light | `bg-default`, near white | 0.58 | ~3.4:1 |
-| Dark | `dark:bg-elevated` | 0.74 | ~5.6:1 |
+| Mode  | Card surface             | Edge L | Contrast |
+| ----- | ------------------------ | ------ | -------- |
+| Light | `bg-default`, near white | 0.58   | ~3.4:1   |
+| Dark  | `dark:bg-elevated`       | 0.74   | ~5.6:1   |
 
 The edge is a supplement, never the whole signal (AC16), so WCAG 1.4.11 does not strictly bind it.
 Clearing 3:1 anyway is the right floor for something the owner intends to scan by.
@@ -395,11 +392,11 @@ px-5 py-[clamp(0.75rem,1.6vh,1rem)]
 At `max-w-5xl` that leaves the bar **384 px**, and at `xl:max-w-6xl` **512 px**. Both are longer
 than the shipped `min-w-60`.
 
-| Zone | Width | Contents |
-| --- | --- | --- |
-| Left | `20rem` fixed | chevron, `h2` with the disclosure button, `aujourd'hui` pill, `Congé` tag, task count |
-| Middle | `1fr` | capacity bar, work days only |
-| Right | `15rem` fixed | capacity reading, work days only, `text-right` |
+| Zone   | Width         | Contents                                                                              |
+| ------ | ------------- | ------------------------------------------------------------------------------------- |
+| Left   | `20rem` fixed | chevron, `h2` with the disclosure button, `aujourd'hui` pill, `Congé` tag, task count |
+| Middle | `1fr`         | capacity bar, work days only                                                          |
+| Right  | `15rem` fixed | capacity reading, work days only, `text-right`                                        |
 
 ### The right zone becomes fixed width, and that is a bug fix
 
@@ -416,16 +413,16 @@ overbooked.
 
 ### Collapsed and expanded, and what moves
 
-| | Collapsed | Expanded |
-| --- | --- | --- |
-| Chevron | `i-ph-caret-right`, `text-dimmed` | same glyph, `rotate-90` |
-| Day name | unchanged | unchanged |
-| `aujourd'hui` pill | unchanged | unchanged |
-| `Congé` tag | unchanged | unchanged |
-| Task count | `5 tâches`, `text-xs tabular-nums text-dimmed` | removed |
-| Capacity bar | unchanged | unchanged |
-| Capacity reading | unchanged | unchanged |
-| Disclosure region | height 0 | natural height |
+|                    | Collapsed                                      | Expanded                |
+| ------------------ | ---------------------------------------------- | ----------------------- |
+| Chevron            | `i-ph-caret-right`, `text-dimmed`              | same glyph, `rotate-90` |
+| Day name           | unchanged                                      | unchanged               |
+| `aujourd'hui` pill | unchanged                                      | unchanged               |
+| `Congé` tag        | unchanged                                      | unchanged               |
+| Task count         | `5 tâches`, `text-xs tabular-nums text-dimmed` | removed                 |
+| Capacity bar       | unchanged                                      | unchanged               |
+| Capacity reading   | unchanged                                      | unchanged               |
+| Disclosure region  | height 0                                       | natural height          |
 
 **Nothing else moves.** The count is the only thing that appears and disappears, and it lives
 inside the fixed left track, so its presence cannot change where the bar starts or how long it is.
@@ -435,21 +432,28 @@ That is the whole reason it goes there rather than beside the reading.
 
 ```html
 <div class="flex min-w-0 items-baseline gap-x-2">
-  <UIcon aria-hidden="true"
-         class="size-4 shrink-0 self-center text-dimmed transition-transform duration-150 motion-reduce:transition-none"
-         :class="open && 'rotate-90'"
-         name="i-ph-caret-right" />
+  <UIcon
+    aria-hidden="true"
+    class="size-4 shrink-0 self-center text-dimmed transition-transform duration-150 motion-reduce:transition-none"
+    :class="open && 'rotate-90'"
+    name="i-ph-caret-right"
+  />
 
-  <h2 :id="`planning-day-${date}`" class="min-w-0 truncate text-[17px] font-semibold tracking-tight text-highlighted first-letter:uppercase">
-    <button type="button"
-            :aria-controls="`planning-day-panel-${date}`"
-            :aria-expanded="open"
-            class="after:absolute after:inset-0 after:content-['']">
+  <h2
+    :id="`planning-day-${date}`"
+    class="min-w-0 truncate text-[17px] font-semibold tracking-tight text-highlighted first-letter:uppercase"
+  >
+    <button
+      type="button"
+      :aria-controls="`planning-day-panel-${date}`"
+      :aria-expanded="open"
+      class="after:absolute after:inset-0 after:content-['']"
+    >
       {{ dayLabel }}
     </button>
   </h2>
 
-  <span v-if="isToday"  class="shrink-0 …">aujourd'hui</span>
+  <span v-if="isToday" class="shrink-0 …">aujourd'hui</span>
   <span v-if="offLabel" class="shrink-0 …">Congé</span>
   <span v-if="!open && tasks.length" class="shrink-0 text-xs font-medium tabular-nums text-dimmed">
     {{ t('planning.taskCount', tasks.length) }}
@@ -465,7 +469,7 @@ That is the whole reason it goes there rather than beside the reading.
   state comes from `aria-expanded` (AC10, AC24).
 - **Focus.** Ring the whole header, not just the day name, because the whole header is the target:
   `has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-[-2px]
-  has-[button:focus-visible]:outline-primary` on the header container. The accessibility stage may
+has-[button:focus-visible]:outline-primary` on the header container. The accessibility stage may
   simplify this to a ring on the button itself.
 - **A day with nothing to disclose** renders no chevron, no button, no count, and no
   `aria-expanded`, and the `h2` carries the day name directly (AC11). The chevron's `size-4` and its
@@ -481,13 +485,13 @@ That is the whole reason it goes there rather than beside the reading.
 ### The disclosure region and the reveal (D13)
 
 ```html
-<div class="grid transition-[grid-template-rows] duration-150 ease-out motion-reduce:transition-none"
-     :class="open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'">
+<div
+  class="grid transition-[grid-template-rows] duration-150 ease-out motion-reduce:transition-none"
+  :class="open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
+>
   <div :id="`planning-day-panel-${date}`" class="overflow-hidden">
     <div class="overflow-x-auto">
-      <div class="min-w-[52rem]" role="table">
-        …column header line, then the rows…
-      </div>
+      <div class="min-w-[52rem]" role="table">…column header line, then the rows…</div>
     </div>
   </div>
 </div>
@@ -509,7 +513,7 @@ The resolution is a **48 px reserved track plus a documented leftward overlay**:
 - The row carries `group/row` from this feature on, costing nothing.
 - `PLAN-17` and `PLAN-13` render the button group absolutely positioned at
   `right-3 top-1/2 -translate-y-1/2`, revealed with `opacity-0 group-hover/row:opacity-100
-  group-focus-within/row:opacity-100`, over a short `bg-gradient-to-l from-default` fade so it reads
+group-focus-within/row:opacity-100`, over a short `bg-gradient-to-l from-default` fade so it reads
   cleanly where it overlaps the status column.
 
 Nothing about the grid is re-cut when they land, which is D10's actual requirement. Reserving the
@@ -629,11 +633,11 @@ There is none, by design (D14, AC25). One arrangement at every width.
 
 Everything is gated on `prefers-reduced-motion: reduce` through `motion-reduce:transition-none`.
 
-| Element | Motion |
-| --- | --- |
-| Disclosure region | `grid-template-rows` `0fr` → `1fr`, 150 ms `ease-out` |
-| Chevron | `rotate-90`, 150 ms |
-| Row actions (`PLAN-17`, `PLAN-13`) | opacity only on hover and focus-within |
+| Element                            | Motion                                                |
+| ---------------------------------- | ----------------------------------------------------- |
+| Disclosure region                  | `grid-template-rows` `0fr` → `1fr`, 150 ms `ease-out` |
+| Chevron                            | `rotate-90`, 150 ms                                   |
+| Row actions (`PLAN-17`, `PLAN-13`) | opacity only on hover and focus-within                |
 
 No slide, no fade on the region, no bounce, no stagger. Nothing else animates.
 
@@ -657,23 +661,23 @@ No slide, no fade on the region, no bounce, no stagger. Nothing else animates.
 
 ## D1 through D15
 
-| | How it is satisfied |
-| --- | --- |
-| **D1** | One line per task. The meta line is gone and both markers are inline on the identity line, so nothing sits under the name. |
-| **D2** | Six of seven tracks are fixed-width, the name is the only `1fr`, and the column header line anchors the columns visually. |
-| **D3** | The name is `minmax(12rem,1fr)` and takes all slack: 389 px at `max-w-5xl`, 517 px at `xl`, against about 200 px for the worst seeded case. |
-| **D4** | `2 800 / 12 000`, one right-aligned tabular cell with a slash and a done/total weight contrast. Read as a ratio, not two numbers. |
-| **D5** | `16 juill. 16:00`, one cell, no separator glyph, joined by tone rather than punctuation. Deviates from the middle-dot nudge, justified above. |
-| **D6** | Per-row labels are deleted. One column header line per open card, doubling as the accessible `columnheader` set. Ten labels on a five-row card become five, once, and zero when collapsed. |
-| **D7** | Status keeps one carrier. The dot is deleted and `StatusDot.vue` with it. The labelled badge survives and loses its pill; the label, which is what makes it the accessible carrier, is untouched. |
-| **D8** | One left edge, weighed against two and recorded. Distinct hue per trackable category. Non-trackable draws no edge. One hue angle per category with shared lightness and chroma, so the palette extends to a `PLAN-30` category with one integer. Light and dark handled by a `.dark` override. |
-| **D9** | Both markers are inline dimmed text on the identity line. No reserved track, no box, and no cost to a row that does not carry them. The split tag loses the badge it ships with today. |
-| **D10** | A 48 px reserved track, no wider than today's 44 px, plus a documented leftward hover overlay so the two buttons land without re-cutting the grid. |
+|         | How it is satisfied                                                                                                                                                                                                                                                                                                                      |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D1**  | One line per task. The meta line is gone and both markers are inline on the identity line, so nothing sits under the name.                                                                                                                                                                                                               |
+| **D2**  | Six of seven tracks are fixed-width, the name is the only `1fr`, and the column header line anchors the columns visually.                                                                                                                                                                                                                |
+| **D3**  | The name is `minmax(12rem,1fr)` and takes all slack: 389 px at `max-w-5xl`, 517 px at `xl`, against about 200 px for the worst seeded case.                                                                                                                                                                                              |
+| **D4**  | `2 800 / 12 000`, one right-aligned tabular cell with a slash and a done/total weight contrast. Read as a ratio, not two numbers.                                                                                                                                                                                                        |
+| **D5**  | `16 juill. 16:00`, one cell, no separator glyph, joined by tone rather than punctuation. Deviates from the middle-dot nudge, justified above.                                                                                                                                                                                            |
+| **D6**  | Per-row labels are deleted. One column header line per open card, doubling as the accessible `columnheader` set. Ten labels on a five-row card become five, once, and zero when collapsed.                                                                                                                                               |
+| **D7**  | Status keeps one carrier. The dot is deleted and `StatusDot.vue` with it. The labelled badge survives and loses its pill; the label, which is what makes it the accessible carrier, is untouched.                                                                                                                                        |
+| **D8**  | One left edge, weighed against two and recorded. Distinct hue per trackable category. Non-trackable draws no edge. One hue angle per category with shared lightness and chroma, so the palette extends to a `PLAN-30` category with one integer. Light and dark handled by a `.dark` override.                                           |
+| **D9**  | Both markers are inline dimmed text on the identity line. No reserved track, no box, and no cost to a row that does not carry them. The split tag loses the badge it ships with today.                                                                                                                                                   |
+| **D10** | A 48 px reserved track, no wider than today's 44 px, plus a documented leftward hover overlay so the two buttons land without re-cutting the grid.                                                                                                                                                                                       |
 | **D11** | The left track is fixed at 20 rem and the right track is now fixed at 15 rem, so the bar starts and ends at the same x on every card. The count lives inside the fixed left track, so appearing and disappearing changes nothing. The meter itself is untouched. This also fixes a live AC6 violation in the shipped `auto` right track. |
-| **D12** | Everything fits. No at-rest field is dropped. The container widens as a convention-idiomatic step for slack, not out of necessity. |
-| **D13** | 150 ms `grid-template-rows` `0fr` → `1fr`, no slide, no bounce, no stagger, suppressed under `prefers-reduced-motion`. |
-| **D14** | One arrangement. Both mobile grids are deleted. The only breakpoint left in the feature is the page container's max-width step, which changes no track. |
-| **D15** | Ten drawn elements per row become seven, and three pill boxes become zero, while the row gains a field. The only new drawn things anywhere are the chevron and the category edge, both explicitly sanctioned. |
+| **D12** | Everything fits. No at-rest field is dropped. The container widens as a convention-idiomatic step for slack, not out of necessity.                                                                                                                                                                                                       |
+| **D13** | 150 ms `grid-template-rows` `0fr` → `1fr`, no slide, no bounce, no stagger, suppressed under `prefers-reduced-motion`.                                                                                                                                                                                                                   |
+| **D14** | One arrangement. Both mobile grids are deleted. The only breakpoint left in the feature is the page container's max-width step, which changes no track.                                                                                                                                                                                  |
+| **D15** | Ten drawn elements per row become seven, and three pill boxes become zero, while the row gains a field. The only new drawn things anywhere are the chevron and the category edge, both explicitly sanctioned.                                                                                                                            |
 
 ## What I think the spec got wrong
 

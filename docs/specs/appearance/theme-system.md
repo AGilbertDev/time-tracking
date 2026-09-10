@@ -19,13 +19,13 @@ This is not a runtime feature with user inputs. The inputs are the locked design
 - **AC1.** The theme set is exactly `pastel`, `encre`, `cafe`, `automne`, `foret`, in that order, with `pastel` the default. No other id exists anywhere in the app. The removed atmospheres (`ember`, `onyx`, `coffee`, `forest`, `autumn`, `berry`, `frost`) appear in no source file.
 - **AC2.** Each theme is a matched light and dark rendering under one id. Display names are proper nouns identical in FR and EN: Pastel, Encre, Café, Automne, Forêt.
 
-  | id | Display name (FR = EN) | Subject | Primary | Accent |
-  | --- | --- | --- | --- | --- |
-  | `pastel` | Pastel | Soft teal seafoam | teal seafoam | lilac |
-  | `encre` | Encre | Translator's ink, the pro/corporate theme | ink blue | sarcelle (teal) |
-  | `cafe` | Café | Warm coffee | espresso | caramel |
-  | `automne` | Automne | Burnt orange and maple, redder than `cafe` | burnt orange | maple red |
-  | `foret` | Forêt | Saturated pine | pine green | plum / heather |
+  | id        | Display name (FR = EN) | Subject                                    | Primary      | Accent          |
+  | --------- | ---------------------- | ------------------------------------------ | ------------ | --------------- |
+  | `pastel`  | Pastel                 | Soft teal seafoam                          | teal seafoam | lilac           |
+  | `encre`   | Encre                  | Translator's ink, the pro/corporate theme  | ink blue     | sarcelle (teal) |
+  | `cafe`    | Café                   | Warm coffee                                | espresso     | caramel         |
+  | `automne` | Automne                | Burnt orange and maple, redder than `cafe` | burnt orange | maple red       |
+  | `foret`   | Forêt                  | Saturated pine                             | pine green   | plum / heather  |
 
 ### Shared contract (`shared/theme.ts`, imported as `#shared/theme`)
 

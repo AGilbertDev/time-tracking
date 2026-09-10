@@ -59,15 +59,15 @@ whether or not they agree with the plan.
 Every product examined that could be verified to source stores setup completion explicitly, and none
 of them infers it from the existence of a password.
 
-| Product | Mechanism | Scope |
-| --- | --- | --- |
-| GitLab | A boolean column `users.onboarding_in_progress`, plus a JSONB `user_details.onboarding_status` holding a `step_url` pointer and the answers collected so far | Per user |
-| Home Assistant | A list of completed step names in `.storage/onboarding`, shaped `{"done": ["user", "core_config", "analytics", "integration"]}`, with storage migrations that backfill `done` whenever a new step is added | Per instance |
-| Discourse | No flag at all. Each completed step is an append-only `UserHistory` row with `action: :wizard_step`, and `Wizard#completed?` compares the step ids against those rows | Per instance |
-| Jellyfin | A plain boolean `IsStartupWizardCompleted` on the application configuration, serialised to `system.xml` | Per instance |
-| Gitea | `INSTALL_LOCK` in `app.ini`, which closes the installation page once true | Per instance |
-| Sentry | One `OrganizationOnboardingTask` row per task, unique on organization and task, each carrying a status and a `date_completed` | Per organization |
-| Metabase | `has-user-setup` is derived rather than stored, by querying whether any real user row exists | Per instance |
+| Product        | Mechanism                                                                                                                                                                                                  | Scope            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| GitLab         | A boolean column `users.onboarding_in_progress`, plus a JSONB `user_details.onboarding_status` holding a `step_url` pointer and the answers collected so far                                               | Per user         |
+| Home Assistant | A list of completed step names in `.storage/onboarding`, shaped `{"done": ["user", "core_config", "analytics", "integration"]}`, with storage migrations that backfill `done` whenever a new step is added | Per instance     |
+| Discourse      | No flag at all. Each completed step is an append-only `UserHistory` row with `action: :wizard_step`, and `Wizard#completed?` compares the step ids against those rows                                      | Per instance     |
+| Jellyfin       | A plain boolean `IsStartupWizardCompleted` on the application configuration, serialised to `system.xml`                                                                                                    | Per instance     |
+| Gitea          | `INSTALL_LOCK` in `app.ini`, which closes the installation page once true                                                                                                                                  | Per instance     |
+| Sentry         | One `OrganizationOnboardingTask` row per task, unique on organization and task, each carrying a status and a `date_completed`                                                                              | Per organization |
+| Metabase       | `has-user-setup` is derived rather than stored, by querying whether any real user row exists                                                                                                               | Per instance     |
 
 Metabase is the exception, and it is the one that proves the point. Because its setup state is
 derived from "does a user exist", there is no supported way to re-run setup, and the community answer
@@ -178,10 +178,10 @@ Three places mint a session and set `onboarded`. All three move to the stored co
 or none of them does. A half-moved flag means two sources of truth for the same fact, which is the
 duplication the conventions forbid and which drifts silently.
 
-| Site | Today | After |
-| --- | --- | --- |
-| `server/api/magic-link/handlers/verify.ts` | `onboarded: !!user.passwordHash` | `onboarded: !!user.onboardedAt` |
-| `server/api/auth/handlers/login.ts` | `onboarded: true` | `onboarded: !!user.onboardedAt` |
+| Site                                         | Today                                                                 | After                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `server/api/magic-link/handlers/verify.ts`   | `onboarded: !!user.passwordHash`                                      | `onboarded: !!user.onboardedAt`                                      |
+| `server/api/auth/handlers/login.ts`          | `onboarded: true`                                                     | `onboarded: !!user.onboardedAt`                                      |
 | `server/api/onboarding/handlers/complete.ts` | `onboarded: true`, guarded by `if (existing?.passwordHash) throw 409` | `onboarded: true`, guarded by `if (existing?.onboardedAt) throw 409` |
 
 Three notes on what actually changes behaviour, because the three sites are not equally affected.
@@ -533,13 +533,13 @@ moves, renames, and regroups nothing.
 
 ### Work parameters
 
-| Candidate | In or out | Reason |
-| --- | --- | --- |
-| `settings.daily_work_minutes` | **In**, via the row delete | Collected by the wizard's work step and rewritten by it on Finish. `loadWorkSettings` falls back to a coded 450 when no row exists, so zero rows is a working state. |
-| `settings.work_days` | **In**, via the row delete | Same. `loadWorkSettings` falls back to `[1,2,3,4,5]`. |
-| `settings.timezone` | **In**, via the row delete | Same. `loadWorkSettings` falls back to `America/Toronto`. |
-| `category_quotas` rows | **In** | A quota is explicitly a user setting per the per-category-quotas spec, and a fresh account has zero rows. With no rows `resolveCategoryQuota` falls back to the shipped `defaultQuotaWph` figures in `shared/categories.ts`, so zero rows is a working state rather than an empty one. |
-| `work_schedule` rows | **Out** | Argued below. |
+| Candidate                     | In or out                  | Reason                                                                                                                                                                                                                                                                                 |
+| ----------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `settings.daily_work_minutes` | **In**, via the row delete | Collected by the wizard's work step and rewritten by it on Finish. `loadWorkSettings` falls back to a coded 450 when no row exists, so zero rows is a working state.                                                                                                                   |
+| `settings.work_days`          | **In**, via the row delete | Same. `loadWorkSettings` falls back to `[1,2,3,4,5]`.                                                                                                                                                                                                                                  |
+| `settings.timezone`           | **In**, via the row delete | Same. `loadWorkSettings` falls back to `America/Toronto`.                                                                                                                                                                                                                              |
+| `category_quotas` rows        | **In**                     | A quota is explicitly a user setting per the per-category-quotas spec, and a fresh account has zero rows. With no rows `resolveCategoryQuota` falls back to the shipped `defaultQuotaWph` figures in `shared/categories.ts`, so zero rows is a working state rather than an empty one. |
+| `work_schedule` rows          | **Out**                    | Argued below.                                                                                                                                                                                                                                                                          |
 
 **Why `work_schedule` is out**, since it is a work parameter and the mandate is to reason it out
 rather than assume either way.
@@ -565,20 +565,20 @@ Out, then, and named here so nobody reads it as forgotten.
 
 ### Account and appearance settings
 
-| Candidate | In or out | Reason |
-| --- | --- | --- |
-| `settings.light_theme` | **In**, via the row delete | Collected by the wizard's appearance step and rewritten on Finish. `loadUserPreferences` falls back to `DEFAULT_THEME_ID`. |
-| `settings.dark_theme` | **In**, via the row delete | Same. |
-| `settings.locale` | **In**, via the row delete | Same, falling back to `DEFAULT_LOCALE`, which is French. |
-| `users.first_name` | **Out** | The wizard always starts its identity fields empty and overwrites both names on Finish whatever the database holds, so clearing them buys nothing. It does cost something, because an abandoned reset would leave the header name and the avatar initials blank on a working account. Leave them. |
-| `users.last_name` | **Out** | Same. |
-| `users.avatar_url` and the stored avatar object | **Out** | Onboarding never collects an avatar, so re-running the wizard would not restore one, and deleting the stored object is unrecoverable. Named explicitly so a reader does not think it was overlooked. |
-| `users.role` | **Out, never** | Clearing it would strip the sole admin of the very role that guards this endpoint, so the reset would be a one-way door out of the admin surface. This is the lockout the recovery convention forbids. |
-| `users.password_hash` | **Out, never** | The whole point of the decided mechanism. See [why the password hash is not the reset switch](#why-the-password-hash-is-not-the-reset-switch). |
-| `users.email` | **Out** | Identity, not a setting. It is also the key the allowlist and any future magic link match on. |
-| `allowed_emails` | **Out** | Access control, not a setting. |
-| `magic_link_tokens` | **Out** | Access control, not a setting. A reset account has a password, so `request.ts` will not issue it a link anyway. |
-| `users.deactivated_at` | **Out** | Account status, not a setting, and clearing it would let a reset silently reverse a deactivation. |
+| Candidate                                       | In or out                  | Reason                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `settings.light_theme`                          | **In**, via the row delete | Collected by the wizard's appearance step and rewritten on Finish. `loadUserPreferences` falls back to `DEFAULT_THEME_ID`.                                                                                                                                                                        |
+| `settings.dark_theme`                           | **In**, via the row delete | Same.                                                                                                                                                                                                                                                                                             |
+| `settings.locale`                               | **In**, via the row delete | Same, falling back to `DEFAULT_LOCALE`, which is French.                                                                                                                                                                                                                                          |
+| `users.first_name`                              | **Out**                    | The wizard always starts its identity fields empty and overwrites both names on Finish whatever the database holds, so clearing them buys nothing. It does cost something, because an abandoned reset would leave the header name and the avatar initials blank on a working account. Leave them. |
+| `users.last_name`                               | **Out**                    | Same.                                                                                                                                                                                                                                                                                             |
+| `users.avatar_url` and the stored avatar object | **Out**                    | Onboarding never collects an avatar, so re-running the wizard would not restore one, and deleting the stored object is unrecoverable. Named explicitly so a reader does not think it was overlooked.                                                                                              |
+| `users.role`                                    | **Out, never**             | Clearing it would strip the sole admin of the very role that guards this endpoint, so the reset would be a one-way door out of the admin surface. This is the lockout the recovery convention forbids.                                                                                            |
+| `users.password_hash`                           | **Out, never**             | The whole point of the decided mechanism. See [why the password hash is not the reset switch](#why-the-password-hash-is-not-the-reset-switch).                                                                                                                                                    |
+| `users.email`                                   | **Out**                    | Identity, not a setting. It is also the key the allowlist and any future magic link match on.                                                                                                                                                                                                     |
+| `allowed_emails`                                | **Out**                    | Access control, not a setting.                                                                                                                                                                                                                                                                    |
+| `magic_link_tokens`                             | **Out**                    | Access control, not a setting. A reset account has a password, so `request.ts` will not issue it a link anyway.                                                                                                                                                                                   |
+| `users.deactivated_at`                          | **Out**                    | Account status, not a setting, and clearing it would let a reset silently reverse a deactivation.                                                                                                                                                                                                 |
 
 ### The owner's data, which is never touched
 
@@ -650,11 +650,11 @@ confirmation copy names the theme and the language for this reason.
 
 Error codes.
 
-| Status | `statusMessage` | When |
-| --- | --- | --- |
-| 401 | from `requireUserSession` | No session, or a session the `validate-session` middleware has already cleared because the account is gone or deactivated. |
-| 403 | `forbidden` | An authenticated user whose role is not exactly `admin`, **or** any caller at all, admin included, while `onboardingResetEnabled` is off. The two cases are deliberately indistinguishable from outside. |
-| 500 | unhandled | An unexpected database error. The partial states this can leave are analysed below and every one of them is recoverable. |
+| Status | `statusMessage`           | When                                                                                                                                                                                                     |
+| ------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 401    | from `requireUserSession` | No session, or a session the `validate-session` middleware has already cleared because the account is gone or deactivated.                                                                               |
+| 403    | `forbidden`               | An authenticated user whose role is not exactly `admin`, **or** any caller at all, admin included, while `onboardingResetEnabled` is off. The two cases are deliberately indistinguishable from outside. |
+| 500    | unhandled                 | An unexpected database error. The partial states this can leave are analysed below and every one of them is recoverable.                                                                                 |
 
 There is deliberately **no 409 for an account that is not onboarded**. Calling the endpoint when
 `onboarded_at` is already null is a no-op that succeeds. Idempotency is load-bearing here rather than
@@ -731,13 +731,13 @@ settings page. Deleting the recoverable one first leaves the harder one intact f
 
 ### Every partial state, and what it looks like
 
-| Stops after | Database | What the user sees | Recovery |
-| --- | --- | --- | --- |
-| Nothing | Unchanged | An error toast, no visible change | Press Reset again |
-| Step 1 | Flag cleared, settings and quotas intact | An error toast, no visible change, because the session was not refreshed | Press Reset again, or sign in again and be routed to the wizard, which upserts over the stale settings row |
-| Step 2 | Flag cleared, settings gone, quotas intact | An error toast. Read paths now return coded defaults, so the interface may show the default theme and French on the next load | Press Reset again, which deletes the remaining quota rows and refreshes the session |
-| Step 3 | Fully reset, session stale | An error toast, and the app still behaves as onboarded with default settings | Press Reset again, which is a no-op on the database and succeeds at the session refresh, or sign in again |
-| Step 4 | Fully reset | The wizard | None needed |
+| Stops after | Database                                   | What the user sees                                                                                                            | Recovery                                                                                                   |
+| ----------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Nothing     | Unchanged                                  | An error toast, no visible change                                                                                             | Press Reset again                                                                                          |
+| Step 1      | Flag cleared, settings and quotas intact   | An error toast, no visible change, because the session was not refreshed                                                      | Press Reset again, or sign in again and be routed to the wizard, which upserts over the stale settings row |
+| Step 2      | Flag cleared, settings gone, quotas intact | An error toast. Read paths now return coded defaults, so the interface may show the default theme and French on the next load | Press Reset again, which deletes the remaining quota rows and refreshes the session                        |
+| Step 3      | Fully reset, session stale                 | An error toast, and the app still behaves as onboarded with default settings                                                  | Press Reset again, which is a no-op on the database and succeeds at the session refresh, or sign in again  |
+| Step 4      | Fully reset                                | The wizard                                                                                                                    | None needed                                                                                                |
 
 Every row of that table is a valid state, and every recovery is available from the settings page or
 the sign-in page with nothing but the password the user still has.
@@ -878,20 +878,20 @@ The vocabulary is taken from the strings already shipped rather than invented, s
 "heures de travail", and "fuseau horaire" match `onboarding.work.*`, and the generic error string is
 reused word for word from `settings.work.errors.generic`.
 
-| Key | FR | EN |
-| --- | --- | --- |
-| `settings.reset.heading` | Réinitialisation | Reset |
-| `settings.reset.subtitle` | Effacez vos paramètres et refaites la configuration initiale. | Clear your settings and go through the initial setup again. |
-| `settings.reset.submit` | Réinitialiser | Reset |
-| `settings.reset.confirm.title` | Réinitialiser vos paramètres ? | Reset your settings? |
-| `settings.reset.confirm.cleared` | Vos heures de travail, vos jours travaillés, votre fuseau horaire, votre thème, votre langue et vos quotas seront effacés et reprendront leurs valeurs par défaut. | Your work hours, work days, timezone, theme, language and quotas will be cleared and go back to their default values. |
-| `settings.reset.confirm.kept` | Vos tâches, votre nom et votre mot de passe ne sont pas touchés. | Your tasks, your name and your password are not affected. |
-| `settings.reset.confirm.password` | La configuration initiale vous redemandera un mot de passe. Vous pouvez saisir le même. | The initial setup will ask you for a password again. You can enter the same one. |
-| `settings.reset.confirm.irreversible` | Cette action est irréversible. | This cannot be undone. |
-| `settings.reset.confirm.cancel` | Annuler | Cancel |
-| `settings.reset.confirm.submit` | Réinitialiser | Reset |
-| `settings.reset.success` | Vos paramètres ont été réinitialisés. | Your settings have been reset. |
-| `settings.reset.errors.generic` | Une erreur est survenue. Veuillez réessayer. | Something went wrong. Please try again. |
+| Key                                   | FR                                                                                                                                                                 | EN                                                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `settings.reset.heading`              | Réinitialisation                                                                                                                                                   | Reset                                                                                                                 |
+| `settings.reset.subtitle`             | Effacez vos paramètres et refaites la configuration initiale.                                                                                                      | Clear your settings and go through the initial setup again.                                                           |
+| `settings.reset.submit`               | Réinitialiser                                                                                                                                                      | Reset                                                                                                                 |
+| `settings.reset.confirm.title`        | Réinitialiser vos paramètres ?                                                                                                                                     | Reset your settings?                                                                                                  |
+| `settings.reset.confirm.cleared`      | Vos heures de travail, vos jours travaillés, votre fuseau horaire, votre thème, votre langue et vos quotas seront effacés et reprendront leurs valeurs par défaut. | Your work hours, work days, timezone, theme, language and quotas will be cleared and go back to their default values. |
+| `settings.reset.confirm.kept`         | Vos tâches, votre nom et votre mot de passe ne sont pas touchés.                                                                                                   | Your tasks, your name and your password are not affected.                                                             |
+| `settings.reset.confirm.password`     | La configuration initiale vous redemandera un mot de passe. Vous pouvez saisir le même.                                                                            | The initial setup will ask you for a password again. You can enter the same one.                                      |
+| `settings.reset.confirm.irreversible` | Cette action est irréversible.                                                                                                                                     | This cannot be undone.                                                                                                |
+| `settings.reset.confirm.cancel`       | Annuler                                                                                                                                                            | Cancel                                                                                                                |
+| `settings.reset.confirm.submit`       | Réinitialiser                                                                                                                                                      | Reset                                                                                                                 |
+| `settings.reset.success`              | Vos paramètres ont été réinitialisés.                                                                                                                              | Your settings have been reset.                                                                                        |
+| `settings.reset.errors.generic`       | Une erreur est survenue. Veuillez réessayer.                                                                                                                       | Something went wrong. Please try again.                                                                               |
 
 The heading is a bare noun to match the three headings already on the page, which are Travail,
 Quotas, and Sécurité.

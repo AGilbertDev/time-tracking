@@ -119,11 +119,11 @@ Acceptance:
 
 Register the three destination routes in the `i18n.pages` map in `nuxt.config.ts` alongside the existing `signin`, `signup`, and `onboarding` entries, and link to them with `useLocalePath()` using the route key. Proposed keys and paths (French first; owner may adjust the words):
 
-| Route key | FR path | EN path |
-| --- | --- | --- |
-| `profile` | `/profil` | `/profile` |
-| `settings` | `/parametres` | `/settings` |
-| `admin-users` | `/utilisateurs` | `/users` |
+| Route key     | FR path         | EN path     |
+| ------------- | --------------- | ----------- |
+| `profile`     | `/profil`       | `/profile`  |
+| `settings`    | `/parametres`   | `/settings` |
+| `admin-users` | `/utilisateurs` | `/users`    |
 
 Notes for the frontend stage:
 
@@ -136,10 +136,10 @@ Existing verified keys reused unchanged: `header.profile`, `header.language`, `h
 
 New keys to add. The user is a professional translator, so the frontend stage must treat these as **proposals pending owner verification**, not final copy. None of the proposed strings contain `? ! : ;`, so the space-before-punctuation rule does not bite; if the owner's wording introduces one of those marks, the French takes the space before it.
 
-| Key | FR (proposed) | EN (proposed) | Confidence |
-| --- | --- | --- | --- |
-| `header.settings` | Paramètres | Settings | High. "Paramètres" is the standard Québécois and general French term for application settings. |
-| `header.manageUsers` | Gérer les utilisateurs | Manage users | Medium. "Gérer les utilisateurs" is a faithful, common rendering; owner may prefer "Gestion des utilisateurs" or "Utilisateurs". Flagged for verification. |
+| Key                  | FR (proposed)          | EN (proposed) | Confidence                                                                                                                                                 |
+| -------------------- | ---------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `header.settings`    | Paramètres             | Settings      | High. "Paramètres" is the standard Québécois and general French term for application settings.                                                             |
+| `header.manageUsers` | Gérer les utilisateurs | Manage users  | Medium. "Gérer les utilisateurs" is a faithful, common rendering; owner may prefer "Gestion des utilisateurs" or "Utilisateurs". Flagged for verification. |
 
 Placement: keep both under the existing `header` namespace to match `header.profile` and `header.logout`. Add them to both `i18n/locales/fr.json` and `i18n/locales/en.json`.
 

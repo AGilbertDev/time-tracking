@@ -32,7 +32,7 @@ Translators work against a **words-per-hour target**, and the target differs by 
 
 - **Copy quality**: every visible string must be **researched, verified, and accurate** — never LLM-guessed. The user is a translator; UI grammar/spelling errors are disqualifying. Applies to French first, English second, and any future locale.
 - **i18n-first**: locale switching is a core feature, not a retrofit. Default locale: **French**. English support planned. Locale should be persisted per user.
-- **Don't police the user**: the app may *signal* (holiday, exceeded daily target, working a non-work day) but never *block*. The user decides what they actually do with their time. The app records reality, not what the schedule says reality should be.
+- **Don't police the user**: the app may _signal_ (holiday, exceeded daily target, working a non-work day) but never _block_. The user decides what they actually do with their time. The app records reality, not what the schedule says reality should be.
 
 ---
 
@@ -61,14 +61,12 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 - Drizzle client lives in `server/db/index.ts`, lazy-initialized via `useDb()` using `useRuntimeConfig()`.
 - All env vars declared in `nuxt.config.ts` under `runtimeConfig` and auto-mapped from `NUXT_*` env vars.
 
-
-
 - **Multi-user**: each user has an account; all data is scoped to the user.
 - **Persistent database**: **Turso** (libSQL / SQLite at the edge) accessed through **Drizzle ORM**. Data does not live in the browser; the user can move between devices and find their data intact. Free tier: 500 databases, 9GB — one Turso account covers all projects.
 - **Auth**: **owner-managed, two methods split across two pages**. The page determines the flow, so the pre-auth UI never has to detect a user's password state (which it can't, having no session) — this also removes any account-enumeration endpoint.
   - **Sign up page** (`/inscription` fr, `/signup` en) — the invite-only **magic-link** request. "First time? Sign up." Enter email → if allowlisted, receive a one-time link → clicking it authenticates and drops into the unskippable onboarding form (which sets the password). Response is always neutral, so the allowlist is never revealed.
   - **Sign in page** (`/connexion` fr, `/login` en) — email + **password**. The regular method for returning, onboarded users. A new `POST /api/auth/login` verifies credentials with `nuxt-auth-utils`' `verifyPassword` (scrypt) and returns a generic "invalid credentials" on any failure (no enumeration). Links to the sign-up page for first-timers.
-  - **Magic link is inert after onboarding** — once `password_hash` is set, a leaked or replayed link cannot grant a normal session. (Forgot-password, planned, will reuse the link to reach a *reset* form rather than logging in directly.)
+  - **Magic link is inert after onboarding** — once `password_hash` is set, a leaked or replayed link cannot grant a normal session. (Forgot-password, planned, will reuse the link to reach a _reset_ form rather than logging in directly.)
   - Access is still gated by `allowed_emails`. A deactivated user stays in the table but is blocked at login with a specific message (see §12).
   - **Owner bootstrap**: a seed/migration step reads `OWNER_EMAIL` on first run, inserts it into `allowed_emails`, and creates the owner `users` row with `role = 'admin'`. The owner activates via the sign-up (magic-link) page on first use.
   - Access is still gated by `allowed_emails`. A deactivated user stays in the table but is blocked at login with a specific message (see §12).
@@ -82,6 +80,7 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 ## 4. Domain model (conceptual)
 
 ### User
+
 - `id` — text, primary key (uuid)
 - `email` — text, unique, not null (login key)
 - `first_name` — text, nullable (set during onboarding)
@@ -95,6 +94,7 @@ Inspired by CJ Reynolds' nuxt-travel-log and the Hubelia/Nathan SDK pattern used
 `first_name` / `last_name` / `password_hash` being null is the signal that triggers the unskippable onboarding form (see §12).
 
 ### Settings (per user)
+
 - `user_id` — FK → users.id
 - `daily_work_minutes` — integer, default `450` (= 7h30). Stored as minutes for arithmetic simplicity.
 - `work_days` — text (JSON array of 0–6 day numbers, e.g. `[1,2,3,4,5]` for Mon–Fri)
@@ -114,25 +114,32 @@ This came from the user rather than from research. The 450 default was drawn fro
 **No flash of the wrong theme (requirement)**: the atmosphere must be resolved on the server and written into the initial HTML (`<html data-theme="...">` plus the `.dark` class) before anything renders. On a hard refresh the first paint has no synchronous access to a value that lives in the database, so a theme fetched on the client after mount paints the default atmosphere first and then swaps to the user's choice, which is the visible flash. A client-side inline script cannot fix this, because the source of truth is server-side and is not known at first paint. Since the choice lives in user settings and the server already holds the session, the server resolves `light_theme` / `dark_theme` at render time, whether carried in the session payload or loaded during SSR, and injects them into the response so the correct atmosphere is present on first paint. This is the main reason the theme is stored in user settings rather than fetched on the client. On the pre-auth screens, where there is no user yet, the same no-flash guarantee comes from reading the cookie default server-side on each request.
 
 ### Auth tables
+
 - **`allowed_emails`** — `email` text primary key. Owner-managed allowlist. Seeded from `OWNER_EMAIL` env var.
 - **`magic_link_tokens`** — `token` text primary key, `email` text, `expires_at` timestamp, `used` boolean default false. Single-use, short TTL (15 min).
 
 ### Sessions
+
 Handled by `nuxt-auth-utils` (signed cookie). The session payload stores `{ userId, email }` — no sensitive data.
 
 ### Week
+
 A logical grouping of days, not a fixed Mon–Fri block. Internally probably stored as a date range or computed from a per-user week-anchor + active-days mask. The UI lets the user see and edit any week.
 
 ### Day
+
 A date within a week. Carries:
+
 - The tasks scheduled on it
 - A computed summary: planned time, actual time, remaining vs. daily target, excess
 - A flag if it's a holiday and/or a non-working day for this user
 
 ### Task
+
 The unit of work. Fields split into **primary** (visible in the compact row) and **secondary** (visible in the expanded edit form).
 
-**Primary** *(working list — confirm with user)*:
+**Primary** _(working list — confirm with user)_:
+
 - Client
 - Project number / name
 - Delivery date + time
@@ -142,7 +149,8 @@ The unit of work. Fields split into **primary** (visible in the compact row) and
 - Actual duration (auto-synced from estimated until the user overrides it)
 - Status (e.g. Accepté / En cours / Terminé — names TBD)
 
-**Secondary** *(working list — confirm with user)*:
+**Secondary** _(working list — confirm with user)_:
+
 - Project manager
 - Per-task WPH quota override
 - Exclude-from-stats flag
@@ -153,7 +161,9 @@ The unit of work. Fields split into **primary** (visible in the compact row) and
 **Categories** are an enum we'll define with the user. Not every task is a translation; some categories (admin, training) may default to excluded-from-stats.
 
 ### Recurring tasks
+
 Like Google Calendar: a task can repeat
+
 - on selected weekdays
 - starting from a date
 - until a date OR forever (no end)
@@ -162,9 +172,11 @@ Like Google Calendar: a task can repeat
 Recurring tasks materialize as individual day-tasks the user can still tweak independently.
 
 ### Split tasks
+
 A single project's work can be **split across multiple days**. The user only knows the **total word count for the project**, not how many words they did each day. This creates a stats tension we have to handle deliberately:
 
 Approaches (decide with the user):
+
 1. **Time-weighted split** — divide the project's words across its day-tasks proportionally to actual time spent each day.
 2. **Prompt on completion** — when the user marks the project Terminé, ask them to confirm a per-day word breakdown.
 3. **Project-level aggregation** — don't try to attribute words to specific days; only aggregate WPH at week/month/year level (the corrected algorithm from the old app already does this).
@@ -172,6 +184,7 @@ Approaches (decide with the user):
 The old app implicitly used (3). We should confirm what feels right for performance-review use.
 
 ### Holiday
+
 A date marked non-working at the user level. The day still exists, the user can still log work on it. The calendar visually marks holidays but doesn't gray them out beyond a hint.
 
 ---
@@ -187,18 +200,21 @@ We need to confirm the formula with the user. Working assumption (carried from t
 **Superseded, and the reason is the per-category quota above.** The formula was confirmed with the user and it is not this one. Each trackable category is its own bucket, measured as the words in that category over the hours spent in that category, so a period reports a row per category rather than one corrected number. Time in a non-trackable category produces no words and belongs to no target, and the gap between the scheduled day and everything logged in it is derived rather than entered. The formula, the reasoning, and the availability model it replaced are in [specs/planning/overview.md](specs/planning/overview.md) under "The quota is buckets". The per-period list below still holds, with each period carrying a row per category instead of a single figure.
 
 Stats periods to surface:
+
 - **Daily** (new vs. old app)
 - **Weekly**
 - **Monthly**
 - **Yearly**
 
 Each period should show:
+
 - The corrected WPH number
 - Total words completed
 - Total time logged
 - Optional: a sparkline or trend indicator vs. the previous period (TBD)
 
 Performance-review surfacing:
+
 - A dedicated view ("Historique de performance" / "Performance history") to look up any past period.
 - Export option (CSV / JSON) so the user can bring numbers into a review meeting. Format TBD.
 
@@ -270,6 +286,7 @@ Mandatory fields enforce on save (the primary-row fields). Secondary fields are 
 (Placeholder — we'll build the full list once the spec stabilizes a bit more.)
 
 Initial seed:
+
 - What does the WPH formula actually look like, in their own words or on a throughput review?
 - What task categories does the user use? Which ones should be excluded from WPH stats?
 - Which fields are mandatory on every task, and which the user only fills in sometimes?
@@ -293,9 +310,9 @@ Access is gated by `users.role === 'admin'` on the session. Non-admins never see
    1. Inserts the email into `allowed_emails`.
    2. Creates a stub `users` row (email only — `first_name` / `last_name` / `password_hash` all null, `role = 'user'`).
    3. Sends a **bilingual invitation email** via Resend. Copy (FR + EN both shown):
-      > *Vous avez été invité·e à utiliser la nouvelle application de planification de traduction d'Alexandre Gilbert.*
-      > *You have been invited to use Alexandre Gilbert's new translation planning app.*
-      followed by the **login link** (magic link).
+      > _Vous avez été invité·e à utiliser la nouvelle application de planification de traduction d'Alexandre Gilbert._
+      > _You have been invited to use Alexandre Gilbert's new translation planning app._
+      > followed by the **login link** (magic link).
 3. **First login (magic link)** — the invited user clicks the link, gets a session, and is dropped on an **unskippable onboarding form** (modal/overlay that re-opens until submitted, blocks the dashboard). Fields:
    - First name
    - Last name
@@ -306,9 +323,9 @@ Access is gated by `users.role === 'admin'` on the session. Non-admins never see
 ### Deactivate / reactivate
 
 - **Deactivate** — sets `deactivated_at`. The user stays in `allowed_emails`, but both the password-login and magic-link handlers check `deactivated_at` and reject with a specific message shown on entering their email / credentials:
-  > *Votre compte a été désactivé. Contactez l'administrateur.*
-  > *Your account has been deactivated. Please contact the administrator.*
-  Their data is preserved.
+  > _Votre compte a été désactivé. Contactez l'administrateur._
+  > _Your account has been deactivated. Please contact the administrator._
+  > Their data is preserved.
 - **Reactivate** — clears `deactivated_at`.
 
 ### Admin routes (planned)
@@ -332,7 +349,7 @@ All protected by the admin-role guard (except onboarding, which is any authentic
 
 The avatar in the header opens a popover — the single entry point for account info, navigation, and session actions. Replaces the current minimal dropdown (Profile / Language / Logout). Order, top to bottom:
 
-1. **Identity header** *(non-interactive)* — avatar, full name, and email of the signed-in user. Reads `firstName` / `lastName` / `email` from the session and `avatar_url` for the image; falls back to initials when no avatar is set (the existing `UAvatar` behavior).
+1. **Identity header** _(non-interactive)_ — avatar, full name, and email of the signed-in user. Reads `firstName` / `lastName` / `email` from the session and `avatar_url` for the image; falls back to initials when no avatar is set (the existing `UAvatar` behavior).
 2. **Profile** — links to the user's own profile page (view / edit name, avatar, change password). Page itself TBD.
 3. **Manage users** — **admin only** (`role === 'admin'`). Links to the admin user-management panel (§12). Hidden entirely for non-admins, never just disabled.
 4. **Language** — switches locale. With two locales (FR/EN) it toggles to the other and shows the active one; becomes a submenu if a third locale is ever added. Persists to `settings.locale` (i18n-first, §2).
@@ -340,7 +357,8 @@ The avatar in the header opens a popover — the single entry point for account 
 6. **Sign out** — clears the session and returns to the sign-in page.
 
 Notes:
-- Grouped with separators: *identity* — *Profile, Manage users* — *Language, Settings* — *Sign out*. Exact grouping TBD in build.
+
+- Grouped with separators: _identity_ — _Profile, Manage users_ — _Language, Settings_ — _Sign out_. Exact grouping TBD in build.
 - Built with Nuxt UI (`UDropdownMenu`) per component priority. Icons: Carbon (`i-carbon-*`).
 - Every label is an i18n key (FR default), copy verified (§2 non-negotiable). French uses a space before `? ! : ;`.
 - Items that link to not-yet-built pages (Profile, Manage users, Settings) can ship as the pages land; Identity, Language, and Sign out work today.

@@ -43,6 +43,7 @@ Tasks are grouped **by date** (one bucket per calendar day in **America/Toronto*
 `wordCount / ratePerHour`, rounded to the nearest **5 minutes**.
 
 Examples:
+
 - 900 words ÷ 450 wph → 2h00
 - 700 words ÷ 450 wph → 1h35 (93.3 min rounded up to 95 min)
 
@@ -51,6 +52,7 @@ Actual duration defaults to a copy of estimated. As soon as the user edits actua
 ### Work-day target
 
 **7 hours 30 minutes** per day. Each day header shows:
+
 - `Planifié` — actual time logged / 7h30 target
 - `Restant` — how much is left to reach target
 - `Excédant` — how much over target
@@ -94,6 +96,7 @@ Shown for three periods: **current week** (Mon–Fri), **current month**, **curr
 ### Expanded edit form
 
 Adds editors for the fields not shown in the compact row:
+
 - Project manager (`pm`)
 - Task type
 - Quota override (`ratePerHour`)

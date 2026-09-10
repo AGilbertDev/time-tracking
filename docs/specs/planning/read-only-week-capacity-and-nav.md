@@ -31,16 +31,16 @@ The `settings` row already holds the user's **current** `dailyWorkMinutes`, `wor
 
 A new `work_schedule` table in `server/db/schema.ts`, in the exact style of the existing tables (Drizzle `sqliteTable`, `text` / `integer` columns, snake_case DB names with camelCase JS keys, `integer(..., { mode: 'timestamp' })` instants defaulted through `$defaultFn(() => new Date())`, and `foreignKey(...)` in the table callback). The column contract, JS key on the left, DB column in the middle:
 
-| JS key | DB column | Type | Null? | Notes |
-| --- | --- | --- | --- | --- |
-| `id` | `id` | `text`, primary key | no | `$defaultFn(() => crypto.randomUUID())`, matching `users.id`, `settings.id`, and `tasks.id`. |
-| `userId` | `user_id` | `text` | no | Foreign key to `users.id`, `onDelete: 'cascade'` (see decisions). |
-| `workMinutes` | `work_minutes` | `integer` | no | The daily work-target in minutes for a **work day** under this record. Whole minutes. |
-| `workDays` | `work_days` | `text` | no | JSON array of weekday numbers `0`–`6` (`0` = Sunday), the same representation as `settings.work_days`. Default `'[1,2,3,4,5]'`. |
-| `bufferMinutes` | `buffer_minutes` | `integer` | no | The buffer the user keeps for urgent work. Default `60`. |
-| `effectiveFrom` | `effective_from` | `text` | no | `'YYYY-MM-DD'`, the calendar day this record takes effect. Lexicographic order equals chronological order. |
-| `createdAt` | `created_at` | `integer` (`mode: 'timestamp'`) | matches `users` | `$defaultFn(() => new Date())`, Unix-seconds instant. |
-| `updatedAt` | `updated_at` | `integer` (`mode: 'timestamp'`) | matches `users` | `$defaultFn(() => new Date())`, Unix-seconds instant. |
+| JS key          | DB column        | Type                            | Null?           | Notes                                                                                                                           |
+| --------------- | ---------------- | ------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | `id`             | `text`, primary key             | no              | `$defaultFn(() => crypto.randomUUID())`, matching `users.id`, `settings.id`, and `tasks.id`.                                    |
+| `userId`        | `user_id`        | `text`                          | no              | Foreign key to `users.id`, `onDelete: 'cascade'` (see decisions).                                                               |
+| `workMinutes`   | `work_minutes`   | `integer`                       | no              | The daily work-target in minutes for a **work day** under this record. Whole minutes.                                           |
+| `workDays`      | `work_days`      | `text`                          | no              | JSON array of weekday numbers `0`–`6` (`0` = Sunday), the same representation as `settings.work_days`. Default `'[1,2,3,4,5]'`. |
+| `bufferMinutes` | `buffer_minutes` | `integer`                       | no              | The buffer the user keeps for urgent work. Default `60`.                                                                        |
+| `effectiveFrom` | `effective_from` | `text`                          | no              | `'YYYY-MM-DD'`, the calendar day this record takes effect. Lexicographic order equals chronological order.                      |
+| `createdAt`     | `created_at`     | `integer` (`mode: 'timestamp'`) | matches `users` | `$defaultFn(() => new Date())`, Unix-seconds instant.                                                                           |
+| `updatedAt`     | `updated_at`     | `integer` (`mode: 'timestamp'`) | matches `users` | `$defaultFn(() => new Date())`, Unix-seconds instant.                                                                           |
 
 Effective-dating semantics: a record applies from its `effective_from` up to but not including the next record's `effective_from`. The value for any target date is the record whose `effective_from` is the latest one **on or before** that date. A date before the first record, or an empty history, resolves to the documented defaults below.
 
@@ -189,7 +189,7 @@ The fill is drawn from the left in the state colour and never exceeds 100 %. The
 {formatDuration(booked)} planifié · <span class="bad">{formatDuration(excess)} en trop</span>
 ```
 
-The separator is a middle dot with a space on each side (` · `). `formatDuration` already clamps a negative input to `0 h 00`, so `remaining` is only ever displayed when it is `≥ 0` (the `good` / `warn` case) and `excess` only when overbooked, which is exactly the overview's "when negative, the excess is shown and remaining is not shown".
+The separator is a middle dot with a space on each side (`·`). `formatDuration` already clamps a negative input to `0 h 00`, so `remaining` is only ever displayed when it is `≥ 0` (the `good` / `warn` case) and `excess` only when overbooked, which is exactly the overview's "when negative, the excess is shown and remaining is not shown".
 
 ### Duration formatting
 
@@ -310,16 +310,16 @@ Every new visible string goes in the existing `planning` namespace in `i18n/loca
 
 New keys, grouped under `planning`:
 
-| Key | FR | EN |
-| --- | --- | --- |
-| `capacity.planned` | `{value} planifié` | `{value} planned` |
-| `capacity.remaining` | `{value} restant` | `{value} remaining` |
-| `capacity.excess` | `{value} en trop` | `{value} over` |
-| `nav.previousWeek` | `Précédente` | `Previous` |
-| `nav.currentWeek` | `Cette semaine` | `This week` |
-| `nav.nextWeek` | `Suivante` | `Next` |
+| Key                  | FR                 | EN                  |
+| -------------------- | ------------------ | ------------------- |
+| `capacity.planned`   | `{value} planifié` | `{value} planned`   |
+| `capacity.remaining` | `{value} restant`  | `{value} remaining` |
+| `capacity.excess`    | `{value} en trop`  | `{value} over`      |
+| `nav.previousWeek`   | `Précédente`       | `Previous`          |
+| `nav.currentWeek`    | `Cette semaine`    | `This week`         |
+| `nav.nextWeek`       | `Suivante`         | `Next`              |
 
-The switcher uses visible text labels (per user feedback reversing the earlier chevron-only decision), so each button's accessible name is its own visible text. The chevron glyphs `‹` and `›` are rendered beside the text and are `aria-hidden`, decorative only. The middle-dot separator (` · `) between the booked figure and the remaining or excess figure is punctuation and is rendered by the component, not stored as translatable copy. The existing `planning.today` (lowercase `aujourd'hui`) stays the today-pill string and is not reused for the switcher button.
+The switcher uses visible text labels (per user feedback reversing the earlier chevron-only decision), so each button's accessible name is its own visible text. The chevron glyphs `‹` and `›` are rendered beside the text and are `aria-hidden`, decorative only. The middle-dot separator (`·`) between the booked figure and the remaining or excess figure is punctuation and is rendered by the component, not stored as translatable copy. The existing `planning.today` (lowercase `aujourd'hui`) stays the today-pill string and is not reused for the switcher button.
 
 There are no `capacity.state.*` label keys: the state pill was removed at the user's request, so the state is conveyed by the meter fill colour and the numeric reading, not by a text badge.
 

@@ -1,8 +1,17 @@
 {
   "$comment": "Files left out of coverage on purpose. Every entry gives a reason, so the decision stays visible in the pull request report. Wiring with no logic of its own belongs here. Anything that makes a decision does not.",
   "files": [
-    { "path": "server/plugins/session.ts", "reason": "Nitro plugin registration with no logic of its own." },
-    { "path": "server/db/index.ts", "reason": "Builds the client from runtime config and exports it." },
-    { "path": "app/plugins/vue-query.ts", "reason": "Plugin registration with no logic of its own." }
+    {
+      "path": "server/plugins/session.ts",
+      "reason": "Nitro plugin registration with no logic of its own."
+    },
+    {
+      "path": "server/db/index.ts",
+      "reason": "Builds the client from runtime config and exports it."
+    },
+    {
+      "path": "app/plugins/vue-query.ts",
+      "reason": "Plugin registration with no logic of its own."
+    }
   ]
 }
